@@ -2,7 +2,7 @@ export default {
   lang: 'en-US',
   title: 'pscm',
   description: 'a scheme language implementation',
-  base: '/pscm/',
+  base: '/',
   lastUpdated: true,
   ignoreDeadLinks: false,
   outDir: "public",
