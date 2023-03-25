@@ -85,6 +85,7 @@ Cell Parser::parse() {
   Cell ret{};
   has_parsed_ = false;
   while (!has_parsed_ && pos_ < code_.size()) {
+    auto start = pos_;
     auto token = next_token();
     switch (token) {
     case Token::LEFT_PARENTHESES: {
@@ -103,8 +104,9 @@ Cell Parser::parse() {
       break;
     }
     case Token::QUOTE: {
+      static auto quote = "quote"_sym;
       ret = parse();
-      ret = cons(quote, cons(ret, nil));
+      ret = cons(&quote, cons(ret, nil));
       has_parsed_ = true;
       break;
     }
@@ -114,12 +116,18 @@ Cell Parser::parse() {
       break;
     }
     case Token::QUOTATION: {
-
+      ret = parse_string();
+      has_parsed_ = true;
+      break;
+    }
+    case Token::SHARP: {
+      ret = parse_literal();
+      has_parsed_ = true;
       break;
     }
     default: {
       // TODO:
-      throw Exception("Unsupported token: ");
+      PSCM_THROW_EXCEPTION("Unsupported token: " + code_.substr(start, pos_ - start));
     }
     }
   }
@@ -133,6 +141,10 @@ Cell Parser::parse_expr() {
     skip_empty();
     auto token = next_token();
     switch (token) {
+    case Token::SEMICOLON: {
+      skip_line();
+      break;
+    }
     case Token::SYMBOL: {
       if (has_dot) {
         p->second = last_symbol_;
@@ -160,8 +172,9 @@ Cell Parser::parse_expr() {
       break;
     }
     case Token::QUOTE: {
+      static auto quote = "quote"_sym;
       auto val = parse();
-      auto p2 = cons(cons(quote, cons(val, nil)), nil);
+      auto p2 = cons(cons(&quote, cons(val, nil)), nil);
       p->second = p2;
       p = p2;
       break;
@@ -198,21 +211,48 @@ Cell Parser::parse_expr() {
 
 Cell Parser::parse_literal() {
   std::string key;
-  while (pos_ < code_.size()) {
-    if (std::isspace(code_[pos_]) || code_[pos_] == ')') {
-      break;
+  auto token = next_token();
+  switch (token) {
+  case Token::SYMBOL: {
+    if (last_symbol_->name() == "t") {
+      return Cell::bool_true();
     }
-    key += code_[pos_];
-    pos_++;
+    else if (last_symbol_->name() == "f") {
+      return Cell::bool_false();
+    }
+    else {
+      PSCM_THROW_EXCEPTION("Unsupported literal: " + std::string(last_symbol_->name()));
+    }
+    break;
   }
-  if (key == "t") {
-    return Cell::bool_true();
+  case Token::BACK_SLASH: {
+    // read char
+    auto start = pos_;
+    auto tok = next_token();
+    if (tok != Token::SYMBOL) {
+      PSCM_THROW_EXCEPTION("Invalid char: " + code_.substr(start, pos_ - start));
+    }
+    auto key = last_symbol_->name();
+    if (key.size() == 1) {
+      return Char::from(key[0]);
+    }
+    else {
+      PSCM_THROW_EXCEPTION("Unsupported literal: " + std::string(key));
+    }
   }
-  if (key == "f") {
-    return Cell::bool_false();
+  case Token::LEFT_PARENTHESES: {
+    // read vector constant
+    auto expr = parse_expr();
+    Cell::Vec vec;
+    while (!expr.is_nil()) {
+      auto e = car(expr);
+      expr = cdr(expr);
+      vec.push_back(e);
+    }
+    return { new Cell::Vec(std::move(vec)) };
   }
-  if (key.size() == 2 && key[0] == '\\') {
-    return Char::from(key[1]);
+  default: {
+  }
   }
   PSCM_THROW_EXCEPTION("Unsupported literal: " + key);
 }
@@ -286,6 +326,10 @@ Parser::Token Parser::next_token() {
   case '"': {
     pos_++;
     return Token::QUOTATION;
+  }
+  case '\\': {
+    pos_++;
+    return Token::BACK_SLASH;
   }
   default: {
     if (isdigit(ch) || (ch == '-' && pos_ + 1 < code_.size() && std::isdigit(code_[pos_ + 1]))) {

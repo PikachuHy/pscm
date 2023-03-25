@@ -12,17 +12,24 @@ namespace pscm {
 
 class Function {
 public:
+  typedef Cell (*ScmFunc2)(Cell, SourceLocation);
+
   Function(std::string name, Cell::ScmFunc f)
       : name_(std::move(name))
       , f_(f) {
   }
 
-  Cell call(Cell args);
+  Function(std::string name, ScmFunc2 f)
+      : name_(std::move(name))
+      , f_(f) {
+  }
+
+  Cell call(Cell args, SourceLocation loc = {});
   friend std::ostream& operator<<(std::ostream& out, const Function& func);
 
 private:
   std::string name_;
-  std::variant<std::monostate, Cell::ScmFunc> f_;
+  std::variant<std::monostate, Cell::ScmFunc, ScmFunc2> f_;
 };
 
 } // namespace pscm

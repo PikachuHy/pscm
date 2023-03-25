@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include <ostream>
 #include <string>
 
 namespace pscm {
@@ -14,6 +15,8 @@ public:
   }
 
   void display() const;
+  friend std::ostream& operator<<(std::ostream& os, const String& s);
+  bool operator==(const String& rhs) const;
 
 private:
   std::string data_;

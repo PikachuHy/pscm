@@ -21,5 +21,6 @@ inline Pair *cons(Cell a, Cell b) {
 Cell car(Cell c, SourceLocation loc = {});
 Cell cdr(Cell c, SourceLocation loc = {});
 Cell cdar(Cell c, SourceLocation loc = {});
+Cell cadr(Cell c, SourceLocation loc = {});
 Cell cddr(Cell c, SourceLocation loc = {});
 } // namespace pscm

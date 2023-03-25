@@ -7,10 +7,19 @@
 #include <ostream>
 
 namespace pscm {
-Cell Function::call(Cell args) {
-  PSCM_ASSERT(f_.index() == 1);
-  auto f = std::get<1>(f_);
-  return (*f)(args);
+Cell Function::call(Cell args, SourceLocation loc) {
+  PSCM_ASSERT(f_.index() == 1 || f_.index() == 2);
+  if (f_.index() == 1) {
+    auto f = std::get<1>(f_);
+    return (*f)(args);
+  }
+  else if (f_.index() == 2) {
+    auto f = std::get<2>(f_);
+    return (*f)(args, loc);
+  }
+  else {
+    PSCM_THROW_EXCEPTION("Invalid function");
+  }
 }
 
 std::ostream& operator<<(std::ostream& out, const Function& func) {

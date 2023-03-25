@@ -17,10 +17,10 @@ public:
   Cell eval(Cell expr);
   Cell lookup(Cell expr);
   Cell apply(Cell op, Cell args);
+  SymbolTable *cur_env() const;
 
 private:
   friend Cell scm_define(Scheme& scm, Cell args);
-  friend Cell scm_call_proc(Scheme& scm, const Procedure& proc, Cell args);
   std::vector<SymbolTable *> envs_;
   bool use_register_machine_;
 };

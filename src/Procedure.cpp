@@ -26,43 +26,6 @@ std::ostream& operator<<(std::ostream& out, const Procedure& proc) {
   return out;
 }
 
-Cell scm_call_proc(Scheme& scm, const Procedure& proc, Cell args) {
-  PSCM_ASSERT(!scm.envs_.empty());
-  auto env = scm.envs_.back();
-  auto proc_env = new SymbolTable(env);
-  auto params = proc.args();
-  PSCM_ASSERT(params.is_pair());
-  PSCM_ASSERT(args.is_pair());
-  auto p1 = params;
-  auto p2 = args;
-  while (!p1.is_nil() && !car(p1).is_nil()) {
-    if (car(p2).is_nil()) {
-      PSCM_THROW_EXCEPTION("Wrong number of arguments to " + Cell(&proc).to_string());
-    }
-    p1 = cdr(p1);
-    p2 = cdr(p2);
-  }
-  if (!p2.is_nil()) {
-    PSCM_THROW_EXCEPTION("Wrong number of arguments to " + Cell(&proc).to_string());
-  }
-  p1 = params;
-  p2 = args;
-
-  while (!p1.is_nil() && !car(p1).is_nil()) {
-    PSCM_ASSERT(car(p1).is_sym());
-    auto sym = car(p1).to_symbol();
-    auto ret = scm.eval(car(p2));
-    proc_env->insert(sym, ret);
-    p1 = cdr(p1);
-    p2 = cdr(p2);
-  }
-  scm.envs_.push_back(proc_env);
-  auto ret = proc.call(scm, args);
-  scm.envs_.pop_back();
-  delete proc_env;
-  return ret;
-}
-
 Cell Procedure::call(Scheme& scm, Cell args) const {
   auto code = body_;
   Cell ret{};

@@ -16,6 +16,7 @@
 #include <cassert>
 #include <cstring>
 #include <sstream>
+#include <unordered_set>
 
 namespace pscm {
 Cell nil = Cell::nil();
@@ -48,6 +49,12 @@ Cell::Cell(Pair *pair) {
   ref_count_++;
   tag_ = Tag::PAIR;
   data_ = pair;
+}
+
+Cell::Cell(Vec *vec) {
+  ref_count_++;
+  tag_ = Tag::VECTOR;
+  data_ = vec;
 }
 
 Cell::Cell(Function *f) {
@@ -114,6 +121,9 @@ std::ostream& operator<<(std::ostream& out, const Cell& cell) {
   if (cell.tag_ == Cell::Tag::CHAR) {
     return out << *cell.to_char();
   }
+  if (cell.tag_ == Cell::Tag::STRING) {
+    return out << *cell.to_str();
+  }
   if (cell.tag_ == Cell::Tag::BOOL) {
     if (cell.to_bool()) {
       return out << "#t";
@@ -124,21 +134,52 @@ std::ostream& operator<<(std::ostream& out, const Cell& cell) {
   }
   if (cell.tag_ == Cell::Tag::PAIR) {
     out << "(";
+    // TODO:
+    std::unordered_set<Pair *> p_set;
+    int num = 0;
     auto p = cell.to_pair();
+    p_set.insert(p);
     while (p) {
       out << p->first;
       if (p->second.is_pair()) {
         out << " ";
         p = p->second.to_pair();
+        if (p_set.contains(p)) {
+          out << ". ";
+          out << "#" << num << "#";
+          break;
+        }
       }
       else if (p->second.is_nil()) {
         break;
       }
       else {
         out << " . ";
+        if (p->second.is_pair()) {
+          auto p2 = p->second.to_pair();
+          if (p_set.contains(p2)) {
+            out << ". ";
+            out << "#" << num << "#";
+            break;
+          }
+        }
         out << p->second;
         break;
       }
+    }
+    out << ")";
+    return out;
+  }
+  if (cell.tag_ == Cell::Tag::VECTOR) {
+    out << "#";
+    out << "(";
+    auto vec = cell.to_vec();
+    for (int i = 0; i < vec->size() - 1; ++i) {
+      out << vec->at(i);
+      out << ", ";
+    }
+    if (!vec->empty()) {
+      out << vec->back();
     }
     out << ")";
     return out;
@@ -169,8 +210,17 @@ bool operator==(const Cell& lhs, const Cell& rhs) {
   case Cell::Tag::PAIR: {
     return *lhs.to_pair() == *rhs.to_pair();
   }
+  case Cell::Tag::STRING: {
+    return *lhs.to_str() == *rhs.to_str();
+  }
   case Cell::Tag::BOOL: {
     return lhs.to_bool() == rhs.to_bool();
+  }
+  case Cell::Tag::SYMBOL: {
+    return *lhs.to_symbol() == *rhs.to_symbol();
+  }
+  case Cell::Tag::VECTOR: {
+    return *lhs.to_vec() == *rhs.to_vec();
   }
   default: {
     return false;
@@ -194,6 +244,26 @@ bool operator==(const Cell& lhs, const Symbol& rhs) {
   auto val = static_cast<Symbol *>(lhs.data_);
   PSCM_ASSERT(val);
   return *val == rhs;
+}
+
+bool operator==(const Cell& lhs, const Cell::Vec& rhs) {
+  if (lhs.tag_ != Cell::Tag::VECTOR) {
+    return false;
+  }
+  auto val = lhs.to_vec();
+  PSCM_ASSERT(val);
+  if (val->size() != rhs.size()) {
+    return false;
+  }
+  for (int i = 0; i < val->size(); ++i) {
+    auto l = val->at(i);
+    auto r = rhs.at(i);
+    if (l != r) {
+      return false;
+    }
+  }
+  return true;
+  //  return *val == rhs;
 }
 
 std::ostream& operator<<(std::ostream& out, const Label& pos) {
@@ -360,6 +430,25 @@ std::ostream& operator<<(std::ostream& out, const Label& pos) {
   }
   }
   return out;
+}
+
+bool Cell::is_self_evaluated() const {
+  switch (tag_) {
+  case Tag::NUMBER:
+  case Tag::CHAR:
+  case Tag::STRING:
+  case Tag::BOOL:
+  case Tag::MACRO:
+  case Tag::PROCEDURE:
+  case Tag::FUNCTION:
+  case Tag::NIL:
+  case Tag::CONTINUATION: {
+    return true;
+  }
+  default: {
+    return false;
+  }
+  }
 }
 
 std::string SourceLocation::to_string() const {

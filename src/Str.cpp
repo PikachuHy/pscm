@@ -11,4 +11,17 @@ void String::display() const {
     std::cout << ch;
   }
 }
+
+std::ostream& operator<<(std::ostream& os, const String& s) {
+  os << '"';
+  for (auto ch : s.data_) {
+    os << ch;
+  }
+  os << '"';
+  return os;
+}
+
+bool String::operator==(const String& rhs) const {
+  return data_ == rhs.data_;
+}
 } // namespace pscm

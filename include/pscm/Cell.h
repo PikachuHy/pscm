@@ -4,6 +4,7 @@
 
 #pragma once
 #include <ostream>
+#include <vector>
 
 namespace pscm {
 class Scheme;
@@ -63,6 +64,7 @@ class Cell {
 public:
   typedef Cell (*ScmFunc)(Cell);
   typedef Cell (*ScmMacro)(Scheme&, Cell);
+  using Vec = std::vector<Cell>;
 
   Cell() {
     ref_count_++;
@@ -73,6 +75,7 @@ public:
   Cell(String *str);
   Cell(Symbol *sym);
   Cell(Pair *pair);
+  Cell(Vec *pair);
   Cell(Function *f);
   Cell(Macro *f);
   Cell(const Procedure *proc);
@@ -91,6 +94,7 @@ public:
     NUMBER,      // number: int float complex
     SYMBOL,      // symbol
     PAIR,        // pair,
+    VECTOR,      // vector, #(a b c)
     FUNCTION,    // c++ function
     PROCEDURE,   // scheme procedure
     MACRO,       //
@@ -136,6 +140,14 @@ public:
 
   Pair *to_pair() const {
     return (Pair *)(data_);
+  }
+
+  bool is_vec() const {
+    return tag_ == Tag::VECTOR;
+  }
+
+  Vec *to_vec() const {
+    return (Vec *)(data_);
   }
 
   bool is_sym() const {
@@ -210,6 +222,8 @@ public:
     return (Continuation *)data_;
   }
 
+  bool is_self_evaluated() const;
+
 private:
   Cell(Tag tag, void *data)
       : tag_(tag)
@@ -220,6 +234,7 @@ private:
   friend bool operator==(const Cell& lhs, const Cell& rhs);
   friend bool operator==(const Cell& lhs, const Number& rhs);
   friend bool operator==(const Cell& lhs, const Symbol& rhs);
+  friend bool operator==(const Cell& lhs, const Vec& rhs);
   int ref_count_ = 0;
   Tag tag_ = Tag::NONE;
   void *data_ = nullptr;

@@ -19,6 +19,7 @@
 #include "pscm/scm_utils.h"
 #include <ostream>
 #include <sstream>
+#include <unordered_set>
 #define PSCM_PUSH_STACK(reg_name)                                                                                      \
   SPDLOG_DEBUG("push {} stack: {}", #reg_name, stack_.reg_name.size());                                                \
   reg_type_stack_.push_back(reg_##reg_name);                                                                           \
@@ -340,6 +341,88 @@ Cell is_boolean(Cell args) {
   return arg.is_bool() ? Cell::bool_true() : Cell::bool_false();
 }
 
+Cell create_list(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  return args;
+}
+
+Cell is_list(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  std::unordered_set<Pair *> p_set;
+  auto arg = car(args);
+  while (arg.is_pair()) {
+    if (p_set.contains(arg.to_pair())) {
+      return Cell::bool_false();
+    }
+    p_set.insert(arg.to_pair());
+    arg = cdr(arg);
+  }
+  return arg.is_nil() ? Cell::bool_true() : Cell::bool_false();
+}
+
+Cell set_cdr(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto pair = car(args);
+  auto obj = cadr(args);
+  if (!pair.is_pair()) {
+    PSCM_THROW_EXCEPTION("Invalid set-cdr! args: " + args.to_string());
+  }
+  pair.to_pair()->second = obj;
+  return Cell::none();
+}
+
+Cell assv(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto obj = car(args);
+  auto alist = cadr(args);
+  while (!alist.is_nil()) {
+    auto item = car(alist);
+    auto key = car(item);
+    if (key == obj) {
+      return item;
+    }
+    alist = cdr(alist);
+  }
+  return Cell::none();
+}
+
+Cell proc_car(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  return car(arg);
+}
+
+Cell proc_cdr(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  return cdr(arg);
+}
+
+Cell proc_cdar(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  return cdar(arg);
+}
+
+Cell proc_cadr(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  return cadr(arg);
+}
+
+Cell proc_cddr(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  return cddr(arg);
+}
+
+Cell is_eqv(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto obj1 = car(args);
+  auto obj2 = cadr(args);
+  return obj1 == obj2 ? Cell::bool_true() : Cell::bool_false();
+}
+
 Cell reverse_argl(Cell argl) {
   auto p = cons(nil, nil);
   auto args = argl;
@@ -356,7 +439,7 @@ Cell expand_let(Cell args) {
   // --->
   // ((lambda (var1 var2 ...) <body>) (init1 init2 ...))
   auto bindings = car(args);
-  auto body = cdar(args);
+  auto body = cadr(args);
   auto var_list = cons(nil, nil);
   auto arg_list = cons(nil, nil);
   auto p1 = var_list;
@@ -365,7 +448,7 @@ Cell expand_let(Cell args) {
     auto binding = car(bindings);
     bindings = cdr(bindings);
     auto var = car(binding);
-    auto init = cdar(binding);
+    auto init = cadr(binding);
     auto t = cons(var, nil);
     p1->second = t;
     p1 = t;
@@ -416,8 +499,7 @@ void Evaluator::run() {
     case Label::EVAL: {
       PRINT_STEP();
       SPDLOG_INFO("eval expr: {}", reg_.expr);
-      if (reg_.expr.is_num() || reg_.expr.is_char() || reg_.expr.is_bool() || reg_.expr.is_macro() ||
-          reg_.expr.is_proc() || reg_.expr.is_func() || reg_.expr.is_nil() || reg_.expr.is_cont()) {
+      if (reg_.expr.is_self_evaluated()) {
         reg_.val = reg_.expr;
         GOTO(reg_.cont);
       }
@@ -647,7 +729,7 @@ void Evaluator::run() {
     }
     case Label::APPLY_APPLY: {
       auto proc = car(reg_.unev);
-      auto args = cdar(reg_.unev);
+      auto args = cadr(reg_.unev);
       PSCM_ASSERT(proc.is_sym());
       PSCM_ASSERT(args.is_sym());
       proc = reg_.env->get(proc.to_symbol());
@@ -686,7 +768,7 @@ void Evaluator::run() {
         PSCM_ASSERT(test.to_symbol());
         auto sym = test.to_symbol();
         if (*sym == cond_else) {
-          reg_.expr = cdar(clause);
+          reg_.expr = cadr(clause);
           reg_.cont = Label::AFTER_APPLY_MACRO;
           GOTO(Label::EVAL);
         }
@@ -726,7 +808,7 @@ void Evaluator::run() {
     case Label::APPLY_SET: {
       PRINT_STEP();
       auto var_name = car(reg_.unev);
-      auto val = cdar(reg_.unev);
+      auto val = cadr(reg_.unev);
       PSCM_ASSERT(var_name.is_sym());
       reg_.val = var_name;
       PSCM_PUSH_STACK(val);
@@ -794,7 +876,7 @@ void Evaluator::run() {
     case Label::APPLY_FOR_EACH: {
       PRINT_STEP();
       auto proc = car(reg_.unev);
-      auto list1 = cdar(reg_.unev);
+      auto list1 = cadr(reg_.unev);
       proc = reg_.env->get(proc.to_symbol());
       list1 = reg_.env->get(list1.to_symbol());
       SPDLOG_INFO("proc: {}", proc);
@@ -842,11 +924,30 @@ void Evaluator::run() {
     }
     case Label::AFTER_EVAL_COND_TEST: {
       PRINT_STEP();
+      if (!reg_.val.is_bool()) {
+        auto clause = car(reg_.unev);
+        auto tmp = cdr(clause);
+        if (tmp.is_nil()) {
+          PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
+        }
+        SPDLOG_INFO("tmp --> {}", tmp);
+        auto arrow = car(tmp);
+        auto recipient = cadr(tmp);
+        if (!arrow.is_sym()) {
+          PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
+        }
+        if (*arrow.to_symbol() != "=>"_sym) {
+          PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
+        }
+        reg_.expr = cons(recipient, list(list(quote, reg_.val)));
+        reg_.cont = Label::AFTER_APPLY_MACRO;
+        GOTO(Label::EVAL);
+      }
       PSCM_ASSERT(reg_.val.is_bool());
       auto pred = reg_.val.to_bool();
       if (pred) {
         auto clause = car(reg_.unev);
-        auto expr = cdar(clause);
+        auto expr = cadr(clause);
         reg_.expr = expr;
         SPDLOG_INFO("cond expr: {}", reg_.expr);
         reg_.cont = Label::AFTER_APPLY_MACRO;
@@ -860,7 +961,7 @@ void Evaluator::run() {
           PSCM_ASSERT(test.to_symbol());
           auto sym = test.to_symbol();
           if (*sym == cond_else) {
-            reg_.expr = cdar(clause);
+            reg_.expr = cadr(clause);
             reg_.cont = Label::AFTER_APPLY_MACRO;
             SPDLOG_INFO("cond expr: {}", reg_.expr);
             GOTO(Label::EVAL);
@@ -876,7 +977,7 @@ void Evaluator::run() {
       PSCM_ASSERT(reg_.val.is_bool());
       bool pred = reg_.val.to_bool();
       if (pred) {
-        auto consequent = cdar(reg_.unev);
+        auto consequent = cadr(reg_.unev);
         reg_.expr = consequent;
       }
       else {

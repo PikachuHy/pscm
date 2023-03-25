@@ -25,15 +25,11 @@ Cell cdr(Cell c, SourceLocation loc) {
 }
 
 Cell cdar(Cell c, SourceLocation loc) {
-  if (!c.is_pair()) {
-    PSCM_THROW_EXCEPTION(loc.to_string() + ", Cell is not Pair: " + c.to_string());
-  }
-  auto p = c.to_pair();
-  if (!p->second.is_pair()) {
-    PSCM_THROW_EXCEPTION("Cell is not Pair: " + p->second.to_string() + " " + loc.to_string());
-  }
-  p = p->second.to_pair();
-  return p->first;
+  return cdr(car(c, loc), loc);
+}
+
+Cell cadr(Cell c, SourceLocation loc) {
+  return car(cdr(c, loc), loc);
 }
 
 Cell cddr(Cell c, SourceLocation loc) {

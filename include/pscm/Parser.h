@@ -31,6 +31,7 @@ private:
     DOT,               // .
     SEMICOLON,         // ;
     QUOTATION,         // "
+    BACK_SLASH,        // forward slash '/', and back slash '\'
     SYMBOL             //
   };
   Token next_token();

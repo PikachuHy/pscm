@@ -5,6 +5,7 @@
 #include "pscm/Scheme.h"
 #include "pscm/Evaluator.h"
 #include "pscm/Exception.h"
+#include "pscm/Expander.h"
 #include "pscm/Function.h"
 #include "pscm/Macro.h"
 #include "pscm/Number.h"
@@ -26,7 +27,7 @@ Cell scm_define(Scheme& scm, Cell args) {
   auto first_arg = car(args);
   if (first_arg.is_sym()) {
     auto sym = first_arg.to_symbol();
-    auto ret = scm.eval(cdar(args));
+    auto ret = scm.eval(cadr(args));
     PSCM_ASSERT(!scm.envs_.empty());
     auto env = scm.envs_.back();
     env->insert(sym, ret);
@@ -47,7 +48,11 @@ Cell scm_define(Scheme& scm, Cell args) {
 }
 
 Cell scm_lambda(Scheme& scm, Cell args) {
-  return Cell::ex("");
+  return new Procedure(nullptr, car(args), cdr(args), scm.cur_env());
+}
+
+Cell scm_quote(Scheme& scm, Cell args) {
+  return car(args);
 }
 
 Cell scm_cond(Scheme& scm, Cell args) {
@@ -62,7 +67,7 @@ Cell scm_cond(Scheme& scm, Cell args) {
       PSCM_THROW_EXCEPTION("Bad cond clause " + clause.to_string() + " in expression " + args.to_string());
     }
     auto test = car(clause);
-    auto expr = cdar(clause);
+    auto expr = cadr(clause);
     SPDLOG_INFO("test: {}", test);
     SPDLOG_INFO("expr: {}", expr);
     if (test.is_sym()) {
@@ -73,6 +78,23 @@ Cell scm_cond(Scheme& scm, Cell args) {
       }
     }
     auto ret = scm.eval(test);
+    if (!ret.is_bool()) {
+      auto tmp = cdr(clause);
+      if (tmp.is_nil()) {
+        PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
+      }
+      auto arrow = car(tmp);
+      auto recipient = cadr(tmp);
+      if (!arrow.is_sym()) {
+        PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
+      }
+      if (*arrow.to_symbol() != "=>"_sym) {
+        PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
+      }
+      auto f = scm.eval(recipient);
+      auto f_args = list(quote, ret);
+      return scm.apply(f, list(f_args));
+    }
     PSCM_ASSERT(ret.is_bool());
     auto pred = ret.to_bool();
     if (pred) {
@@ -86,7 +108,7 @@ Cell scm_cond(Scheme& scm, Cell args) {
 
 Cell scm_if(Scheme& scm, Cell args) {
   auto test = car(args);
-  auto consequent = cdar(args);
+  auto consequent = cadr(args);
   auto alternate = cddr(args);
   auto pred = scm.eval(test);
   PSCM_ASSERT(pred.is_bool());
@@ -133,8 +155,18 @@ Cell scm_or(Scheme& scm, Cell args) {
   return Cell::bool_false();
 }
 
+Cell scm_let(Scheme& scm, Cell args) {
+  auto expr = expand_let(args);
+  return scm.eval(expr);
+}
+
+Cell scm_let_star(Scheme& scm, Cell args) {
+  auto expr = expand_let_star(args);
+  return scm.eval(expr);
+}
+
 Cell lambda = new Macro("lambda", Label::APPLY_LAMBDA, scm_lambda);
-Cell quote = new Macro("quote", Label::APPLY_QUOTE, scm_lambda);
+Cell quote = new Macro("quote", Label::APPLY_QUOTE, scm_quote);
 // TODO: #<primitive-generic for-each>
 Cell for_each = new Macro("builtin_for-each", Label::APPLY_FOR_EACH, scm_lambda);
 Cell apply = new Macro("builtin_apply", Label::APPLY_APPLY, scm_lambda);
@@ -156,6 +188,15 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("newline"), new Function("newline", newline));
   env->insert(new Symbol("procedure?"), new Function("procedure?", is_procedure));
   env->insert(new Symbol("boolean?"), new Function("boolean?", is_boolean));
+  env->insert(new Symbol("list"), new Function("list", create_list));
+  env->insert(new Symbol("list?"), new Function("list?", is_list));
+  env->insert(new Symbol("set-cdr!"), new Function("set-cdr!", set_cdr));
+  env->insert(new Symbol("assv"), new Function("assv", assv));
+  env->insert(new Symbol("car"), new Function("car", proc_car));
+  env->insert(new Symbol("cdr"), new Function("cdr", proc_cdr));
+  env->insert(new Symbol("cadr"), new Function("cadr", proc_cadr));
+  env->insert(new Symbol("cdar"), new Function("cdar", proc_cdar));
+  env->insert(new Symbol("eqv?"), new Function("eqv?", is_eqv));
 
   env->insert(new Symbol("define"), new Macro("define", Label::APPLY_DEFINE, scm_define));
   env->insert(new Symbol("cond"), new Macro("cond", Label::APPLY_COND, scm_cond));
@@ -163,8 +204,9 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("and"), new Macro("and", Label::APPLY_AND, scm_and));
   env->insert(new Symbol("or"), new Macro("or", Label::APPLY_OR, scm_or));
   env->insert(new Symbol("set!"), new Macro("set!", Label::APPLY_SET, scm_define));
-  env->insert(new Symbol("let"), new Macro("let", Label::APPLY_LET, scm_define));
-  env->insert(new Symbol("let*"), new Macro("let*", Label::APPLY_LET_STAR, scm_define));
+  env->insert(new Symbol("let"), new Macro("let", Label::APPLY_LET, scm_let));
+  env->insert(new Symbol("let*"), new Macro("let*", Label::APPLY_LET_STAR, scm_let_star));
+  env->insert(new Symbol("quote"), quote);
   env->insert(new Symbol("lambda"), lambda);
   {
     auto proc = new Procedure(&callcc, cons(new Symbol("proc"), nil), nil, env);
@@ -216,10 +258,7 @@ Cell Scheme::eval(const char *code) {
 }
 
 Cell Scheme::eval(Cell expr) {
-  if (expr.tag_ == Cell::Tag::NUMBER) {
-    return expr;
-  }
-  if (expr.tag_ == Cell::Tag::STRING) {
+  if (expr.is_self_evaluated()) {
     return expr;
   }
   if (expr.tag_ == Cell::Tag::SYMBOL) {
@@ -267,11 +306,12 @@ Cell Scheme::apply(Cell op, Cell args) {
       args = cdr(args);
     }
     auto f = op.to_func();
+    SPDLOG_INFO("func {} args: {}", op, ret->second);
     return f->call(ret->second);
   }
   if (op.is_macro()) {
     PSCM_ASSERT(args.is_pair());
-    SPDLOG_INFO("apply args: {}", args.to_string());
+    SPDLOG_INFO("apply {} with args: {}", op, args.to_string());
     auto f = op.to_macro();
     return f->call(*this, args);
   }
@@ -290,9 +330,24 @@ Cell Scheme::apply(Cell op, Cell args) {
       args = cdr(args);
     }
     auto proc = op.to_proc();
-    return scm_call_proc(*this, *proc, ret->second);
+    auto proc_args = ret->second;
+    bool ok = proc->check_args(proc_args);
+    if (!ok) {
+      PSCM_THROW_EXCEPTION("Wrong number of arguments to " + Cell(proc).to_string());
+    }
+    auto proc_env = proc->create_proc_env(proc_args);
+    envs_.push_back(proc_env);
+    auto proc_ret = proc->call(*this, proc_args);
+    envs_.pop_back();
+    return proc_ret;
   }
   PSCM_THROW_EXCEPTION("unsupported op: " + op.to_string());
   return {};
+}
+
+SymbolTable *Scheme::cur_env() const {
+  PSCM_ASSERT(!envs_.empty());
+  auto env = envs_.back();
+  return env;
 }
 } // namespace pscm
