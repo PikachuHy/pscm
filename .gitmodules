@@ -1,0 +1,6 @@
+[submodule "3rd/spdlog"]
+	path = 3rd/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "3rd/doctest"]
+	path = 3rd/doctest
+	url = https://github.com/doctest/doctest.git
