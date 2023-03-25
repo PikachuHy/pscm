@@ -10,7 +10,7 @@
   SPDLOG_ERROR("Exception occurred here: {}", msg);                                                                    \
   throw ::pscm::Exception(msg)
 #define PSCM_ASSERT(e)                                                                                                 \
-  if (__builtin_expect(!(e), 0)) {                                                                                     \
+  if (!(e)) {                                                                                                          \
     SPDLOG_ERROR("ASSERT FAILED here: {}", #e);                                                                        \
     assert(e);                                                                                                         \
   }                                                                                                                    \
