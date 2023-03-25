@@ -1,0 +1,4 @@
+add_executable(callcc_example_1 callcc_example_1.cpp)
+target_link_libraries(callcc_example_1 PRIVATE pscm)
+add_executable(callcc_example_2 callcc_example_2.cpp)
+target_link_libraries(callcc_example_2 PRIVATE pscm)

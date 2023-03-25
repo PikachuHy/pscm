@@ -1,0 +1,27 @@
+ColumnLimit: 120
+ReferenceAlignment: Left
+AllowShortLambdasOnASingleLine: Empty
+IndentWidth: 2
+AccessModifierOffset: -2
+AlwaysBreakTemplateDeclarations: Yes
+AllowShortFunctionsOnASingleLine: None
+BreakInheritanceList: BeforeComma
+PackConstructorInitializers: Never
+AlignArrayOfStructures: Right
+BreakBeforeBraces: Custom
+Cpp11BracedListStyle: false
+RemoveBracesLLVM: false
+SeparateDefinitionBlocks: Always
+BreakConstructorInitializers: BeforeComma
+BraceWrapping:
+  AfterFunction: false
+  SplitEmptyFunction: true
+  BeforeElse: true
+  BeforeCatch: true
+
+---
+Language: JavaScript
+DisableFormat: true
+---
+Language: Json
+DisableFormat: true
