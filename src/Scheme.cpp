@@ -78,32 +78,29 @@ Cell scm_cond(Scheme& scm, Cell args) {
       }
     }
     auto ret = scm.eval(test);
-    if (!ret.is_bool()) {
-      auto tmp = cdr(clause);
-      if (tmp.is_nil()) {
-        PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
+    if (ret.is_bool()) {
+      if (!ret.to_bool()) {
+        continue;
       }
-      auto arrow = car(tmp);
+    }
+    auto tmp = cdr(clause);
+    if (tmp.is_nil()) {
+      PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
+    }
+    SPDLOG_INFO("tmp: {}", tmp);
+    auto arrow = car(tmp);
+    if (arrow.is_sym() && *arrow.to_symbol() == "=>"_sym) {
       auto recipient = cadr(tmp);
-      if (!arrow.is_sym()) {
-        PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
-      }
-      if (*arrow.to_symbol() != "=>"_sym) {
-        PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
-      }
       auto f = scm.eval(recipient);
       auto f_args = list(quote, ret);
       return scm.apply(f, list(f_args));
     }
-    PSCM_ASSERT(ret.is_bool());
-    auto pred = ret.to_bool();
-    if (pred) {
+    else {
       return scm.eval(expr);
     }
-    continue;
   }
 
-  return Cell::ex("");
+  return Cell::none();
 }
 
 Cell scm_if(Scheme& scm, Cell args) {
@@ -124,35 +121,30 @@ Cell scm_if(Scheme& scm, Cell args) {
 }
 
 Cell scm_and(Scheme& scm, Cell args) {
+  Cell pred = Cell::bool_true();
   while (!args.is_nil()) {
     auto expr = car(args);
     args = cdr(args);
-    auto pred = scm.eval(expr);
-    PSCM_ASSERT(pred.is_bool());
-    if (pred.to_bool()) {
-      continue;
-    }
-    else {
+    pred = scm.eval(expr);
+    if (pred.is_bool() && !pred.to_bool()) {
       return Cell::bool_false();
     }
   }
-  return Cell::bool_true();
+  return pred;
 }
 
 Cell scm_or(Scheme& scm, Cell args) {
+  Cell pred = Cell::bool_false();
   while (!args.is_nil()) {
     auto expr = car(args);
     args = cdr(args);
-    auto pred = scm.eval(expr);
-    PSCM_ASSERT(pred.is_bool());
-    if (pred.to_bool()) {
-      return Cell::bool_true();
-    }
-    else {
+    pred = scm.eval(expr);
+    if (pred.is_bool() && !pred.to_bool()) {
       continue;
     }
+    return pred;
   }
-  return Cell::bool_false();
+  return pred;
 }
 
 Cell scm_let(Scheme& scm, Cell args) {
@@ -163,6 +155,28 @@ Cell scm_let(Scheme& scm, Cell args) {
 Cell scm_let_star(Scheme& scm, Cell args) {
   auto expr = expand_let_star(args);
   return scm.eval(expr);
+}
+
+Cell scm_letrec(Scheme& scm, Cell args) {
+  auto expr = expand_letrec(args);
+  SPDLOG_INFO("letrec: {}", expr);
+  return scm.eval(expr);
+}
+
+bool is_member(Cell item, Cell list) {
+  while (!list.is_nil()) {
+    if (item == car(list)) {
+      return true;
+    }
+    list = cdr(list);
+  }
+  return false;
+}
+
+Cell scm_case(Scheme& scm, Cell args) {
+  auto expr = expand_case(args);
+  auto ret = scm.eval(expr);
+  return ret;
 }
 
 Cell lambda = new Macro("lambda", Label::APPLY_LAMBDA, scm_lambda);
@@ -192,11 +206,19 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("list?"), new Function("list?", is_list));
   env->insert(new Symbol("set-cdr!"), new Function("set-cdr!", set_cdr));
   env->insert(new Symbol("assv"), new Function("assv", assv));
+  env->insert(new Symbol("cons"), new Function("car", proc_cons));
   env->insert(new Symbol("car"), new Function("car", proc_car));
   env->insert(new Symbol("cdr"), new Function("cdr", proc_cdr));
   env->insert(new Symbol("cadr"), new Function("cadr", proc_cadr));
   env->insert(new Symbol("cdar"), new Function("cdar", proc_cdar));
   env->insert(new Symbol("eqv?"), new Function("eqv?", is_eqv));
+  env->insert(new Symbol("eq?"), new Function("eqv?", is_eq));
+  env->insert(new Symbol("equal?"), new Function("equal?", is_equal));
+  env->insert(new Symbol("memq"), new Function("memq", memq));
+  env->insert(new Symbol("memv"), new Function("memv", memv));
+  env->insert(new Symbol("member"), new Function("member", member));
+  env->insert(new Symbol("make-vector"), new Function("make-vector", make_vector));
+  env->insert(new Symbol("zero?"), new Function("zero?", is_zero));
 
   env->insert(new Symbol("define"), new Macro("define", Label::APPLY_DEFINE, scm_define));
   env->insert(new Symbol("cond"), new Macro("cond", Label::APPLY_COND, scm_cond));
@@ -206,6 +228,8 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("set!"), new Macro("set!", Label::APPLY_SET, scm_define));
   env->insert(new Symbol("let"), new Macro("let", Label::APPLY_LET, scm_let));
   env->insert(new Symbol("let*"), new Macro("let*", Label::APPLY_LET_STAR, scm_let_star));
+  env->insert(new Symbol("letrec"), new Macro("letrec", Label::APPLY_LETREC, scm_letrec));
+  env->insert(new Symbol("case"), new Macro("case", Label::APPLY_CASE, scm_case));
   env->insert(new Symbol("quote"), quote);
   env->insert(new Symbol("lambda"), lambda);
   {
@@ -290,7 +314,7 @@ Cell Scheme::lookup(Cell expr) {
 }
 
 Cell Scheme::apply(Cell op, Cell args) {
-  SPDLOG_INFO("apply op: {}", op.to_string());
+  SPDLOG_INFO("apply op: {}, {}", op.to_string(), args.to_string());
   if (op.is_func()) {
     PSCM_ASSERT(args.is_pair());
     SPDLOG_INFO("apply args: {}", args.to_string());
@@ -316,7 +340,7 @@ Cell Scheme::apply(Cell op, Cell args) {
     return f->call(*this, args);
   }
   if (op.is_proc()) {
-    PSCM_ASSERT(args.is_pair());
+    PSCM_ASSERT(args.is_pair() || args.is_nil());
     SPDLOG_INFO("apply args: {}", args.to_string());
     // eval each arg
     auto ret = cons(nil, nil);

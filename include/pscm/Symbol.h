@@ -18,6 +18,7 @@ public:
     return name_;
   }
 
+  friend std::ostream& operator<<(std::ostream& out, const Symbol& sym);
   bool operator==(const Symbol& sym) const;
 
 private:
@@ -29,4 +30,5 @@ extern Symbol callcc;
 extern Symbol call_with_values;
 extern Symbol values;
 extern Symbol cond_else;
+Symbol *gensym();
 } // namespace pscm

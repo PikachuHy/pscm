@@ -46,9 +46,11 @@ enum class Label {
   APPLY_SET,
   APPLY_LET,
   APPLY_LET_STAR,
+  APPLY_LETREC,
   APPLY_LAMBDA,
   APPLY_QUOTE,
   APPLY_FOR_EACH,
+  APPLY_CASE,
   AFTER_EVAL_FOR_EACH_FIRST_EXPR,
   AFTER_EVAL_DEFINE_ARG,
   AFTER_EVAL_SET_ARG,
@@ -58,6 +60,7 @@ enum class Label {
   AFTER_EVAL_OR_EXPR,
   AFTER_EVAL_CALL_WITH_VALUES_PRODUCER,
 };
+std::string to_string(Label label);
 std::ostream& operator<<(std::ostream& out, const Label& pos);
 
 class Cell {
@@ -80,6 +83,7 @@ public:
   Cell(Macro *f);
   Cell(const Procedure *proc);
   Cell(Continuation *cont);
+  explicit Cell(bool val);
 
   ~Cell() {
     ref_count_--;
@@ -223,6 +227,9 @@ public:
   }
 
   bool is_self_evaluated() const;
+
+  [[nodiscard]] Cell is_eqv(const Cell& rhs) const;
+  [[nodiscard]] Cell is_eq(const Cell& rhs) const;
 
 private:
   Cell(Tag tag, void *data)

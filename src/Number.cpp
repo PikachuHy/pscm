@@ -5,6 +5,7 @@
 #include "pscm/Number.h"
 #include "pscm/Exception.h"
 #include "pscm/common_def.h"
+#include <sstream>
 #include <string_view>
 using namespace std::string_literals;
 
@@ -18,7 +19,7 @@ std::ostream& operator<<(std::ostream& out, const Number& num) {
 
 Number Number::operator-(const Number& num) {
   if (num.data_.index() != 1) {
-    throw Exception("Invalid number type: not supported now");
+    PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
   }
   auto data = std::get<1>(data_) - std::get<1>(num.data_);
   return Number(data);
@@ -26,7 +27,7 @@ Number Number::operator-(const Number& num) {
 
 Number Number::operator/(const Number& num) {
   if (num.data_.index() != 1) {
-    throw Exception("Invalid number type: not supported now");
+    PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
   }
   auto data = std::get<1>(data_) / std::get<1>(num.data_);
   return Number(data);
@@ -35,7 +36,7 @@ Number Number::operator/(const Number& num) {
 bool Number::operator<(const Number& num) const {
   PSCM_ASSERT(data_.index() == 1);
   if (num.data_.index() != 1) {
-    throw Exception("Invalid number type: not supported now");
+    PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
   }
   auto a = std::get<1>(data_);
   auto b = std::get<1>(num.data_);
@@ -45,7 +46,7 @@ bool Number::operator<(const Number& num) const {
 bool Number::operator>(const Number& num) const {
   PSCM_ASSERT(data_.index() == 1);
   if (num.data_.index() != 1) {
-    throw Exception("Invalid number type: not supported now");
+    PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
   }
   auto a = std::get<1>(data_);
   auto b = std::get<1>(num.data_);
@@ -61,7 +62,7 @@ void Number::inplace_add(const Number& num) {
       data_ = to_int() + num.to_float();
     }
     else {
-      throw Exception("Invalid number type: not supported now");
+      PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
     }
   }
   else if (is_float()) {
@@ -72,17 +73,17 @@ void Number::inplace_add(const Number& num) {
       data_ = to_float() + num.to_float();
     }
     else {
-      throw Exception("Invalid number type: not supported now");
+      PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
     }
   }
   else {
-    throw Exception("Invalid number type: not supported now");
+    PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
   }
 }
 
 void Number::inplace_minus(const Number& num) {
   if (num.data_.index() != 1) {
-    throw Exception("Invalid number type: not supported now");
+    PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
   }
   data_ = std::get<1>(data_) - std::get<1>(num.data_);
 }
@@ -96,7 +97,7 @@ void Number::inplace_mul(const Number& num) {
       data_ = to_int() * num.to_float();
     }
     else {
-      throw Exception("Invalid number type: not supported now");
+      PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
     }
   }
   else if (is_float()) {
@@ -107,17 +108,17 @@ void Number::inplace_mul(const Number& num) {
       data_ = to_float() * num.to_float();
     }
     else {
-      throw Exception("Invalid number type: not supported now");
+      PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
     }
   }
   else {
-    throw Exception("Invalid number type: not supported now");
+    PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
   }
 }
 
 void Number::inplace_div(const Number& num) {
   if (num.data_.index() != 1) {
-    throw Exception("Invalid number type: not supported now");
+    PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
   }
   data_ = std::get<1>(data_) / std::get<1>(num.data_);
 }
@@ -134,8 +135,24 @@ double Number::to_float() const {
 
 void Number::display() const {
   if (data_.index() != 1) {
-    throw Exception("Invalid number type: not supported now");
+    PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
   }
   std::cout << std::get<1>(data_);
+}
+
+std::string Number::to_string() const {
+  std::stringstream ss;
+  ss << *this;
+  return ss.str();
+}
+
+bool Number::is_zero() const {
+  if (data_.index() == 1) {
+    return std::get<1>(data_) == 0;
+  }
+  if (data_.index() == 2) {
+    return std::get<2>(data_) == 0;
+  }
+  PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
 }
 } // namespace pscm

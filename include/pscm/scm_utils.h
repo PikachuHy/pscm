@@ -6,6 +6,7 @@
 #include "pscm/Cell.h"
 #include "pscm/Number.h"
 #include "pscm/Pair.h"
+#include "pscm/Symbol.h"
 #include <spdlog/spdlog.h>
 
 namespace pscm {
@@ -16,6 +17,9 @@ Cell list(T t) {
   }
   else if constexpr (std::same_as<T, int32_t>) {
     return cons(new Number(t), nil);
+  }
+  else if constexpr (std::same_as<T, Symbol>) {
+    return cons(new Symbol(t), nil);
   }
   else if constexpr (std::is_pointer_v<T>) {
     using U = std::remove_pointer_t<T>;
@@ -33,6 +37,9 @@ Cell list(T t, Args... args) {
   }
   else if constexpr (std::same_as<T, int32_t>) {
     return cons(new Number(t), list(args...));
+  }
+  else if constexpr (std::same_as<T, Symbol>) {
+    return cons(new Symbol(t), list(args...));
   }
   else if constexpr (std::is_pointer_v<T>) {
     using U = std::remove_pointer_t<T>;

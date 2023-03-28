@@ -6,6 +6,7 @@
 #include "pscm/Char.h"
 #include "pscm/Continuation.h"
 #include "pscm/Exception.h"
+#include "pscm/Expander.h"
 #include "pscm/Function.h"
 #include "pscm/Macro.h"
 #include "pscm/Number.h"
@@ -386,6 +387,12 @@ Cell assv(Cell args) {
   return Cell::none();
 }
 
+Cell proc_cons(Cell args) {
+  auto a = car(args);
+  auto b = cadr(args);
+  return cons(a, b);
+}
+
 Cell proc_car(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
@@ -420,7 +427,76 @@ Cell is_eqv(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto obj1 = car(args);
   auto obj2 = cadr(args);
-  return obj1 == obj2 ? Cell::bool_true() : Cell::bool_false();
+  return obj1.is_eqv(obj2);
+}
+
+Cell is_eq(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto obj1 = car(args);
+  auto obj2 = cadr(args);
+  return obj1.is_eq(obj2);
+}
+
+Cell is_equal(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto obj1 = car(args);
+  auto obj2 = cadr(args);
+  return (obj1 == obj2) ? Cell::bool_true() : Cell::bool_false();
+}
+
+Cell memq(Cell args) {
+  auto obj = car(args);
+  auto list = cadr(args);
+  while (!list.is_nil()) {
+    if (obj.is_eq(car(list)).to_bool()) {
+      return list;
+    }
+    list = cdr(list);
+  }
+  return Cell::bool_false();
+}
+
+Cell memv(Cell args) {
+  auto obj = car(args);
+  auto list = cadr(args);
+  while (!list.is_nil()) {
+    if (obj.is_eqv(car(list)).to_bool()) {
+      return list;
+    }
+    list = cdr(list);
+  }
+  return Cell::bool_false();
+}
+
+Cell member(Cell args) {
+  auto obj = car(args);
+  auto list = cadr(args);
+  while (!list.is_nil()) {
+    if (obj == car(list)) {
+      return list;
+    }
+    list = cdr(list);
+  }
+  return Cell::bool_false();
+}
+
+Cell make_vector(Cell args) {
+  Cell::Vec v;
+  while (!args.is_nil()) {
+    v.push_back(car(args));
+    args = cdr(args);
+  }
+  return Cell(new Cell::Vec(v));
+}
+
+Cell is_zero(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  if (!arg.is_num()) {
+    PSCM_THROW_EXCEPTION("In procedure zero? in expression " + args.to_string());
+  }
+  auto num = arg.to_number();
+  return Cell(num->is_zero());
 }
 
 Cell reverse_argl(Cell argl) {
@@ -431,45 +507,6 @@ Cell reverse_argl(Cell argl) {
     args = cdr(args);
   }
   return p->second;
-}
-
-Cell expand_let(Cell args) {
-  // (let <bindings> <body>)
-  // ((var1 init1) ...)
-  // --->
-  // ((lambda (var1 var2 ...) <body>) (init1 init2 ...))
-  auto bindings = car(args);
-  auto body = cadr(args);
-  auto var_list = cons(nil, nil);
-  auto arg_list = cons(nil, nil);
-  auto p1 = var_list;
-  auto p2 = arg_list;
-  while (!bindings.is_nil()) {
-    auto binding = car(bindings);
-    bindings = cdr(bindings);
-    auto var = car(binding);
-    auto init = cadr(binding);
-    auto t = cons(var, nil);
-    p1->second = t;
-    p1 = t;
-    t = cons(init, nil);
-    p2->second = t;
-    p2 = t;
-  }
-  auto a = cons(lambda, cons(var_list->second, cons(body, nil)));
-  auto b = cons(a, arg_list->second);
-  return b;
-}
-
-Cell expand_let_star(Cell args) {
-  auto bindings = car(args);
-  auto body = cdr(args);
-  if (bindings.is_nil()) {
-    return cons(cons(lambda, cons(nil, body)), nil);
-  }
-  auto arg = cons(car(bindings), nil);
-  auto expanded_body = expand_let_star(cons(cdr(bindings), body));
-  return expand_let(cons(arg, cons(expanded_body, nil)));
 }
 
 Evaluator::Evaluator() {
@@ -828,6 +865,18 @@ void Evaluator::run() {
       reg_.expr = expand_let_star(reg_.unev);
       GOTO(Label::EVAL);
     }
+    case Label::APPLY_LETREC: {
+      PRINT_STEP();
+      reg_.cont = Label::AFTER_APPLY_MACRO;
+      reg_.expr = expand_letrec(reg_.unev);
+      GOTO(Label::EVAL);
+    }
+    case Label::APPLY_CASE: {
+      PRINT_STEP();
+      reg_.cont = Label::AFTER_APPLY_MACRO;
+      reg_.expr = expand_case(reg_.unev);
+      GOTO(Label::EVAL);
+    }
     case Label::AFTER_EVAL_DEFINE_ARG: {
       PRINT_STEP();
       auto val = reg_.val;
@@ -924,37 +973,12 @@ void Evaluator::run() {
     }
     case Label::AFTER_EVAL_COND_TEST: {
       PRINT_STEP();
-      if (!reg_.val.is_bool()) {
-        auto clause = car(reg_.unev);
-        auto tmp = cdr(clause);
-        if (tmp.is_nil()) {
-          PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
-        }
-        SPDLOG_INFO("tmp --> {}", tmp);
-        auto arrow = car(tmp);
-        auto recipient = cadr(tmp);
-        if (!arrow.is_sym()) {
-          PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
-        }
-        if (*arrow.to_symbol() != "=>"_sym) {
-          PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
-        }
-        reg_.expr = cons(recipient, list(list(quote, reg_.val)));
-        reg_.cont = Label::AFTER_APPLY_MACRO;
-        GOTO(Label::EVAL);
-      }
-      PSCM_ASSERT(reg_.val.is_bool());
-      auto pred = reg_.val.to_bool();
-      if (pred) {
-        auto clause = car(reg_.unev);
-        auto expr = cadr(clause);
-        reg_.expr = expr;
-        SPDLOG_INFO("cond expr: {}", reg_.expr);
-        reg_.cont = Label::AFTER_APPLY_MACRO;
-        GOTO(Label::EVAL);
-      }
-      else {
+      if (reg_.val.is_bool() && !reg_.val.to_bool()) {
         reg_.unev = cdr(reg_.unev);
+        if (reg_.unev.is_nil()) {
+          reg_.val = Cell::none();
+          GOTO(Label::AFTER_APPLY_MACRO);
+        }
         auto clause = car(reg_.unev);
         auto test = car(clause);
         if (test.is_sym()) {
@@ -969,6 +993,25 @@ void Evaluator::run() {
         }
         reg_.expr = car(clause);
         reg_.cont = Label::AFTER_EVAL_COND_TEST;
+        GOTO(Label::EVAL);
+      }
+      auto clause = car(reg_.unev);
+      auto tmp = cdr(clause);
+      if (tmp.is_nil()) {
+        PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
+      }
+      auto arrow = car(tmp);
+      if (arrow.is_sym() && *arrow.to_symbol() == "=>"_sym) {
+        auto recipient = cadr(tmp);
+        reg_.expr = cons(recipient, list(list(quote, reg_.val)));
+        reg_.cont = Label::AFTER_APPLY_MACRO;
+        GOTO(Label::EVAL);
+      }
+      else {
+        auto expr = cadr(clause);
+        reg_.expr = expr;
+        SPDLOG_INFO("cond expr: {}", reg_.expr);
+        reg_.cont = Label::AFTER_APPLY_MACRO;
         GOTO(Label::EVAL);
       }
     }
@@ -994,12 +1037,13 @@ void Evaluator::run() {
     }
     case Label::AFTER_EVAL_AND_EXPR: {
       PRINT_STEP();
-      PSCM_ASSERT(reg_.val.is_bool());
-      bool pred = reg_.val.to_bool();
-      if (pred) {
+      if (reg_.val.is_bool() && !reg_.val.to_bool()) {
+        reg_.val = Cell::bool_false();
+        GOTO(Label::AFTER_APPLY_MACRO);
+      }
+      else {
         reg_.unev = cdr(reg_.unev);
         if (reg_.unev.is_nil()) {
-          reg_.val = Cell::bool_true();
           GOTO(Label::AFTER_APPLY_MACRO);
         }
         auto expr = car(reg_.unev);
@@ -1007,20 +1051,10 @@ void Evaluator::run() {
         reg_.cont = Label::AFTER_EVAL_AND_EXPR;
         GOTO(Label::EVAL);
       }
-      else {
-        reg_.val = Cell::bool_false();
-        GOTO(Label::AFTER_APPLY_MACRO);
-      }
     }
     case Label::AFTER_EVAL_OR_EXPR: {
       PRINT_STEP();
-      PSCM_ASSERT(reg_.val.is_bool());
-      bool pred = reg_.val.to_bool();
-      if (pred) {
-        reg_.val = Cell::bool_true();
-        GOTO(Label::AFTER_APPLY_MACRO);
-      }
-      else {
+      if (reg_.val.is_bool() && !reg_.val.to_bool()) {
         reg_.unev = cdr(reg_.unev);
         if (reg_.unev.is_nil()) {
           reg_.val = Cell::bool_false();
@@ -1031,6 +1065,7 @@ void Evaluator::run() {
         reg_.cont = Label::AFTER_EVAL_OR_EXPR;
         GOTO(Label::EVAL);
       }
+      GOTO(Label::AFTER_APPLY_MACRO);
     }
     case Label::AFTER_EVAL_CALL_WITH_VALUES_PRODUCER: {
       PRINT_STEP();
@@ -1048,7 +1083,7 @@ void Evaluator::run() {
     }
     default: {
       SPDLOG_ERROR("Unsupported pos: {}", pos_);
-      PSCM_THROW_EXCEPTION("Unsupported pos: ");
+      PSCM_THROW_EXCEPTION("Unsupported pos: " + to_string(pos_));
     }
     }
   }

@@ -44,11 +44,14 @@ public:
   }
 
   void display() const;
+  [[nodiscard]] std::string to_string() const;
   friend std::ostream& operator<<(std::ostream& out, const Number& num);
   Number operator-(const Number& num);
   Number operator/(const Number& num);
   bool operator<(const Number& num) const;
   bool operator>(const Number& num) const;
+
+  [[nodiscard]] bool is_zero() const;
 
 private:
   std::variant<std::monostate, int64_t, double> data_;

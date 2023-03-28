@@ -19,6 +19,9 @@ Cell Char::from(char ch) {
   else if (ch == '*') {
     return &ch_star;
   }
+  else if (std::isalpha(ch)) {
+    return new Char(std::to_string(ch));
+  }
   else {
     PSCM_THROW_EXCEPTION("unsupported char: "s + ch);
   }
@@ -27,6 +30,10 @@ Cell Char::from(char ch) {
 std::ostream& operator<<(std::ostream& out, const Char& ch) {
   PSCM_ASSERT(!ch.ch_.empty());
   return out << "#\\" << ch.ch_;
+}
+
+bool Char::operator==(const Char& rhs) const {
+  return ch_ == rhs.ch_;
 }
 
 void Char::display() const {

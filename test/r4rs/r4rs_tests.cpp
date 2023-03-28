@@ -276,7 +276,7 @@ TEST_CASE("testing 4.1.6, Assignments") {
   }
 }
 
-TEST_CASE("testing 4.2.1, Conditionals") {
+TEST_CASE("testing 4.2.1, Conditionals, cond") {
   auto f = [](Scheme& scm) {
     Cell ret;
     ret = scm.eval(R"(
@@ -295,6 +295,410 @@ TEST_CASE("testing 4.2.1, Conditionals") {
       (else #f))
 )");
     CHECK(ret == 2);
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing 4.2.1, Conditionals, case") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(case (* 2 3)
+  ((2 3 5 7) 'prime)
+  ((1 4 6 8 9) 'composite))
+)");
+    CHECK(ret == "composite"_sym);
+    ret = scm.eval("(define var 'c)");
+    ret = scm.eval(R"(
+    (cond ((member var '(a)) 'a)
+          ((member var '(b)) 'b))
+    )");
+    CHECK(ret == Cell::none());
+    ret = scm.eval(R"(
+(case (car '(c d))
+  ((a) 'a)
+  ((b) 'b))
+)");
+    CHECK(ret == Cell::none());
+    ret = scm.eval(R"(
+(case (car '(c d))
+  ((a e i o u) 'vowel)
+  ((w y) 'semivowel)
+  (else 'constant))
+)");
+    CHECK(ret == "constant"_sym);
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing 4.2.1, Conditionals, and") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(and (= 2 2) (> 2 1))
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+(and (= 2 2) (< 2 1))
+)");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval("(and 1 2 'c '(f g))");
+    auto f = "f"_sym;
+    auto g = "g"_sym;
+    CHECK(ret == list(&f, &g));
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing 4.2.1, Conditionals, or") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(or (= 2 2) (> 2 1))
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+(or (= 2 2) (< 2 1))
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(or #f #f #f)");
+    CHECK(ret == Cell::bool_false());
+    auto b = "b"_sym;
+    auto c = "c"_sym;
+    ret = scm.eval("(memq 'b '(a b c))");
+    CHECK(ret == list(&b, &c));
+    ret = scm.eval("(or (memq 'b '(a b c)) (/ 3 0))");
+    CHECK(ret == list(&b, &c));
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing 4.2.2, Binding constructs") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(let ((x 2) (y 3))
+  (* x y))
+)");
+    CHECK(ret == 6);
+    ret = scm.eval(R"(
+(let ((x 2) (y 3))
+  (* x y)
+  8)
+)");
+    CHECK(ret == 8);
+    ret = scm.eval(R"(
+(let ((x 2) (y 3))
+  (let ((x 7)
+        (z (+ x y)))
+    (* z x)))
+)");
+    CHECK(ret == 35);
+    ret = scm.eval(R"(
+(let ((x 2) (y 3))
+  (let* ((x 7)
+         (z (+ x y)))
+    (* z x)))
+)");
+    CHECK(ret == 70);
+    ret = scm.eval(R"(
+(letrec ((even?
+          (lambda (n)
+            (if (zero? n)
+                #t
+                (odd? (- n 1)))))
+         (odd?
+          (lambda (n)
+            (if (zero? n)
+                #f
+                (even? (- n 1))))))
+  (even? 88))
+)");
+    CHECK(ret == Cell::bool_true());
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing 5.2, Equivalence predicates, eqv") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval("(eqv? 'a 'a)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(eqv? 'a 'b)");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval("(eqv? 2 2)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(eqv? '() '())");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(eqv? 100000000 100000000)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(eqv? (cons 1 2) (cons 1 2))");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval(R"(
+(eqv? (lambda () 1)
+      (lambda () 2))
+)");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval("(eqv? #f 'nil)");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval(R"(
+(let ((p (lambda (x) x)))
+  (eqv? p p))
+)");
+    CHECK(ret == Cell::bool_true());
+
+    ret = scm.eval(R"(
+(eqv? "" "")
+)");
+    // the following 4 case return unspecified
+    // we follow the guile output #t or #f
+    // CHECK(ret == Cell::none());
+    // guile -> #t
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(eqv? '#() '#())");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval(R"(
+(eqv? (lambda (x) x)
+      (lambda (x) x))
+)");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval(R"(
+(eqv? (lambda (x) x)
+      (lambda (y) y))
+)");
+    CHECK(ret == Cell::bool_false());
+
+    ret = scm.eval(R"(
+(define gen-counter
+  (lambda ()
+    (let ((n 0))
+      (lambda () (set! n (+ n 1)) n))))
+)");
+    ret = scm.eval(R"(
+(let ((g (gen-counter)))
+  (eqv? g g))
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(eqv? (gen-counter) (gen-counter))");
+    CHECK(ret == Cell::bool_false());
+
+    ret = scm.eval(R"(
+(define gen-loser
+  (lambda ()
+    (let ((n 0))
+      (lambda () (set! n (+ n 1)) 27))))
+)");
+    ret = scm.eval(R"(
+(let ((g (gen-loser)))
+  (eqv? g g))
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(eqv? (gen-loser) (gen-loser))");
+    // r4rs -> unspecified
+    // guile -> #f
+    CHECK(ret == Cell::bool_false());
+    // TODO: letrec
+    ret = scm.eval(R"(
+(letrec ((f (lambda () (if (eqv? f g) ’both ’f)))
+	 (g (lambda () (if (eqv? f g) ’both ’g))))
+  (eqv? f g))
+)");
+    // r4rs -> unspecified
+    // guile -> #f
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval(R"(
+(letrec ((f (lambda () (if (eqv? f g) ’f ’both)))
+	 (g (lambda () (if (eqv? f g) ’g ’both))))
+  (eqv? f g))
+)");
+    CHECK(ret == Cell::bool_false());
+    // the following three case return unspecified
+    // while guile return #f
+    ret = scm.eval("(eqv? '(a) '(a))");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval(R"(
+(eqv? "a" "a")
+)");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval("(eqv? '(b) (cdr '(a b)))");
+    CHECK(ret == Cell::bool_false());
+
+    ret = scm.eval(R"(
+(let ((x '(a)))
+  (eqv? x x))
+)");
+    CHECK(ret == Cell::bool_true());
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing 5.2, Equivalence predicates, eq") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval("(eq? 'a 'a)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(eq? '(a) '(a))");
+    // r4rs -> unspecified
+    // guile -> #f
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval("(eq? (list 'a) (list 'a))");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval(R"(
+(eq? "a" "a")
+)");
+    // r4rs -> unspecified
+    // guile -> #f
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval(R"(
+(eq? "" "")
+)");
+    // r4rs -> unspecified
+    // guile -> #t
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(eq? '() '())");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(eq? 2 2)");
+    // r4rs -> unspecified
+    // guile -> #t
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+(eq? #\A #\A)
+)");
+    // r4rs -> unspecified
+    // guile -> #t
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(eq? car car)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+(let ((n (+ 2 3)))
+  (eq? n n))
+)");
+    // r4rs -> unspecified
+    // guile -> #t
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+(let ((x '(a)))
+  (eq? x x))
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+(let ((x '#()))
+  (eq? x x))
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+(let ((p (lambda (x) x)))
+  (eq? p p))
+)");
+    CHECK(ret == Cell::bool_true());
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing 5.2, Equivalence predicates, equal") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(equal? '(a (b) c)
+        '(a (b) c))
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+(equal? 2 2)
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+(equal? (make-vector 5 'a)
+        (make-vector 5 'a))
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+(equal? (lambda (x) x)
+        (lambda (y) y))
+)");
+    CHECK(ret == Cell::bool_false());
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing 6.3, Pairs and lists, memq memv member") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval("(memq 'a '(a b c))");
+    auto a = "a"_sym;
+    auto b = "b"_sym;
+    auto c = "c"_sym;
+    CHECK(ret == list(&a, &b, &c));
+    ret = scm.eval("(memq 'b '(a b c))");
+    CHECK(ret == list(b, c));
+    ret = scm.eval("(memq 'a '(b c d))");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval("(memq (list 'a) '(b (a) c))");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval("(member (list 'a) '(b (a) c))");
+    CHECK(ret == list(list(a), c));
+    ret = scm.eval("(memq 101 '(100 101 102))");
+    // r4rs -> unspecified
+    // guile -> (101 102)
+    CHECK(ret == list(101, 102));
+    ret = scm.eval("(memv 101 '(100 101 102))");
+    CHECK(ret == list(101, 102));
   };
   {
     Scheme scm;

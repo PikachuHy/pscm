@@ -15,6 +15,7 @@ public:
   }
 
   static Cell from(char ch);
+  bool operator==(const Char& rhs) const;
   friend std::ostream& operator<<(std::ostream& out, const Char& ch);
   void display() const;
 
