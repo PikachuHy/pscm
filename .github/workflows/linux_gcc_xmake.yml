@@ -41,5 +41,4 @@ jobs:
           xmake build --jobs=8
 
       - name: Test
-        working-directory: ${{github.workspace}}/build/test
         run: xmake run --group=tests
