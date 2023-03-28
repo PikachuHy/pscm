@@ -295,6 +295,31 @@ TEST_CASE("testing 4.2.1, Conditionals") {
       (else #f))
 )");
     CHECK(ret == 2);
+    ret = scm.eval(R"(
+(case (* 2 3)
+  ((2 3 5 7) 'prime)
+  ((1 4 6 8 9) 'composite))
+)");
+    CHECK(ret == "composite"_sym);
+    ret = scm.eval("(define var 'c)");
+    ret = scm.eval(R"(
+    (cond ((member var '(a)) 'a)
+          ((member var '(b)) 'b))
+    )");
+    CHECK(ret == Cell::none());
+    ret = scm.eval(R"(
+(case (car '(c d))
+  ((a) 'a)
+  ((b) 'b))
+)");
+    CHECK(ret == Cell::none());
+    ret = scm.eval(R"(
+(case (car '(c d))
+  ((a e i o u) 'vowel)
+  ((w y) 'semivowel)
+  (else 'constant))
+)");
+    CHECK(ret == "constant"_sym);
   };
   {
     Scheme scm;

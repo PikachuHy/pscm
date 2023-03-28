@@ -8,6 +8,7 @@
 namespace pscm {
 Cell expand_let(Cell args);
 Cell expand_let_star(Cell args);
+Cell expand_case(Cell args);
 
 class Expander {};
 

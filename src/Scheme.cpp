@@ -78,32 +78,29 @@ Cell scm_cond(Scheme& scm, Cell args) {
       }
     }
     auto ret = scm.eval(test);
-    if (!ret.is_bool()) {
-      auto tmp = cdr(clause);
-      if (tmp.is_nil()) {
-        PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
+    if (ret.is_bool()) {
+      if (!ret.to_bool()) {
+        continue;
       }
-      auto arrow = car(tmp);
+    }
+    auto tmp = cdr(clause);
+    if (tmp.is_nil()) {
+      PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
+    }
+    SPDLOG_INFO("tmp: {}", tmp);
+    auto arrow = car(tmp);
+    if (arrow.is_sym() && *arrow.to_symbol() == "=>"_sym) {
       auto recipient = cadr(tmp);
-      if (!arrow.is_sym()) {
-        PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
-      }
-      if (*arrow.to_symbol() != "=>"_sym) {
-        PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
-      }
       auto f = scm.eval(recipient);
       auto f_args = list(quote, ret);
       return scm.apply(f, list(f_args));
     }
-    PSCM_ASSERT(ret.is_bool());
-    auto pred = ret.to_bool();
-    if (pred) {
+    else {
       return scm.eval(expr);
     }
-    continue;
   }
 
-  return Cell::ex("");
+  return Cell::none();
 }
 
 Cell scm_if(Scheme& scm, Cell args) {
@@ -165,6 +162,22 @@ Cell scm_let_star(Scheme& scm, Cell args) {
   return scm.eval(expr);
 }
 
+bool is_member(Cell item, Cell list) {
+  while (!list.is_nil()) {
+    if (item == car(list)) {
+      return true;
+    }
+    list = cdr(list);
+  }
+  return false;
+}
+
+Cell scm_case(Scheme& scm, Cell args) {
+  auto expr = expand_case(args);
+  auto ret = scm.eval(expr);
+  return ret;
+}
+
 Cell lambda = new Macro("lambda", Label::APPLY_LAMBDA, scm_lambda);
 Cell quote = new Macro("quote", Label::APPLY_QUOTE, scm_quote);
 // TODO: #<primitive-generic for-each>
@@ -197,6 +210,7 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("cadr"), new Function("cadr", proc_cadr));
   env->insert(new Symbol("cdar"), new Function("cdar", proc_cdar));
   env->insert(new Symbol("eqv?"), new Function("eqv?", is_eqv));
+  env->insert(new Symbol("member"), new Function("member", member));
 
   env->insert(new Symbol("define"), new Macro("define", Label::APPLY_DEFINE, scm_define));
   env->insert(new Symbol("cond"), new Macro("cond", Label::APPLY_COND, scm_cond));
@@ -206,6 +220,7 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("set!"), new Macro("set!", Label::APPLY_SET, scm_define));
   env->insert(new Symbol("let"), new Macro("let", Label::APPLY_LET, scm_let));
   env->insert(new Symbol("let*"), new Macro("let*", Label::APPLY_LET_STAR, scm_let_star));
+  env->insert(new Symbol("case"), new Macro("case", Label::APPLY_CASE, scm_case));
   env->insert(new Symbol("quote"), quote);
   env->insert(new Symbol("lambda"), lambda);
   {

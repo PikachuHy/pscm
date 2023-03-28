@@ -13,11 +13,11 @@ class Scheme {
 public:
   Scheme(bool use_register_machine = false);
   ~Scheme();
-  Cell eval(const char *code);
-  Cell eval(Cell expr);
-  Cell lookup(Cell expr);
-  Cell apply(Cell op, Cell args);
-  SymbolTable *cur_env() const;
+  [[nodiscard]] Cell eval(const char *code);
+  [[nodiscard]] Cell eval(Cell expr);
+  [[nodiscard]] Cell lookup(Cell expr);
+  [[nodiscard]] Cell apply(Cell op, Cell args);
+  [[nodiscard]] SymbolTable *cur_env() const;
 
 private:
   friend Cell scm_define(Scheme& scm, Cell args);

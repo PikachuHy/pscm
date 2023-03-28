@@ -30,6 +30,7 @@ Cell proc_cdar(Cell args);
 Cell proc_cadr(Cell args);
 Cell proc_cddr(Cell args);
 Cell is_eqv(Cell args);
+Cell member(Cell args);
 class SymbolTable;
 
 class Evaluator {

@@ -107,7 +107,7 @@ std::ostream& operator<<(std::ostream& out, const Cell& cell) {
     return out << "NIL";
   }
   if (cell.tag_ == Cell::Tag::SYMBOL) {
-    return out << cell.to_symbol()->name();
+    return out << *cell.to_symbol();
   }
   if (cell.tag_ == Cell::Tag::FUNCTION) {
     return out << *cell.to_func();
@@ -370,6 +370,10 @@ std::ostream& operator<<(std::ostream& out, const Label& pos) {
   }
   case Label::APPLY_LET_STAR: {
     out << "APPLY_LET_STAR";
+    break;
+  }
+  case Label::APPLY_CASE: {
+    out << "APPLY_CASE";
     break;
   }
   case Label::AFTER_EVAL_DEFINE_ARG: {
