@@ -81,6 +81,7 @@ public:
   Cell(Macro *f);
   Cell(const Procedure *proc);
   Cell(Continuation *cont);
+  explicit Cell(bool val);
 
   ~Cell() {
     ref_count_--;
@@ -224,6 +225,9 @@ public:
   }
 
   bool is_self_evaluated() const;
+
+  [[nodiscard]] Cell is_eqv(const Cell& rhs) const;
+  [[nodiscard]] Cell is_eq(const Cell& rhs) const;
 
 private:
   Cell(Tag tag, void *data)

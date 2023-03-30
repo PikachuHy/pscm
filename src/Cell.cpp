@@ -81,6 +81,16 @@ Cell::Cell(Continuation *cont) {
   data_ = (void *)cont;
 }
 
+Cell::Cell(bool val) {
+  tag_ = Tag::BOOL;
+  if (val) {
+    data_ = this;
+  }
+  else {
+    data_ = nullptr;
+  }
+}
+
 std::string Cell::to_string() const {
   std::stringstream ss;
   ss << *this;
@@ -174,11 +184,11 @@ std::ostream& operator<<(std::ostream& out, const Cell& cell) {
     out << "#";
     out << "(";
     auto vec = cell.to_vec();
-    for (int i = 0; i < vec->size() - 1; ++i) {
-      out << vec->at(i);
-      out << ", ";
-    }
     if (!vec->empty()) {
+      for (int i = 0; i < vec->size() - 1; ++i) {
+        out << vec->at(i);
+        out << ", ";
+      }
       out << vec->back();
     }
     out << ")";
@@ -213,6 +223,9 @@ bool operator==(const Cell& lhs, const Cell& rhs) {
   case Cell::Tag::STRING: {
     return *lhs.to_str() == *rhs.to_str();
   }
+  case Cell::Tag::CHAR: {
+    return *lhs.to_char() == *rhs.to_char();
+  }
   case Cell::Tag::BOOL: {
     return lhs.to_bool() == rhs.to_bool();
   }
@@ -223,7 +236,7 @@ bool operator==(const Cell& lhs, const Cell& rhs) {
     return *lhs.to_vec() == *rhs.to_vec();
   }
   default: {
-    return false;
+    return lhs.data_ == rhs.data_;
   }
   }
 }
@@ -453,6 +466,36 @@ bool Cell::is_self_evaluated() const {
     return false;
   }
   }
+}
+
+Cell Cell::is_eqv(const Cell& rhs) const {
+  if (tag_ != rhs.tag_) {
+    return Cell::bool_false();
+  }
+  if (tag_ == Tag::SYMBOL) {
+    return Cell(*to_symbol() == *rhs.to_symbol());
+  }
+  else if (tag_ == Tag::NUMBER) {
+    return Cell(*to_number() == *rhs.to_number());
+  }
+  else if (tag_ == Tag::CHAR) {
+    return Cell(*to_char() == *rhs.to_char());
+  }
+  else if (tag_ == Tag::STRING) {
+    return Cell(to_str()->empty() && rhs.to_str()->empty());
+  }
+
+  bool eq = (data_ == rhs.data_);
+  if (eq) {
+    return Cell::bool_true();
+  }
+  else {
+    return Cell::bool_false();
+  }
+}
+
+Cell Cell::is_eq(const pscm::Cell& rhs) const {
+  return is_eqv(rhs);
 }
 
 std::string SourceLocation::to_string() const {

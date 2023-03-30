@@ -24,13 +24,17 @@ Cell create_list(Cell args);
 Cell is_list(Cell args);
 Cell set_cdr(Cell args);
 Cell assv(Cell args);
+Cell proc_cons(Cell args);
 Cell proc_car(Cell args);
 Cell proc_cdr(Cell args);
 Cell proc_cdar(Cell args);
 Cell proc_cadr(Cell args);
 Cell proc_cddr(Cell args);
 Cell is_eqv(Cell args);
+Cell is_eq(Cell args);
+Cell is_equal(Cell args);
 Cell member(Cell args);
+Cell make_vector(Cell args);
 class SymbolTable;
 
 class Evaluator {

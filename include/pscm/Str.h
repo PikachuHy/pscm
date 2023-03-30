@@ -14,6 +14,10 @@ public:
       : data_(std::move(data)) {
   }
 
+  [[nodiscard]] bool empty() const {
+    return data_.empty();
+  }
+
   void display() const;
   friend std::ostream& operator<<(std::ostream& os, const String& s);
   bool operator==(const String& rhs) const;

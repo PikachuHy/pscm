@@ -121,19 +121,16 @@ Cell scm_if(Scheme& scm, Cell args) {
 }
 
 Cell scm_and(Scheme& scm, Cell args) {
+  Cell pred = Cell::bool_true();
   while (!args.is_nil()) {
     auto expr = car(args);
     args = cdr(args);
-    auto pred = scm.eval(expr);
-    PSCM_ASSERT(pred.is_bool());
-    if (pred.to_bool()) {
-      continue;
-    }
-    else {
+    pred = scm.eval(expr);
+    if (pred.is_bool() && !pred.to_bool()) {
       return Cell::bool_false();
     }
   }
-  return Cell::bool_true();
+  return pred;
 }
 
 Cell scm_or(Scheme& scm, Cell args) {
@@ -205,12 +202,16 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("list?"), new Function("list?", is_list));
   env->insert(new Symbol("set-cdr!"), new Function("set-cdr!", set_cdr));
   env->insert(new Symbol("assv"), new Function("assv", assv));
+  env->insert(new Symbol("cons"), new Function("car", proc_cons));
   env->insert(new Symbol("car"), new Function("car", proc_car));
   env->insert(new Symbol("cdr"), new Function("cdr", proc_cdr));
   env->insert(new Symbol("cadr"), new Function("cadr", proc_cadr));
   env->insert(new Symbol("cdar"), new Function("cdar", proc_cdar));
   env->insert(new Symbol("eqv?"), new Function("eqv?", is_eqv));
+  env->insert(new Symbol("eq?"), new Function("eqv?", is_eq));
+  env->insert(new Symbol("equal?"), new Function("equal?", is_equal));
   env->insert(new Symbol("member"), new Function("member", member));
+  env->insert(new Symbol("make-vector"), new Function("make-vector", make_vector));
 
   env->insert(new Symbol("define"), new Macro("define", Label::APPLY_DEFINE, scm_define));
   env->insert(new Symbol("cond"), new Macro("cond", Label::APPLY_COND, scm_cond));
@@ -305,7 +306,7 @@ Cell Scheme::lookup(Cell expr) {
 }
 
 Cell Scheme::apply(Cell op, Cell args) {
-  SPDLOG_INFO("apply op: {}", op.to_string());
+  SPDLOG_INFO("apply op: {}, {}", op.to_string(), args.to_string());
   if (op.is_func()) {
     PSCM_ASSERT(args.is_pair());
     SPDLOG_INFO("apply args: {}", args.to_string());
@@ -331,7 +332,7 @@ Cell Scheme::apply(Cell op, Cell args) {
     return f->call(*this, args);
   }
   if (op.is_proc()) {
-    PSCM_ASSERT(args.is_pair());
+    PSCM_ASSERT(args.is_pair() || args.is_nil());
     SPDLOG_INFO("apply args: {}", args.to_string());
     // eval each arg
     auto ret = cons(nil, nil);

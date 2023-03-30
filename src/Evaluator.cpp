@@ -387,6 +387,12 @@ Cell assv(Cell args) {
   return Cell::none();
 }
 
+Cell proc_cons(Cell args) {
+  auto a = car(args);
+  auto b = cadr(args);
+  return cons(a, b);
+}
+
 Cell proc_car(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
@@ -421,7 +427,21 @@ Cell is_eqv(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto obj1 = car(args);
   auto obj2 = cadr(args);
-  return obj1 == obj2 ? Cell::bool_true() : Cell::bool_false();
+  return obj1.is_eqv(obj2);
+}
+
+Cell is_eq(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto obj1 = car(args);
+  auto obj2 = cadr(args);
+  return obj1.is_eq(obj2);
+}
+
+Cell is_equal(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto obj1 = car(args);
+  auto obj2 = cadr(args);
+  return (obj1 == obj2) ? Cell::bool_true() : Cell::bool_false();
 }
 
 Cell member(Cell args) {
@@ -434,6 +454,15 @@ Cell member(Cell args) {
     list = cdr(list);
   }
   return Cell::bool_false();
+}
+
+Cell make_vector(Cell args) {
+  Cell::Vec v;
+  while (!args.is_nil()) {
+    v.push_back(car(args));
+    args = cdr(args);
+  }
+  return Cell(new Cell::Vec(v));
 }
 
 Cell reverse_argl(Cell argl) {
@@ -1007,22 +1036,19 @@ void Evaluator::run() {
     }
     case Label::AFTER_EVAL_AND_EXPR: {
       PRINT_STEP();
-      PSCM_ASSERT(reg_.val.is_bool());
-      bool pred = reg_.val.to_bool();
-      if (pred) {
+      if (reg_.val.is_bool() && !reg_.val.to_bool()) {
+        reg_.val = Cell::bool_false();
+        GOTO(Label::AFTER_APPLY_MACRO);
+      }
+      else {
         reg_.unev = cdr(reg_.unev);
         if (reg_.unev.is_nil()) {
-          reg_.val = Cell::bool_true();
           GOTO(Label::AFTER_APPLY_MACRO);
         }
         auto expr = car(reg_.unev);
         reg_.expr = expr;
         reg_.cont = Label::AFTER_EVAL_AND_EXPR;
         GOTO(Label::EVAL);
-      }
-      else {
-        reg_.val = Cell::bool_false();
-        GOTO(Label::AFTER_APPLY_MACRO);
       }
     }
     case Label::AFTER_EVAL_OR_EXPR: {
