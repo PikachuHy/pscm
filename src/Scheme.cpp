@@ -210,6 +210,8 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("eqv?"), new Function("eqv?", is_eqv));
   env->insert(new Symbol("eq?"), new Function("eqv?", is_eq));
   env->insert(new Symbol("equal?"), new Function("equal?", is_equal));
+  env->insert(new Symbol("memq"), new Function("memq", memq));
+  env->insert(new Symbol("memv"), new Function("memv", memv));
   env->insert(new Symbol("member"), new Function("member", member));
   env->insert(new Symbol("make-vector"), new Function("make-vector", make_vector));
 

@@ -33,6 +33,8 @@ Cell proc_cddr(Cell args);
 Cell is_eqv(Cell args);
 Cell is_eq(Cell args);
 Cell is_equal(Cell args);
+Cell memq(Cell args);
+Cell memv(Cell args);
 Cell member(Cell args);
 Cell make_vector(Cell args);
 class SymbolTable;

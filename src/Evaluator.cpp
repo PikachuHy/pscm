@@ -444,6 +444,30 @@ Cell is_equal(Cell args) {
   return (obj1 == obj2) ? Cell::bool_true() : Cell::bool_false();
 }
 
+Cell memq(Cell args) {
+  auto obj = car(args);
+  auto list = cadr(args);
+  while (!list.is_nil()) {
+    if (obj.is_eq(car(list)).to_bool()) {
+      return list;
+    }
+    list = cdr(list);
+  }
+  return Cell::bool_false();
+}
+
+Cell memv(Cell args) {
+  auto obj = car(args);
+  auto list = cadr(args);
+  while (!list.is_nil()) {
+    if (obj.is_eqv(car(list)).to_bool()) {
+      return list;
+    }
+    list = cdr(list);
+  }
+  return Cell::bool_false();
+}
+
 Cell member(Cell args) {
   auto obj = car(args);
   auto list = cadr(args);

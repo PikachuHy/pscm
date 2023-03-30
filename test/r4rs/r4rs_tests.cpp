@@ -555,6 +555,39 @@ TEST_CASE("testing 5.2, Equivalence predicates, equal") {
   }
 }
 
+TEST_CASE("testing 6.3, Pairs and lists, memq memv member") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval("(memq 'a '(a b c))");
+    auto a = "a"_sym;
+    auto b = "b"_sym;
+    auto c = "c"_sym;
+    CHECK(ret == list(&a, &b, &c));
+    ret = scm.eval("(memq 'b '(a b c))");
+    CHECK(ret == list(b, c));
+    ret = scm.eval("(memq 'a '(b c d))");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval("(memq (list 'a) '(b (a) c))");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval("(member (list 'a) '(b (a) c))");
+    CHECK(ret == list(list(a), c));
+    ret = scm.eval("(memq 101 '(100 101 102))");
+    // r4rs -> unspecified
+    // guile -> (101 102)
+    CHECK(ret == list(101, 102));
+    ret = scm.eval("(memv 101 '(100 101 102))");
+    CHECK(ret == list(101, 102));
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
 TEST_CASE("testing 6.3, Pairs and lists") {
   auto f = [](Scheme& scm) {
     Cell ret;
