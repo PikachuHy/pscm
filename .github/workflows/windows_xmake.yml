@@ -1,0 +1,48 @@
+name: Windows (xmake)
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build_with_cmake:
+    runs-on: windows-2022
+
+    strategy:
+      matrix:
+        # FIXME: Debug Assertion failed: string subscript out of range
+        # mode: [ Debug, Release ]
+        mode: [ Release ]
+        arch: [ x86, x64 ]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Enable Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1.12.0
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: cache xmake
+        uses: actions/cache@v2
+        with:
+          path: |
+            ${{github.workspace}}/build/.build_cache
+            C:\Users\runneradmin\AppData\Local\.xmake
+          key: ${{ runner.os }}-xmake-${{ hashFiles('**/xmake.lua') }}
+          
+      - uses: xmake-io/github-action-setup-xmake@v1
+        with:
+          xmake-version: v2.7.7
+          actions-cache-folder: '.xmake-cache'
+
+      - name: Build
+        run: |
+          xmake config --yes --mode=${{matrix.mode}} --arch=${{matrix.arch}}
+          xmake build --jobs=8
+
+      - name: Test
+        run: xmake run --group=tests
+
