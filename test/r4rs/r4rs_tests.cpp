@@ -345,6 +345,62 @@ TEST_CASE("testing 4.2.1, Conditionals, case") {
   }
 }
 
+TEST_CASE("testing 4.2.1, Conditionals, and") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(and (= 2 2) (> 2 1))
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+(and (= 2 2) (< 2 1))
+)");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval("(and 1 2 'c '(f g))");
+    auto f = "f"_sym;
+    auto g = "g"_sym;
+    CHECK(ret == list(&f, &g));
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing 4.2.1, Conditionals, or") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(or (= 2 2) (> 2 1))
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+(or (= 2 2) (< 2 1))
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(or #f #f #f)");
+    CHECK(ret == Cell::bool_false());
+    auto b = "b"_sym;
+    auto c = "c"_sym;
+    ret = scm.eval("(memq 'b '(a b c))");
+    CHECK(ret == list(&b, &c));
+    ret = scm.eval("(or (memq 'b '(a b c)) (/ 3 0))");
+    CHECK(ret == list(&b, &c));
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
 TEST_CASE("testing 5.2, Equivalence predicates, eqv") {
   auto f = [](Scheme& scm) {
     Cell ret;

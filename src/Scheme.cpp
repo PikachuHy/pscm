@@ -134,19 +134,17 @@ Cell scm_and(Scheme& scm, Cell args) {
 }
 
 Cell scm_or(Scheme& scm, Cell args) {
+  Cell pred = Cell::bool_false();
   while (!args.is_nil()) {
     auto expr = car(args);
     args = cdr(args);
-    auto pred = scm.eval(expr);
-    PSCM_ASSERT(pred.is_bool());
-    if (pred.to_bool()) {
-      return Cell::bool_true();
-    }
-    else {
+    pred = scm.eval(expr);
+    if (pred.is_bool() && !pred.to_bool()) {
       continue;
     }
+    return pred;
   }
-  return Cell::bool_false();
+  return pred;
 }
 
 Cell scm_let(Scheme& scm, Cell args) {

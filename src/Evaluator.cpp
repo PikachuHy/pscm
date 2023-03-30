@@ -1077,13 +1077,7 @@ void Evaluator::run() {
     }
     case Label::AFTER_EVAL_OR_EXPR: {
       PRINT_STEP();
-      PSCM_ASSERT(reg_.val.is_bool());
-      bool pred = reg_.val.to_bool();
-      if (pred) {
-        reg_.val = Cell::bool_true();
-        GOTO(Label::AFTER_APPLY_MACRO);
-      }
-      else {
+      if (reg_.val.is_bool() && !reg_.val.to_bool()) {
         reg_.unev = cdr(reg_.unev);
         if (reg_.unev.is_nil()) {
           reg_.val = Cell::bool_false();
@@ -1094,6 +1088,7 @@ void Evaluator::run() {
         reg_.cont = Label::AFTER_EVAL_OR_EXPR;
         GOTO(Label::EVAL);
       }
+      GOTO(Label::AFTER_APPLY_MACRO);
     }
     case Label::AFTER_EVAL_CALL_WITH_VALUES_PRODUCER: {
       PRINT_STEP();
