@@ -157,6 +157,12 @@ Cell scm_let_star(Scheme& scm, Cell args) {
   return scm.eval(expr);
 }
 
+Cell scm_letrec(Scheme& scm, Cell args) {
+  auto expr = expand_letrec(args);
+  SPDLOG_INFO("letrec: {}", expr);
+  return scm.eval(expr);
+}
+
 bool is_member(Cell item, Cell list) {
   while (!list.is_nil()) {
     if (item == car(list)) {
@@ -212,6 +218,7 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("memv"), new Function("memv", memv));
   env->insert(new Symbol("member"), new Function("member", member));
   env->insert(new Symbol("make-vector"), new Function("make-vector", make_vector));
+  env->insert(new Symbol("zero?"), new Function("zero?", is_zero));
 
   env->insert(new Symbol("define"), new Macro("define", Label::APPLY_DEFINE, scm_define));
   env->insert(new Symbol("cond"), new Macro("cond", Label::APPLY_COND, scm_cond));
@@ -221,6 +228,7 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("set!"), new Macro("set!", Label::APPLY_SET, scm_define));
   env->insert(new Symbol("let"), new Macro("let", Label::APPLY_LET, scm_let));
   env->insert(new Symbol("let*"), new Macro("let*", Label::APPLY_LET_STAR, scm_let_star));
+  env->insert(new Symbol("letrec"), new Macro("letrec", Label::APPLY_LETREC, scm_letrec));
   env->insert(new Symbol("case"), new Macro("case", Label::APPLY_CASE, scm_case));
   env->insert(new Symbol("quote"), quote);
   env->insert(new Symbol("lambda"), lambda);

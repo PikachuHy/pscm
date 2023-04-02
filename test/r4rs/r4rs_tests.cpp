@@ -401,6 +401,59 @@ TEST_CASE("testing 4.2.1, Conditionals, or") {
   }
 }
 
+TEST_CASE("testing 4.2.2, Binding constructs") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(let ((x 2) (y 3))
+  (* x y))
+)");
+    CHECK(ret == 6);
+    ret = scm.eval(R"(
+(let ((x 2) (y 3))
+  (* x y)
+  8)
+)");
+    CHECK(ret == 8);
+    ret = scm.eval(R"(
+(let ((x 2) (y 3))
+  (let ((x 7)
+        (z (+ x y)))
+    (* z x)))
+)");
+    CHECK(ret == 35);
+    ret = scm.eval(R"(
+(let ((x 2) (y 3))
+  (let* ((x 7)
+         (z (+ x y)))
+    (* z x)))
+)");
+    CHECK(ret == 70);
+    ret = scm.eval(R"(
+(letrec ((even?
+          (lambda (n)
+            (if (zero? n)
+                #t
+                (odd? (- n 1)))))
+         (odd?
+          (lambda (n)
+            (if (zero? n)
+                #f
+                (even? (- n 1))))))
+  (even? 88))
+)");
+    CHECK(ret == Cell::bool_true());
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
 TEST_CASE("testing 5.2, Equivalence predicates, eqv") {
   auto f = [](Scheme& scm) {
     Cell ret;

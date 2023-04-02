@@ -489,6 +489,16 @@ Cell make_vector(Cell args) {
   return Cell(new Cell::Vec(v));
 }
 
+Cell is_zero(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  if (!arg.is_num()) {
+    PSCM_THROW_EXCEPTION("In procedure zero? in expression " + args.to_string());
+  }
+  auto num = arg.to_number();
+  return Cell(num->is_zero());
+}
+
 Cell reverse_argl(Cell argl) {
   auto p = cons(nil, nil);
   auto args = argl;
@@ -497,45 +507,6 @@ Cell reverse_argl(Cell argl) {
     args = cdr(args);
   }
   return p->second;
-}
-
-Cell expand_let(Cell args) {
-  // (let <bindings> <body>)
-  // ((var1 init1) ...)
-  // --->
-  // ((lambda (var1 var2 ...) <body>) (init1 init2 ...))
-  auto bindings = car(args);
-  auto body = cadr(args);
-  auto var_list = cons(nil, nil);
-  auto arg_list = cons(nil, nil);
-  auto p1 = var_list;
-  auto p2 = arg_list;
-  while (!bindings.is_nil()) {
-    auto binding = car(bindings);
-    bindings = cdr(bindings);
-    auto var = car(binding);
-    auto init = cadr(binding);
-    auto t = cons(var, nil);
-    p1->second = t;
-    p1 = t;
-    t = cons(init, nil);
-    p2->second = t;
-    p2 = t;
-  }
-  auto a = cons(lambda, cons(var_list->second, cons(body, nil)));
-  auto b = cons(a, arg_list->second);
-  return b;
-}
-
-Cell expand_let_star(Cell args) {
-  auto bindings = car(args);
-  auto body = cdr(args);
-  if (bindings.is_nil()) {
-    return cons(cons(lambda, cons(nil, body)), nil);
-  }
-  auto arg = cons(car(bindings), nil);
-  auto expanded_body = expand_let_star(cons(cdr(bindings), body));
-  return expand_let(cons(arg, cons(expanded_body, nil)));
 }
 
 Evaluator::Evaluator() {
@@ -894,6 +865,12 @@ void Evaluator::run() {
       reg_.expr = expand_let_star(reg_.unev);
       GOTO(Label::EVAL);
     }
+    case Label::APPLY_LETREC: {
+      PRINT_STEP();
+      reg_.cont = Label::AFTER_APPLY_MACRO;
+      reg_.expr = expand_letrec(reg_.unev);
+      GOTO(Label::EVAL);
+    }
     case Label::APPLY_CASE: {
       PRINT_STEP();
       reg_.cont = Label::AFTER_APPLY_MACRO;
@@ -1106,7 +1083,7 @@ void Evaluator::run() {
     }
     default: {
       SPDLOG_ERROR("Unsupported pos: {}", pos_);
-      PSCM_THROW_EXCEPTION("Unsupported pos: ");
+      PSCM_THROW_EXCEPTION("Unsupported pos: " + to_string(pos_));
     }
     }
   }

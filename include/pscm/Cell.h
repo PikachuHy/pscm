@@ -46,6 +46,7 @@ enum class Label {
   APPLY_SET,
   APPLY_LET,
   APPLY_LET_STAR,
+  APPLY_LETREC,
   APPLY_LAMBDA,
   APPLY_QUOTE,
   APPLY_FOR_EACH,
@@ -59,6 +60,7 @@ enum class Label {
   AFTER_EVAL_OR_EXPR,
   AFTER_EVAL_CALL_WITH_VALUES_PRODUCER,
 };
+std::string to_string(Label label);
 std::ostream& operator<<(std::ostream& out, const Label& pos);
 
 class Cell {

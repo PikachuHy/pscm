@@ -37,6 +37,7 @@ Cell memq(Cell args);
 Cell memv(Cell args);
 Cell member(Cell args);
 Cell make_vector(Cell args);
+Cell is_zero(Cell args);
 class SymbolTable;
 
 class Evaluator {

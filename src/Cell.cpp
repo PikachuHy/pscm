@@ -279,6 +279,12 @@ bool operator==(const Cell& lhs, const Cell::Vec& rhs) {
   //  return *val == rhs;
 }
 
+std::string to_string(Label label) {
+  std::stringstream ss;
+  ss << label;
+  return ss.str();
+}
+
 std::ostream& operator<<(std::ostream& out, const Label& pos) {
   switch (pos) {
   case Label::EVAL: {
@@ -383,6 +389,10 @@ std::ostream& operator<<(std::ostream& out, const Label& pos) {
   }
   case Label::APPLY_LET_STAR: {
     out << "APPLY_LET_STAR";
+    break;
+  }
+  case Label::APPLY_LETREC: {
+    out << "APPLY_LETREC";
     break;
   }
   case Label::APPLY_CASE: {
