@@ -533,7 +533,20 @@ TEST_CASE("testing 5.2, Equivalence predicates, eqv") {
     // guile -> #f
     CHECK(ret == Cell::bool_false());
     // TODO: letrec
-
+    ret = scm.eval(R"(
+(letrec ((f (lambda () (if (eqv? f g) ’both ’f)))
+	 (g (lambda () (if (eqv? f g) ’both ’g))))
+  (eqv? f g))
+)");
+    // r4rs -> unspecified
+    // guile -> #f
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval(R"(
+(letrec ((f (lambda () (if (eqv? f g) ’f ’both)))
+	 (g (lambda () (if (eqv? f g) ’g ’both))))
+  (eqv? f g))
+)");
+    CHECK(ret == Cell::bool_false());
     // the following three case return unspecified
     // while guile return #f
     ret = scm.eval("(eqv? '(a) '(a))");
