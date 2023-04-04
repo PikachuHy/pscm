@@ -15,12 +15,17 @@ public:
   ~Scheme();
   [[nodiscard]] Cell eval(const char *code);
   [[nodiscard]] Cell eval(Cell expr);
-  [[nodiscard]] Cell lookup(Cell expr);
-  [[nodiscard]] Cell apply(Cell op, Cell args);
-  [[nodiscard]] SymbolTable *cur_env() const;
 
 private:
-  friend Cell scm_define(Scheme& scm, Cell args);
+  [[nodiscard]] Cell eval(SymbolTable *env, Cell expr);
+  [[nodiscard]] Cell eval_args(SymbolTable *env, Cell args);
+  [[nodiscard]] Cell lookup(SymbolTable *env, Cell expr, SourceLocation loc = {});
+  friend Cell scm_define(Scheme& scm, SymbolTable *env, Cell args);
+  friend Cell scm_set(Scheme& scm, SymbolTable *env, Cell args);
+  friend Cell scm_cond(Scheme& scm, SymbolTable *env, Cell args);
+  friend Cell scm_if(Scheme& scm, SymbolTable *env, Cell args);
+  friend Cell scm_and(Scheme& scm, SymbolTable *env, Cell args);
+  friend Cell scm_or(Scheme& scm, SymbolTable *env, Cell args);
   std::vector<SymbolTable *> envs_;
   bool use_register_machine_;
 };

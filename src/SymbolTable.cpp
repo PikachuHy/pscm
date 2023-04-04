@@ -37,15 +37,15 @@ Cell SymbolTable::get(Symbol *sym, SourceLocation loc) const {
   PSCM_THROW_EXCEPTION(loc.to_string() + ", Unbound variable: "s + std::string(sym->name()));
 }
 
-Cell SymbolTable::get_or(Symbol *sym, Cell default_value) const {
+Cell SymbolTable::get_or(Symbol *sym, Cell default_value, SourceLocation loc) const {
   PSCM_ASSERT(sym);
   if (map_.contains(sym->name())) {
     return map_.at(sym->name());
   }
   if (parent_) {
-    return parent_->get_or(sym, default_value);
+    return parent_->get_or(sym, default_value, loc);
   }
-  PSCM_THROW_EXCEPTION("Unbound variable: "s + std::string(sym->name()));
+  PSCM_THROW_EXCEPTION(loc.to_string() + ", Unbound variable: "s + std::string(sym->name()));
 }
 
 void SymbolTable::set(Symbol *sym, Cell value, SourceLocation loc) {

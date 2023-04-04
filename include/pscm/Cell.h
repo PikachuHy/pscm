@@ -12,6 +12,7 @@ class Number;
 class Char;
 class String;
 class Symbol;
+class SymbolTable;
 class Pair;
 class Procedure;
 class Function;
@@ -66,7 +67,7 @@ std::ostream& operator<<(std::ostream& out, const Label& pos);
 class Cell {
 public:
   typedef Cell (*ScmFunc)(Cell);
-  typedef Cell (*ScmMacro)(Scheme&, Cell);
+  typedef Cell (*ScmMacro)(Scheme&, SymbolTable *, Cell);
   using Vec = std::vector<Cell>;
 
   Cell() {

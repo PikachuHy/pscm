@@ -402,32 +402,33 @@ TEST_CASE("testing 4.2.1, Conditionals, or") {
 }
 
 TEST_CASE("testing 4.2.2, Binding constructs") {
+
   auto f = [](Scheme& scm) {
     Cell ret;
     ret = scm.eval(R"(
-(let ((x 2) (y 3))
-  (* x y))
-)");
+    (let ((x 2) (y 3))
+      (* x y))
+    )");
     CHECK(ret == 6);
     ret = scm.eval(R"(
-(let ((x 2) (y 3))
-  (* x y)
-  8)
-)");
+    (let ((x 2) (y 3))
+      (* x y)
+      8)
+    )");
     CHECK(ret == 8);
     ret = scm.eval(R"(
-(let ((x 2) (y 3))
-  (let ((x 7)
-        (z (+ x y)))
-    (* z x)))
-)");
+    (let ((x 2) (y 3))
+      (let ((x 7)
+            (z (+ x y)))
+        (* z x)))
+    )");
     CHECK(ret == 35);
     ret = scm.eval(R"(
-(let ((x 2) (y 3))
-  (let* ((x 7)
-         (z (+ x y)))
-    (* z x)))
-)");
+    (let ((x 2) (y 3))
+      (let* ((x 7)
+             (z (+ x y)))
+        (* z x)))
+    )");
     CHECK(ret == 70);
     ret = scm.eval(R"(
 (letrec ((even?
@@ -443,6 +444,15 @@ TEST_CASE("testing 4.2.2, Binding constructs") {
   (even? 88))
 )");
     CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+    (letrec ((fib (lambda (n)
+                (cond ((zero? n) 1)
+                      ((= 1 n) 1)
+                      (else  (+ (fib (- n 1))
+    			    (fib (- n 2))))))))
+        (fib 10))
+    )");
+    CHECK(ret == 89);
   };
   {
     Scheme scm;

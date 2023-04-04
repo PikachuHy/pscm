@@ -7,6 +7,7 @@
 #include "pscm/Number.h"
 #include "pscm/Pair.h"
 #include "pscm/Symbol.h"
+#include "pscm/common_def.h"
 #include <spdlog/spdlog.h>
 
 namespace pscm {
@@ -51,6 +52,39 @@ Cell list(T t, Args... args) {
 }
 
 Cell reverse_argl(Cell argl);
+
+Cell map(auto f, Cell list, SourceLocation loc = {}) {
+  auto ret = cons(nil, nil);
+  auto p = ret;
+  while (!list.is_nil()) {
+    auto item = car(list);
+    auto val = f(item, loc);
+    auto new_item = cons(val, nil);
+    p->second = new_item;
+    p = new_item;
+    auto l = cdr(list);
+    list = l;
+  }
+  return ret->second;
+}
+
+Cell map(auto f, Cell list1, Cell list2, SourceLocation loc = {}) {
+  auto ret = cons(nil, nil);
+  auto p = ret;
+  while ((!list1.is_nil() && !list2.is_nil())) {
+    auto item1 = car(list1);
+    auto item2 = car(list2);
+    auto val = f(item1, item2, loc);
+    auto new_item = cons(val, nil);
+    p->second = new_item;
+    p = new_item;
+    list1 = cdr(list1);
+    list2 = cdr(list2);
+  }
+  PSCM_ASSERT(list1.is_nil() && list2.is_nil());
+  return ret->second;
+}
+
 } // namespace pscm
 
 template <>

@@ -522,7 +522,7 @@ Cell Evaluator::eval(Cell expr, SymbolTable *env) {
 
 void Evaluator::run() {
   while (true) {
-    if (step_ > 5000) {
+    if (step_ > 10000) {
       PSCM_THROW_EXCEPTION("evaluator terminate due to reach max step: " + std::to_string(step_));
     }
     step_++;

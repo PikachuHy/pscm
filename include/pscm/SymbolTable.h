@@ -19,7 +19,7 @@ public:
   void insert(Symbol *sym, Cell cell);
   bool remove(Symbol *sym);
   Cell get(Symbol *sym, SourceLocation loc = {}) const;
-  Cell get_or(Symbol *sym, Cell default_value) const;
+  Cell get_or(Symbol *sym, Cell default_value, SourceLocation loc = {}) const;
   void set(Symbol *sym, Cell value, SourceLocation loc = {});
 
   SymbolTable *parent() const {
