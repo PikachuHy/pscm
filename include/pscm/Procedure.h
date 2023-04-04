@@ -21,8 +21,12 @@ public:
 
   friend std::ostream& operator<<(std::ostream& out, const Procedure& proc);
 
-  Cell args() const {
+  [[nodiscard]] Cell args() const {
     return args_;
+  }
+
+  [[nodiscard]] Cell body() const {
+    return body_;
   }
 
   Cell call(Scheme& scm, Cell args) const;

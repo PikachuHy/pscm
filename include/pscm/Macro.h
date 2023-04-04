@@ -12,16 +12,32 @@ class Scheme;
 
 class Macro {
 public:
+  Macro(std::string name, Label pos)
+      : name_(std::move(name))
+      , pos_(pos) {
+  }
+
   Macro(std::string name, Label pos, Cell::ScmMacro f)
       : name_(std::move(name))
       , pos_(pos)
       , f_(f) {
   }
 
-  Cell call(Scheme& scm, Cell args);
+  Macro(std::string name, Label pos, Cell::ScmFunc f)
+      : name_(std::move(name))
+      , pos_(pos)
+      , f_(f) {
+  }
 
-  Label pos() const {
+  [[nodiscard]] Cell call(Scheme& scm, SymbolTable *env, Cell args);
+  [[nodiscard]] Cell call(Cell args);
+
+  [[nodiscard]] Label pos() const {
     return pos_;
+  }
+
+  bool is_func() const {
+    return f_.index() == 2;
   }
 
   friend std::ostream& operator<<(std::ostream& out, const Macro& macro);
@@ -29,7 +45,7 @@ public:
 private:
   std::string name_;
   Label pos_;
-  std::variant<std::monostate, Cell::ScmMacro> f_;
+  std::variant<std::monostate, Cell::ScmMacro, Cell::ScmFunc> f_;
 };
 
 } // namespace pscm

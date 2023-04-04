@@ -6,10 +6,16 @@
 #include "pscm/common_def.h"
 
 namespace pscm {
-Cell Macro::call(Scheme& scm, Cell args) {
+Cell Macro::call(Scheme& scm, SymbolTable *env, Cell args) {
   PSCM_ASSERT(f_.index() == 1);
   auto f = std::get<1>(f_);
-  return (*f)(scm, args);
+  return (*f)(scm, env, args);
+}
+
+Cell Macro::call(Cell args) {
+  PSCM_ASSERT(f_.index() == 2);
+  auto f = std::get<2>(f_);
+  return (*f)(args);
 }
 
 std::ostream& operator<<(std::ostream& out, const Macro& macro) {

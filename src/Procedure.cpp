@@ -4,6 +4,7 @@
 
 #include "pscm/Procedure.h"
 #include "pscm/Exception.h"
+#include "pscm/Expander.h"
 #include "pscm/Pair.h"
 #include "pscm/Scheme.h"
 #include "pscm/Symbol.h"
