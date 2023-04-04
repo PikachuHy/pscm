@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  build_with_clang:
     strategy:
       matrix:
         mode: [ Release, Debug ]

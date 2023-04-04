@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build:
+  build_with_xmake_and_clang:
     strategy:
       matrix:
         mode: [ debug, release ]

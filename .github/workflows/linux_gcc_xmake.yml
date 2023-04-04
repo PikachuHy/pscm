@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build_with_gcc:
+  build_with_xmake_and_gcc:
     strategy:
       matrix:
         gcc_version: [ 10, 11, 12 ]

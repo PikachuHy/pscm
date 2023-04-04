@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build_with_cmake:
+  build_on_windows:
     runs-on: windows-2022
 
     strategy:

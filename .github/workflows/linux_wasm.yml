@@ -1,0 +1,52 @@
+name: Linux WASM
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+env:
+  EM_VERSION: 3.1.33
+  EM_CACHE_FOLDER: 'emsdk-cache'
+jobs:
+  build_on_wasm:
+    strategy:
+      matrix:
+        mode: [ Release, Debug ]
+    runs-on: [ ubuntu-22.04 ]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Clone Deps
+        run: git submodule update --init
+        working-directory: ${{github.workspace}}
+
+      - name: Setup cache
+        id: cache-system-libraries
+        uses: actions/cache@v2
+        with:
+          path: ${{env.EM_CACHE_FOLDER}}
+          key: ${{env.EM_VERSION}}-${{ runner.os }}
+
+      - name: Setup emsdk
+        uses: mymindstorm/setup-emsdk@v11
+        with:
+          version: ${{env.EM_VERSION}}
+          actions-cache-folder: ${{env.EM_CACHE_FOLDER}}
+
+      - name: Verify emsdk
+        run: emcc -v
+
+      - name: Install ninja-build tool
+        uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: Configure CMake
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DCMAKE_TOOLCHAIN_FILE=/home/runner/work/pscm/pscm/emsdk-cache/emsdk-main/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCMAKE_CROSSCOMPILING_EMULATOR="/home/runner/work/pscm/pscm/emsdk-cache/emsdk-main/node/14.18.2_64bit/bin/node;--experimental-wasm-bulk-memory;--experimental-wasm-threads"
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build -j --verbose
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build/test
+        run: ctest -C ${{matrix.mode}} --output-on-failure
