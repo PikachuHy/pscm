@@ -50,7 +50,9 @@ const char *EMSCRIPTEN_KEEPALIVE eval(void *scm, const char *code) {
 #endif
 int EMSCRIPTEN_KEEPALIVE main() {
   spdlog::set_level(spdlog::level::err);
-  std::cout << "Start pscm-v2" << std::endl;
-  std::cout << "With PSCM" << std::endl;
+  Scheme scm;
+  auto version = scm.eval("(version)");
+  std::cout << "Welcome to PikachuHy's Scheme" << std::endl;
+  std::cout << "version: " << version << std::endl;
   return 0;
 }

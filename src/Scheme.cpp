@@ -12,10 +12,12 @@
 #include "pscm/Pair.h"
 #include "pscm/Parser.h"
 #include "pscm/Procedure.h"
+#include "pscm/Str.h"
 #include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
+#include "pscm/version.h"
 #include <string>
 #include <string_view>
 using namespace std::string_literals;
@@ -170,10 +172,16 @@ Cell quote = new Macro("quote", Label::APPLY_QUOTE);
 Cell for_each = new Macro("builtin_for-each", Label::APPLY_FOR_EACH);
 Cell apply = new Macro("builtin_apply", Label::APPLY_APPLY);
 
+Cell version(Cell) {
+  static String ver(std::string() + PSCM_VERSION + " (" + GIT_BRANCH + "@" + GIT_HASH + ")");
+  return &ver;
+}
+
 Scheme::Scheme(bool use_register_machine)
     : use_register_machine_(use_register_machine) {
   auto env = new SymbolTable();
   envs_.push_back(env);
+  env->insert(new Symbol("version"), new Function("version", version));
   env->insert(new Symbol("+"), new Function("+", add));
   env->insert(new Symbol("-"), new Function("-", minus));
   env->insert(new Symbol("*"), new Function("*", mul));
