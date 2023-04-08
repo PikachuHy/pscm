@@ -12,7 +12,13 @@ using namespace std::string_literals;
 namespace pscm {
 bool SymbolTable::contains(Symbol *sym) const {
   PSCM_ASSERT(sym);
-  return map_.contains(sym->name());
+  if (map_.contains(sym->name())) {
+    return true;
+  }
+  if (parent_) {
+    return parent_->contains(sym);
+  }
+  return false;
 }
 
 void SymbolTable::insert(Symbol *sym, Cell cell) {

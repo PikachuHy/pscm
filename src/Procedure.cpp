@@ -10,6 +10,7 @@
 #include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
+#include "pscm/scm_utils.h"
 
 namespace pscm {
 std::ostream& operator<<(std::ostream& out, const Procedure& proc) {
@@ -76,7 +77,17 @@ Procedure *Procedure::create_for_each(SymbolTable *env) {
   auto proc = new Symbol("proc");
   auto list1 = new Symbol("list1");
   Cell args = cons(proc, cons(list1, nil));
-  Cell body = cons(for_each, cons(proc, cons(list1, nil)));
+  Cell body = cons(builtin_for_each, cons(proc, cons(list1, nil)));
+  body = cons(body, nil);
+  return new Procedure(name, args, body, env);
+}
+
+Procedure *Procedure::create_map(SymbolTable *env) {
+  auto name = new Symbol("map");
+  auto proc = new Symbol("proc");
+  auto list1 = new Symbol("list1");
+  Cell args = cons(proc, cons(list1, nil));
+  Cell body = cons(builtin_map, cons(proc, cons(list1, nil)));
   body = cons(body, nil);
   return new Procedure(name, args, body, env);
 }
@@ -85,8 +96,8 @@ Procedure *Procedure::create_apply(SymbolTable *env) {
   auto name = new Symbol("apply");
   auto proc = new Symbol("proc");
   auto args = new Symbol("args");
-  Cell body = cons(apply, cons(proc, cons(args, nil)));
-  body = cons(body, nil);
+  Cell body = cons(apply, cons(proc, args));
+  body = list(body);
   return new Procedure(name, cons(proc, args), body, env);
 }
 } // namespace pscm

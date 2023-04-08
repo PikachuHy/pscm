@@ -23,9 +23,9 @@ public:
       , f_(f) {
   }
 
-  Macro(std::string name, Label pos, Cell::ScmFunc f)
+  Macro(std::string name, Cell::ScmFunc f)
       : name_(std::move(name))
-      , pos_(pos)
+      , pos_(Label::APPLY_MACRO)
       , f_(f) {
   }
 

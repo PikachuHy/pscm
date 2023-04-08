@@ -53,6 +53,27 @@ bool Number::operator>(const Number& num) const {
   return a > b;
 }
 
+bool Number::operator<=(const Number& num) const {
+  PSCM_ASSERT(data_.index() == 1);
+  if (num.data_.index() != 1) {
+    PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
+  }
+  auto a = std::get<1>(data_);
+  auto b = std::get<1>(num.data_);
+  return a <= b;
+}
+
+bool Number::operator>=(const Number& num) const {
+
+  PSCM_ASSERT(data_.index() == 1);
+  if (num.data_.index() != 1) {
+    PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
+  }
+  auto a = std::get<1>(data_);
+  auto b = std::get<1>(num.data_);
+  return a >= b;
+}
+
 void Number::inplace_add(const Number& num) {
   if (is_int()) {
     if (num.is_int()) {

@@ -10,6 +10,7 @@
 #include "pscm/Str.h"
 #include "pscm/Symbol.h"
 #include "pscm/common_def.h"
+#include "pscm/scm_utils.h"
 #include <cmath>
 #include <limits>
 #include <string>
@@ -87,6 +88,15 @@ Cell Parser::parse() {
   while (!has_parsed_ && pos_ < code_.size()) {
     auto start = pos_;
     auto token = next_token();
+    ret = parse_token(token, start);
+  }
+  return ret;
+}
+
+Cell Parser::parse_token(pscm::Parser::Token token, std::size_t start) {
+  Cell ret;
+  has_parsed_ = false;
+  while (!has_parsed_) {
     switch (token) {
     case Token::LEFT_PARENTHESES: {
       ret = parse_expr();
@@ -106,17 +116,40 @@ Cell Parser::parse() {
     case Token::QUOTE: {
       static auto quote = "quote"_sym;
       ret = parse();
-      ret = cons(&quote, cons(ret, nil));
+      ret = list(&quote, ret);
+      has_parsed_ = true;
+      break;
+    }
+    case Token::UNQUOTE: {
+      static auto unquote = "unquote"_sym;
+      ret = parse();
+      ret = list(&unquote, ret);
+      has_parsed_ = true;
+      break;
+    }
+    case Token::UNQUOTE_SPLICING: {
+      static auto unquote_splicing = "unquote-splicing"_sym;
+      ret = parse();
+      ret = list(&unquote_splicing, ret);
       has_parsed_ = true;
       break;
     }
     case Token::SEMICOLON: {
       skip_line();
       has_parsed_ = false;
+      start = pos_;
+      token = next_token();
       break;
     }
     case Token::QUOTATION: {
       ret = parse_string();
+      has_parsed_ = true;
+      break;
+    }
+    case Token::QUASIQUOTE: {
+      static auto quasiquote = "quasiquote"_sym;
+      ret = parse();
+      ret = list(&quasiquote, ret);
       has_parsed_ = true;
       break;
     }
@@ -133,80 +166,35 @@ Cell Parser::parse() {
   }
   return ret;
 }
-
 Cell Parser::parse_expr() {
   Pair *ret = cons(nil, nil);
   auto p = ret;
   while (pos_ < code_.size()) {
     skip_empty();
+    auto start = pos_;
     auto token = next_token();
     switch (token) {
-    case Token::SEMICOLON: {
-      skip_line();
-      break;
-    }
-    case Token::SYMBOL: {
-      if (has_dot) {
-        p->second = last_symbol_;
-        has_dot = false;
-      }
-      else {
-        PSCM_ASSERT(p->second.is_nil());
-        auto p2 = cons(Cell(last_symbol_), nil);
-        p->second = p2;
-        p = p2;
-      }
-      break;
-    }
-    case Token::NUMBER: {
-      auto p2 = cons(Cell(last_num_), nil);
-      p->second = p2;
-      p = p2;
-      break;
-    }
-    case Token::SHARP: {
-      auto val = parse_literal();
-      auto p2 = cons(val, nil);
-      p->second = p2;
-      p = p2;
-      break;
-    }
-    case Token::QUOTE: {
-      static auto quote = "quote"_sym;
-      auto val = parse();
-      auto p2 = cons(cons(&quote, cons(val, nil)), nil);
-      p->second = p2;
-      p = p2;
-      break;
-    }
-    case Token::QUOTATION: {
-      auto val = parse_string();
-      auto p2 = cons(cons(quote, cons(val, nil)), nil);
-      p->second = p2;
-      p = p2;
-      break;
-    }
-    case Token::DOT: {
-      has_dot = true;
-      break;
-    }
     case Token::RIGHT_PARENTHESES: {
       return ret->second;
     }
-    case Token::LEFT_PARENTHESES: {
-      auto expr = parse_expr();
-      auto p2 = cons(expr, nil);
-      p->second = p2;
-      p = p2;
-      break;
+    case Token::DOT: {
+      auto expr = parse();
+      token = next_token();
+      if (token == Token::RIGHT_PARENTHESES) {
+        p->second = expr;
+        return ret->second;
+      }
+      PSCM_THROW_EXCEPTION("Invalid expr with . : " + code_.substr(start, pos_ - start));
     }
     default: {
-      PSCM_THROW_EXCEPTION("Unsupported token " + std::to_string(int(token)));
+      auto expr = parse_token(token, start);
+      auto new_pair = cons(expr, nil);
+      p->second = new_pair;
+      p = new_pair;
     }
     }
   }
-  throw Exception("Invalid expr: " + code_);
-  return {};
+  PSCM_THROW_EXCEPTION("Invalid expr: " + code_);
 }
 
 Cell Parser::parse_literal() {
@@ -315,6 +303,17 @@ Parser::Token Parser::next_token() {
     pos_++;
     return Token::QUOTE;
   }
+  case ',': {
+    if (pos_ + 1 < code_.size() && code_[pos_ + 1] == '@') {
+      pos_++;
+      pos_++;
+      return Token::UNQUOTE_SPLICING;
+    }
+    else {
+      pos_++;
+      return Token::UNQUOTE;
+    }
+  }
   case '.': {
     pos_++;
     return Token::DOT;
@@ -326,6 +325,10 @@ Parser::Token Parser::next_token() {
   case '"': {
     pos_++;
     return Token::QUOTATION;
+  }
+  case '`': {
+    pos_++;
+    return Token::QUASIQUOTE;
   }
   case '\\': {
     pos_++;

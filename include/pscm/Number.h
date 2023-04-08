@@ -50,6 +50,8 @@ public:
   Number operator/(const Number& num);
   bool operator<(const Number& num) const;
   bool operator>(const Number& num) const;
+  bool operator<=(const Number& num) const;
+  bool operator>=(const Number& num) const;
 
   [[nodiscard]] bool is_zero() const;
 

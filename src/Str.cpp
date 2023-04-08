@@ -24,4 +24,8 @@ std::ostream& operator<<(std::ostream& os, const String& s) {
 bool String::operator==(const String& rhs) const {
   return data_ == rhs.data_;
 }
+
+String operator""_str(const char *data, std::size_t len) {
+  return String(std::string(data, len));
+}
 } // namespace pscm

@@ -22,8 +22,14 @@ public:
   friend std::ostream& operator<<(std::ostream& os, const String& s);
   bool operator==(const String& rhs) const;
 
+  std::string_view str() const {
+    return data_;
+  }
+
 private:
   std::string data_;
 };
+
+String operator""_str(const char *data, std::size_t len);
 
 } // namespace pscm

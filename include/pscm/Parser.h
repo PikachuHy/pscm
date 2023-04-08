@@ -28,13 +28,17 @@ private:
     NUMBER,            // 0123456789
     SHARP,             // #
     QUOTE,             // '
+    UNQUOTE,           // ,
+    UNQUOTE_SPLICING,  // ,@
     DOT,               // .
     SEMICOLON,         // ;
     QUOTATION,         // "
+    QUASIQUOTE,        // `
     BACK_SLASH,        // forward slash '/', and back slash '\'
     SYMBOL             //
   };
   Token next_token();
+  Cell parse_token(Token token, std::size_t start);
 
 private:
   std::string code_;

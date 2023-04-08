@@ -45,14 +45,15 @@ enum class Label {
   APPLY_AND,
   APPLY_OR,
   APPLY_SET,
-  APPLY_LET,
-  APPLY_LET_STAR,
-  APPLY_LETREC,
   APPLY_LAMBDA,
   APPLY_QUOTE,
+  APPLY_QUASIQUOTE,
   APPLY_FOR_EACH,
-  APPLY_CASE,
+  APPLY_MAP,
+  APPLY_BEGIN,
   AFTER_EVAL_FOR_EACH_FIRST_EXPR,
+  AFTER_EVAL_MAP_FIRST_EXPR,
+  AFTER_EVAL_MAP_OTHER_EXPR,
   AFTER_EVAL_DEFINE_ARG,
   AFTER_EVAL_SET_ARG,
   AFTER_EVAL_COND_TEST,
@@ -243,6 +244,7 @@ private:
   friend bool operator==(const Cell& lhs, const Number& rhs);
   friend bool operator==(const Cell& lhs, const Symbol& rhs);
   friend bool operator==(const Cell& lhs, const Vec& rhs);
+  friend bool operator==(const Cell& lhs, const String& rhs);
   int ref_count_ = 0;
   Tag tag_ = Tag::NONE;
   void *data_ = nullptr;
@@ -267,6 +269,11 @@ struct SourceLocation {
 extern Cell nil;
 extern Cell lambda;
 extern Cell quote;
-extern Cell for_each;
+extern Cell unquote;
+extern Cell quasiquote;
+extern Cell unquote_splicing;
+extern Cell begin;
+extern Cell builtin_for_each;
+extern Cell builtin_map;
 extern Cell apply;
 } // namespace pscm

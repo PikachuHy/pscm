@@ -4,9 +4,13 @@
 
 #include "pscm/Expander.h"
 #include "pscm/Pair.h"
+#include "pscm/Scheme.h"
 #include "pscm/Symbol.h"
+#include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
+#include <string>
+using namespace std::string_literals;
 
 namespace pscm {
 Cell do_case(auto item, Cell clause, auto args) {
@@ -56,6 +60,33 @@ Cell expand_case(Cell args) {
              (named-let bindings (car body) (cdr body))
       `((lambda ,(map car bindings) . ,body)  ,@(map cadr bindings))))
  */
+Cell expand_named_let(Cell name, Cell bindings, Cell body) {
+  auto var = map(car, bindings);
+  auto arg = map(cadr, bindings);
+  SPDLOG_INFO("var: {}", var);
+  SPDLOG_INFO("arg: {}", arg);
+  auto new_bindings = map(
+      [](Cell expr, auto loc) {
+        auto var = car(expr);
+        auto init = cadr(expr);
+        PSCM_ASSERT(var.is_sym());
+        auto sym = var.to_symbol();
+        return list(new Symbol(std::string(sym->name()) + "="s), init);
+      },
+      bindings);
+  SPDLOG_INFO("new-bindings: {}", new_bindings);
+  Cell let_init = cons(list(name, Cell::bool_false()), new_bindings);
+  auto l2 = new Symbol("lambda");
+  auto let_body = list(new Symbol("set!"), name, cons(l2, cons(map(car, bindings), body)));
+  Cell let_body2 = cons(name, map(car, new_bindings));
+  SPDLOG_INFO("let init: {}", let_init);
+  SPDLOG_INFO("let body: {}", let_body);
+  SPDLOG_INFO("let body2: {}", let_body2);
+  auto full_let = list(let_init, let_body, let_body2);
+  SPDLOG_INFO("let: {}", full_let);
+  return expand_let(full_let);
+}
+
 Cell expand_let(Cell args) {
   // (let <bindings> <body>)
   // ((var1 init1) ...)
@@ -63,12 +94,16 @@ Cell expand_let(Cell args) {
   // ((lambda (var1 var2 ...) <body>) (init1 init2 ...))
   auto bindings = car(args);
   auto body = cdr(args);
+  if (bindings.is_sym()) {
+    return expand_named_let(bindings, car(body), cdr(body));
+  }
 
   auto var = map(car, bindings);
   auto arg = map(cadr, bindings);
 
   auto a = cons(lambda, cons(var, body));
-  auto b = cons(a, arg);
+  Cell b = cons(a, arg);
+  SPDLOG_INFO("let -> {}", b);
   return b;
 }
 
@@ -135,4 +170,193 @@ Cell expand_letrec(Cell args) {
   return expand_let(expr);
 }
 
+Cell expand_do(Cell args) {
+  auto bindings = car(args);
+  auto test_and_expr = cadr(args);
+  auto body = cddr(args);
+
+  auto variables = map(car, bindings);
+  auto inits = map(cadr, bindings);
+  auto steps = map(
+      [](auto expr, auto loc) {
+        if (cddr(expr).is_nil()) {
+          return car(expr);
+        }
+        else {
+          return caddr(expr);
+        }
+      },
+      bindings);
+
+  auto test = car(test_and_expr);
+  auto expr = cdr(test_and_expr);
+
+  SPDLOG_INFO("var: {}", variables);
+  SPDLOG_INFO("init: {}", inits);
+  SPDLOG_INFO("step: {}", steps);
+  SPDLOG_INFO("test: {}", test);
+  SPDLOG_INFO("expr: {}", expr);
+  SPDLOG_INFO("body: {}", body);
+  Cell loop = gensym();
+  {
+    if (body.is_pair()) {
+      auto p = body.to_pair();
+      while (p->second.is_pair()) {
+        p = p->second.to_pair();
+      }
+      p->second = list(cons(loop, steps));
+    }
+    else {
+      body = list(cons(loop, steps));
+    }
+  }
+  auto else_clause = cons(new Symbol("begin"), body);
+  auto if_clause = Cell::none();
+  if (!expr.is_nil()) {
+    if_clause = cons(new Symbol("begin"), expr);
+  }
+  auto proc_body = list(&sym_if, test, if_clause, else_clause);
+  SPDLOG_INFO("proc body: {}", proc_body);
+  auto proc_def = list(lambda, variables, proc_body);
+  auto var_def = list(loop, proc_def);
+  auto letrec_args = list(list(var_def), cons(loop, inits));
+  SPDLOG_INFO("letrec: {}", letrec_args);
+  return expand_letrec(letrec_args);
+}
+
+bool QuasiQuotationExpander::is_constant(pscm::Cell expr) {
+  if (expr.is_pair()) {
+    auto op = car(expr);
+    if (op.is_sym()) {
+      auto sym = op.to_symbol();
+      auto val = env_->get_or(sym, Cell::none());
+      return val == quote;
+    }
+    else {
+      return op == quote;
+    }
+  }
+  else {
+    return !expr.is_sym();
+  }
+}
+
+bool QuasiQuotationExpander::is_unquote(pscm::Cell expr) {
+  return expr == "unquote"_sym;
+}
+
+bool QuasiQuotationExpander::is_quasiquote(pscm::Cell expr) {
+  return expr == "quasiquote"_sym;
+}
+
+bool QuasiQuotationExpander::is_unquote_splicing(pscm::Cell expr) {
+  return expr == "unquote-splicing"_sym;
+}
+
+bool QuasiQuotationExpander::is_list(pscm::Cell expr) {
+  return expr == "list"_sym;
+}
+
+int QuasiQuotationExpander::length(Cell expr) {
+  int len = 0;
+  while (!expr.is_nil()) {
+    len++;
+    expr = cdr(expr);
+  }
+  return len;
+}
+
+Cell QuasiQuotationExpander::combine_skeletons(pscm::Cell left, pscm::Cell right, pscm::Cell expr) {
+  if (is_constant(right) && is_constant(left)) {
+    auto left_val = scm_.eval(env_, left);
+    auto right_val = scm_.eval(env_, right);
+    static Symbol sym_quote("quote");
+    if (left_val.is_eqv(right_val).to_bool()) {
+      return list(&sym_quote, expr);
+    }
+    else {
+      return list(&sym_quote, cons(left_val, right_val));
+    }
+  }
+  else if (right.is_nil()) {
+    return list(new Symbol("list"), left);
+  }
+  else if (right.is_pair() && is_list(car(right))) {
+    return cons(new Symbol("list"), cons(left, cdr(right)));
+  }
+  else {
+    return list(new Symbol("cons"), left, right);
+  }
+}
+
+Cell QuasiQuotationExpander::expand(pscm::Cell expr) {
+  return expand(expr, 0);
+}
+
+Cell QuasiQuotationExpander::convert_vector_to_list(const Cell::Vec& vec) {
+  auto ret = cons(nil, nil);
+  auto p = ret;
+  for (const auto& item : vec) {
+    auto new_pair = cons(item, nil);
+    p->second = new_pair;
+    p = new_pair;
+  }
+  return ret->second;
+}
+
+Cell QuasiQuotationExpander::expand(pscm::Cell expr, int nesting) {
+  SPDLOG_INFO("expand: {}, nesting: {}", expr, nesting);
+  if (expr.is_vec()) {
+    SPDLOG_INFO("expr: {}", expr);
+    auto l = convert_vector_to_list(*expr.to_vec());
+    SPDLOG_INFO("l: {}", l);
+    auto new_expr = expand(l, nesting);
+    SPDLOG_INFO("new_expr: {}", new_expr);
+    auto ret = list(new Symbol("apply"), new Symbol("vector"), new_expr);
+    SPDLOG_INFO("expand ret: {}", ret);
+    return ret;
+  }
+  else if (!expr.is_pair()) {
+    if (is_constant(expr)) {
+      return expr;
+    }
+    else {
+      return list(quote, expr);
+    }
+  }
+  else if (is_unquote(car(expr)) && length(expr) == 2) {
+    if (nesting == 0) {
+      return cadr(expr);
+    }
+    else {
+      auto new_right = expand(cdr(expr), nesting - 1);
+      SPDLOG_INFO("new right: {}", new_right);
+      static Symbol sym_unquote("unquote");
+      return combine_skeletons(list(quote, &sym_unquote), new_right, expr);
+    }
+  }
+  else if (is_quasiquote(car(expr)) && length(expr) == 2) {
+    auto new_right = expand(cdr(expr), nesting + 1);
+    static Symbol sym_quasiquote("quasiquote");
+    return combine_skeletons(list(quote, &sym_quasiquote), new_right, expr);
+  }
+  else if (car(expr).is_pair() && is_unquote_splicing(caar(expr)) && length(car(expr)) == 2) {
+    if (nesting == 0) {
+      auto new_expr = expand(cdr(expr), nesting);
+      auto ret = list(new Symbol("append"), cadr(car(expr)), new_expr);
+      SPDLOG_INFO("ret: {}", ret);
+      return ret;
+    }
+    else {
+      auto new_left = expand(car(expr), nesting - 1);
+      auto new_right = expand(cdr(expr), nesting);
+      return combine_skeletons(new_left, new_right, expr);
+    }
+  }
+  else {
+    auto new_left = expand(car(expr), nesting);
+    auto new_right = expand(cdr(expr), nesting);
+    return combine_skeletons(new_left, new_right, expr);
+  }
+}
 } // namespace pscm

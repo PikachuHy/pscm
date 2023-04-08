@@ -101,9 +101,8 @@ Cell scm_cond(Scheme& scm, SymbolTable *env, Cell args) {
     if (arrow.is_sym() && *arrow.to_symbol() == "=>"_sym) {
       auto recipient = cadr(tmp);
       auto f = scm.eval(env, recipient);
-      auto f_args = list(quote, ret);
-      //      return scm.apply(f, list(f_args));
-      return list(apply, f, f_args);
+      auto f_args = list(quote, list(list(ret)));
+      return cons(apply, cons(f, f_args));
     }
     else {
       return expr;
@@ -166,10 +165,52 @@ Cell scm_or(Scheme& scm, SymbolTable *env, Cell args) {
   }
 }
 
+Cell scm_begin(Scheme& scm, SymbolTable *env, Cell args) {
+  while (args.is_pair() && cdr(args).is_pair()) {
+    [[maybe_unused]] auto ret = scm.eval(env, car(args));
+    args = cdr(args);
+  }
+  if (args.is_nil()) {
+    return Cell::none();
+  }
+  else {
+    return car(args);
+  }
+}
+
+Cell scm_quasiquote(Scheme& scm, SymbolTable *env, Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  QuasiQuotationExpander expander(scm, env);
+  auto ret = expander.expand(car(args));
+  return ret;
+}
+
+Cell scm_map(Scheme& scm, SymbolTable *env, Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  Cell ret;
+  auto proc = car(args);
+  PSCM_ASSERT(proc.is_sym());
+  auto list1 = cadr(args);
+  PSCM_ASSERT(list1.is_sym());
+  proc = env->get(proc.to_symbol());
+  list1 = env->get(list1.to_symbol());
+  ret = map(
+      [&scm, env, proc](Cell expr, auto loc) {
+        return scm.eval(env, cons(proc, list(list(quote, expr))));
+      },
+      list1);
+  return list(quote, ret);
+}
+
 Cell lambda = new Macro("lambda", Label::APPLY_LAMBDA);
 Cell quote = new Macro("quote", Label::APPLY_QUOTE);
+Cell unquote = new Macro("unquote", Label::APPLY_QUOTE);
+Cell quasiquote = new Macro("quasiquote", Label::APPLY_QUASIQUOTE, scm_quasiquote);
+Cell unquote_splicing = new Macro("unquote-splicing", Label::APPLY_QUOTE, scm_quasiquote);
+Cell begin = new Macro("begin", Label::APPLY_BEGIN, scm_begin);
 // TODO: #<primitive-generic for-each>
-Cell for_each = new Macro("builtin_for-each", Label::APPLY_FOR_EACH);
+Cell builtin_for_each = new Macro("builtin_for-each", Label::APPLY_FOR_EACH);
+Cell builtin_map = new Macro("builtin_map", Label::APPLY_MAP, scm_map);
 Cell apply = new Macro("builtin_apply", Label::APPLY_APPLY);
 
 Cell version(Cell) {
@@ -187,8 +228,10 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("*"), new Function("*", mul));
   env->insert(new Symbol("/"), new Function("/", div));
   env->insert(new Symbol("<"), new Function("<", less_than));
+  env->insert(new Symbol("<="), new Function("<=", less_or_equal_than));
   env->insert(new Symbol("="), new Function("=", equal_to));
   env->insert(new Symbol(">"), new Function(">", greater_than));
+  env->insert(new Symbol(">="), new Function(">=", greater_or_equal_than));
   env->insert(new Symbol("negative?"), new Function("negative?", is_negative));
   env->insert(new Symbol("not"), new Function("not", builtin_not));
   env->insert(new Symbol("display"), new Function("display", display));
@@ -197,7 +240,9 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("boolean?"), new Function("boolean?", is_boolean));
   env->insert(new Symbol("list"), new Function("list", create_list));
   env->insert(new Symbol("list?"), new Function("list?", is_list));
+  env->insert(new Symbol("pair?"), new Function("pair?", is_pair));
   env->insert(new Symbol("set-cdr!"), new Function("set-cdr!", set_cdr));
+  env->insert(new Symbol("set-car!"), new Function("set-car!", set_car));
   env->insert(new Symbol("assv"), new Function("assv", assv));
   env->insert(new Symbol("cons"), new Function("car", proc_cons));
   env->insert(new Symbol("car"), new Function("car", proc_car));
@@ -210,8 +255,27 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("memq"), new Function("memq", memq));
   env->insert(new Symbol("memv"), new Function("memv", memv));
   env->insert(new Symbol("member"), new Function("member", member));
+  env->insert(new Symbol("assq"), new Function("assq", assq));
+  env->insert(new Symbol("assv"), new Function("assv", assv));
+  env->insert(new Symbol("assoc"), new Function("assoc", assoc));
   env->insert(new Symbol("make-vector"), new Function("make-vector", make_vector));
+  env->insert(new Symbol("vector"), new Function("vector", proc_vector));
+  env->insert(new Symbol("vector-set!"), new Function("vector-set!", vector_set));
   env->insert(new Symbol("zero?"), new Function("zero?", is_zero));
+  env->insert(new Symbol("null?"), new Function("null?", is_null));
+  env->insert(new Symbol("length"), new Function("length", length));
+  env->insert(new Symbol("append"), new Function("append", append));
+  env->insert(new Symbol("reverse"), new Function("reverse", reverse));
+  env->insert(new Symbol("list-ref"), new Function("list-ref", list_ref));
+  env->insert(new Symbol("expt"), new Function("expt", expt));
+  env->insert(new Symbol("abs"), new Function("abs", proc_abs));
+  env->insert(new Symbol("sqrt"), new Function("sqrt", proc_sqrt));
+  env->insert(new Symbol("round"), new Function("round", proc_round));
+  env->insert(new Symbol("inexact->exact"), new Function("inexact->exact", inexact_to_exact));
+  env->insert(new Symbol("symbol?"), new Function("symbol?", is_symbol));
+  env->insert(new Symbol("symbol->string"), new Function("symbol->string", symbol_to_string));
+  env->insert(new Symbol("string->symbol"), new Function("string->symbol", string_to_symbol));
+  env->insert(new Symbol("string=?"), new Function("string=?", is_string_equal));
 
   env->insert(new Symbol("define"), new Macro("define", Label::APPLY_DEFINE, scm_define));
   env->insert(new Symbol("cond"), new Macro("cond", Label::APPLY_COND, scm_cond));
@@ -219,18 +283,24 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("and"), new Macro("and", Label::APPLY_AND, scm_and));
   env->insert(new Symbol("or"), new Macro("or", Label::APPLY_OR, scm_or));
   env->insert(new Symbol("set!"), new Macro("set!", Label::APPLY_SET, scm_set));
-  env->insert(new Symbol("let"), new Macro("let", Label::APPLY_LET, expand_let));
-  env->insert(new Symbol("let*"), new Macro("let*", Label::APPLY_LET_STAR, expand_let_star));
-  env->insert(new Symbol("letrec"), new Macro("letrec", Label::APPLY_LETREC, expand_letrec));
-  env->insert(new Symbol("case"), new Macro("case", Label::APPLY_CASE, expand_case));
+  env->insert(new Symbol("let"), new Macro("let", expand_let));
+  env->insert(new Symbol("let*"), new Macro("let*", expand_let_star));
+  env->insert(new Symbol("letrec"), new Macro("letrec", expand_letrec));
+  env->insert(new Symbol("case"), new Macro("case", expand_case));
+  env->insert(new Symbol("do"), new Macro("do", expand_do));
   env->insert(new Symbol("quote"), quote);
+  env->insert(new Symbol("unquote"), unquote);
+  env->insert(new Symbol("unquote-splicing"), unquote_splicing);
   env->insert(new Symbol("lambda"), lambda);
+  env->insert(new Symbol("begin"), begin);
+  env->insert(new Symbol("quasiquote"), quasiquote);
   {
     auto proc = new Procedure(&callcc, cons(new Symbol("proc"), nil), nil, env);
     env->insert(&callcc, proc);
     env->insert(new Symbol("call/cc"), proc);
   }
   env->insert(new Symbol("for-each"), Procedure::create_for_each(env));
+  env->insert(new Symbol("map"), Procedure::create_map(env));
   env->insert(new Symbol("apply"), Procedure::create_apply(env));
   {
     auto proc_args = cons(new Symbol("producer"), cons(new Symbol("consumer"), nil));
@@ -261,7 +331,7 @@ Cell Scheme::eval(const char *code) {
       return Cell::none();
     }
     if (use_register_machine_) {
-      ret = Evaluator().eval(ret, envs_.back());
+      ret = Evaluator(*this).eval(ret, envs_.back());
     }
     else {
       ret = eval(ret);
@@ -274,12 +344,12 @@ Cell Scheme::eval(const char *code) {
   }
 }
 
-Cell Scheme::eval_args(pscm::SymbolTable *env, pscm::Cell args) {
+Cell Scheme::eval_args(pscm::SymbolTable *env, pscm::Cell args, SourceLocation loc) {
   auto ret = map(
-      [this, env](auto expr, auto loc) {
+      [this, env](auto expr, auto) {
         return this->eval(env, expr);
       },
-      args);
+      args, loc);
   return ret;
 }
 
@@ -300,20 +370,32 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
     proc = eval(env, car(expr));
     args = cdr(expr);
     if (proc.is_func()) {
+      SPDLOG_INFO("proc args: {}", args);
       PSCM_ASSERT(args.is_pair() || args.is_nil());
       auto f = proc.to_func();
       auto func_args = eval_args(env, args);
       return f->call(func_args);
     }
     else if (proc.is_macro()) {
-      PSCM_ASSERT(args.is_pair());
+      PSCM_ASSERT(args.is_pair() || args.is_nil());
       auto f = proc.to_macro();
       if (f == quote) {
         return car(args);
       }
       else if (f == apply) {
-        expr = args;
-        continue;
+        auto op = car(args);
+        auto op_args = cdr(args);
+        SPDLOG_INFO("op: {}", op);
+        SPDLOG_INFO("args: {}", op_args);
+        op = eval(env, op);
+        op_args = eval(env, op_args);
+        SPDLOG_INFO("op: {}", op);
+        SPDLOG_INFO("args: {}", op_args);
+        // TODO:
+        if (op.is_func()) {
+          return op.to_func()->call(car(op_args));
+        }
+        PSCM_ASSERT("unsupported now");
       }
       else if (f == lambda) {
         return new Procedure(nullptr, car(args), cdr(args), env);
@@ -344,6 +426,7 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
       continue;
     }
     else {
+      SPDLOG_ERROR("unsupported {}", proc);
       PSCM_THROW_EXCEPTION("unsupported");
     }
   }

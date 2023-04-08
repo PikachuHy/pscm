@@ -53,11 +53,21 @@ Cell list(T t, Args... args) {
 
 Cell reverse_argl(Cell argl);
 
+Cell for_each(auto f, Cell list, SourceLocation loc = {}) {
+  while (!list.is_nil()) {
+    auto item = car(list);
+    f(item, loc);
+    auto l = cdr(list);
+    list = l;
+  }
+  return Cell::none();
+}
+
 Cell map(auto f, Cell list, SourceLocation loc = {}) {
   auto ret = cons(nil, nil);
   auto p = ret;
   while (!list.is_nil()) {
-    auto item = car(list);
+    auto item = car(list, loc);
     auto val = f(item, loc);
     auto new_item = cons(val, nil);
     p->second = new_item;

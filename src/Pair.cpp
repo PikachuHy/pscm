@@ -16,6 +16,10 @@ Cell car(Cell c, SourceLocation loc) {
   return p->first;
 }
 
+Cell caar(Cell c, SourceLocation loc) {
+  return car(car(c, loc), loc);
+}
+
 Cell cdr(Cell c, SourceLocation loc) {
   if (!c.is_pair()) {
     PSCM_THROW_EXCEPTION(loc.to_string() + ", Cell is not Pair: " + c.to_string());
@@ -42,6 +46,10 @@ Cell cddr(Cell c, SourceLocation loc) {
   }
   p = p->second.to_pair();
   return p->second;
+}
+
+Cell caddr(Cell c, SourceLocation loc) {
+  return car(cdr(cdr(c, loc), loc), loc);
 }
 
 bool Pair::operator==(const Pair& rhs) const {

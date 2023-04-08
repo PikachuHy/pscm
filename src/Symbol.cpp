@@ -10,6 +10,7 @@ Symbol callcc("call-with-current-continuation");
 Symbol call_with_values("call-with-values");
 Symbol values("values");
 Symbol cond_else("else");
+Symbol sym_if("if");
 
 std::ostream& operator<<(std::ostream& out, const Symbol& sym) {
   auto name = sym.name_;

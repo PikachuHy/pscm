@@ -279,6 +279,15 @@ bool operator==(const Cell& lhs, const Cell::Vec& rhs) {
   //  return *val == rhs;
 }
 
+bool operator==(const Cell& lhs, const String& rhs) {
+  if (lhs.tag_ != Cell::Tag::STRING) {
+    return false;
+  }
+  auto val = static_cast<String *>(lhs.data_);
+  PSCM_ASSERT(val);
+  return *val == rhs;
+}
+
 std::string to_string(Label label) {
   std::stringstream ss;
   ss << label;
@@ -383,20 +392,8 @@ std::ostream& operator<<(std::ostream& out, const Label& pos) {
     out << "APPLY_SET";
     break;
   }
-  case Label::APPLY_LET: {
-    out << "APPLY_LET";
-    break;
-  }
-  case Label::APPLY_LET_STAR: {
-    out << "APPLY_LET_STAR";
-    break;
-  }
-  case Label::APPLY_LETREC: {
-    out << "APPLY_LETREC";
-    break;
-  }
-  case Label::APPLY_CASE: {
-    out << "APPLY_CASE";
+  case Label::APPLY_BEGIN: {
+    out << "APPLY_BEGIN";
     break;
   }
   case Label::AFTER_EVAL_DEFINE_ARG: {
@@ -415,12 +412,28 @@ std::ostream& operator<<(std::ostream& out, const Label& pos) {
     out << "APPLY_QUOTE";
     break;
   }
+  case Label::APPLY_QUASIQUOTE: {
+    out << "APPLY_QUASIQUOTE";
+    break;
+  }
   case Label::APPLY_FOR_EACH: {
     out << "APPLY_FOR_EACH";
     break;
   }
+  case Label::APPLY_MAP: {
+    out << "APPLY_MAP";
+    break;
+  }
   case Label::AFTER_EVAL_FOR_EACH_FIRST_EXPR: {
     out << "AFTER_EVAL_FOR_EACH_FIRST_EXPR";
+    break;
+  }
+  case Label::AFTER_EVAL_MAP_FIRST_EXPR: {
+    out << "AFTER_EVAL_MAP_FIRST_EXPR";
+    break;
+  }
+  case Label::AFTER_EVAL_MAP_OTHER_EXPR: {
+    out << "AFTER_EVAL_MAP_OTHER_EXPR";
     break;
   }
   case Label::AFTER_EVAL_FIRST_EXPR: {
@@ -465,6 +478,7 @@ bool Cell::is_self_evaluated() const {
   case Tag::CHAR:
   case Tag::STRING:
   case Tag::BOOL:
+  case Tag::VECTOR:
   case Tag::MACRO:
   case Tag::PROCEDURE:
   case Tag::FUNCTION:

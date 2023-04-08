@@ -30,5 +30,6 @@ extern Symbol callcc;
 extern Symbol call_with_values;
 extern Symbol values;
 extern Symbol cond_else;
+extern Symbol sym_if;
 Symbol *gensym();
 } // namespace pscm
