@@ -63,6 +63,18 @@ Cell for_each(auto f, Cell list, SourceLocation loc = {}) {
   return Cell::none();
 }
 
+Cell for_each(auto f, Cell list1, Cell list2, SourceLocation loc = {}) {
+  while (!list1.is_nil() && !list2.is_nil()) {
+    auto item1 = car(list1);
+    auto item2 = car(list2);
+    f(item1, item2, loc);
+    list1 = cdr(list1);
+    list2 = cdr(list2);
+  }
+  PSCM_ASSERT(list1.is_nil() && list2.is_nil());
+  return Cell::none();
+}
+
 Cell map(auto f, Cell list, SourceLocation loc = {}) {
   auto ret = cons(nil, nil);
   auto p = ret;

@@ -9,7 +9,9 @@
 #include "pscm/Macro.h"
 #include "pscm/Number.h"
 #include "pscm/Pair.h"
+#include "pscm/Port.h"
 #include "pscm/Procedure.h"
+#include "pscm/Promise.h"
 #include "pscm/Str.h"
 #include "pscm/Symbol.h"
 #include "pscm/common_def.h"
@@ -75,10 +77,22 @@ Cell::Cell(Macro *f) {
   data_ = (void *)f;
 }
 
+Cell::Cell(Promise *p) {
+  ref_count_++;
+  tag_ = Tag::PROMISE;
+  data_ = (void *)p;
+}
+
 Cell::Cell(Continuation *cont) {
   ref_count_++;
   tag_ = Tag::CONTINUATION;
   data_ = (void *)cont;
+}
+
+Cell::Cell(Port *port) {
+  ref_count_++;
+  tag_ = Tag::PORT;
+  data_ = (void *)port;
 }
 
 Cell::Cell(bool val) {
@@ -95,6 +109,71 @@ std::string Cell::to_string() const {
   std::stringstream ss;
   ss << *this;
   return ss.str();
+}
+
+Pair *Cell::to_pair(SourceLocation loc) const {
+  PSCM_ASSERT_WITH_LOC(is_pair(), loc);
+  return (Pair *)(data_);
+}
+
+Cell::Vec *Cell::to_vec(SourceLocation loc) const {
+  PSCM_ASSERT_WITH_LOC(is_vec(), loc);
+  return (Vec *)(data_);
+}
+
+Symbol *Cell::to_symbol(SourceLocation loc) const {
+  PSCM_ASSERT_WITH_LOC(is_sym(), loc);
+  return (Symbol *)(data_);
+}
+
+Char *Cell::to_char(SourceLocation loc) const {
+  PSCM_ASSERT_WITH_LOC(is_char(), loc);
+  return (Char *)(data_);
+}
+
+String *Cell::to_str(SourceLocation loc) const {
+  PSCM_ASSERT_WITH_LOC(is_str(), loc);
+  return (String *)(data_);
+}
+
+Number *Cell::to_number(SourceLocation loc) const {
+  PSCM_ASSERT_WITH_LOC(is_num(), loc);
+  return (Number *)(data_);
+}
+
+bool Cell::to_bool(SourceLocation loc) const {
+  PSCM_ASSERT_WITH_LOC(is_bool(), loc);
+  return data_ != nullptr;
+}
+
+Function *Cell::to_func(SourceLocation loc) const {
+  PSCM_ASSERT_WITH_LOC(is_func(), loc);
+  return (Function *)(data_);
+}
+
+Macro *Cell::to_macro(SourceLocation loc) const {
+  PSCM_ASSERT_WITH_LOC(is_macro(), loc);
+  return (Macro *)(data_);
+}
+
+Procedure *Cell::to_proc(SourceLocation loc) const {
+  PSCM_ASSERT_WITH_LOC(is_proc(), loc);
+  return (Procedure *)(data_);
+}
+
+Promise *Cell::to_promise(SourceLocation loc) const {
+  PSCM_ASSERT_WITH_LOC(is_promise(), loc);
+  return (Promise *)(data_);
+}
+
+Continuation *Cell::to_cont(SourceLocation loc) const {
+  PSCM_ASSERT_WITH_LOC(is_cont(), loc);
+  return (Continuation *)(data_);
+}
+
+Port *Cell::to_port(SourceLocation loc) const {
+  PSCM_ASSERT_WITH_LOC(is_port(), loc);
+  return (Port *)(data_);
 }
 
 Cell Cell::ex(const char *msg) {
@@ -197,8 +276,14 @@ std::ostream& operator<<(std::ostream& out, const Cell& cell) {
   if (cell.tag_ == Cell::Tag::PROCEDURE) {
     return out << *cell.to_proc();
   }
+  if (cell.tag_ == Cell::Tag::PROMISE) {
+    return out << *cell.to_promise();
+  }
   if (cell.tag_ == Cell::Tag::CONTINUATION) {
     return out << *cell.to_cont();
+  }
+  if (cell.tag_ == Cell::Tag::PORT) {
+    return out << cell.to_port()->to_string();
   }
   SPDLOG_ERROR("TODO: {}", int(cell.tag_));
   //  PSCM_THROW_EXCEPTION("TODO: cell tag ");
@@ -392,6 +477,10 @@ std::ostream& operator<<(std::ostream& out, const Label& pos) {
     out << "APPLY_SET";
     break;
   }
+  case Label::APPLY_DELAY: {
+    out << "APPLY_DELAY";
+    break;
+  }
   case Label::APPLY_BEGIN: {
     out << "APPLY_BEGIN";
     break;
@@ -422,6 +511,14 @@ std::ostream& operator<<(std::ostream& out, const Label& pos) {
   }
   case Label::APPLY_MAP: {
     out << "APPLY_MAP";
+    break;
+  }
+  case Label::APPLY_FORCE: {
+    out << "APPLY_FORCE";
+    break;
+  }
+  case Label::AFTER_EVAL_PROMISE: {
+    out << "AFTER_EVAL_PROMISE";
     break;
   }
   case Label::AFTER_EVAL_FOR_EACH_FIRST_EXPR: {
@@ -483,6 +580,7 @@ bool Cell::is_self_evaluated() const {
   case Tag::PROCEDURE:
   case Tag::FUNCTION:
   case Tag::NIL:
+  case Tag::PROMISE:
   case Tag::CONTINUATION: {
     return true;
   }

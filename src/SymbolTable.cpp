@@ -51,6 +51,7 @@ Cell SymbolTable::get_or(Symbol *sym, Cell default_value, SourceLocation loc) co
   if (parent_) {
     return parent_->get_or(sym, default_value, loc);
   }
+  sym->print_debug_info();
   PSCM_THROW_EXCEPTION(loc.to_string() + ", Unbound variable: "s + std::string(sym->name()));
 }
 

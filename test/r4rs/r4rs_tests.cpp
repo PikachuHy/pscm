@@ -1507,6 +1507,60 @@ TEST_CASE("testing 6.4, Symbols, string->symbol") {
   }
 }
 
+TEST_CASE("testing 6.5.5, Numerical operations, number? complex? real? rational? interger?") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval("(complex? 3+4i)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(complex? 3)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(real? 3)");
+    CHECK(ret == Cell::bool_true());
+
+    ret = scm.eval("(real? -2.5+0.0i)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(real? #e1e10)");
+    CHECK(ret == Cell::bool_true());
+
+    ret = scm.eval("(rational? 6/10)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(rational? 6/3)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(integer? 3+0i)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(integer? 3.0)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(integer? 8/4)");
+    CHECK(ret == Cell::bool_true());
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing 6.5.5, Numerical operations, max") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval("(max 3 4)");
+    CHECK(ret == 4);
+    ret = scm.eval("(max 3.9 4)");
+    CHECK(ret == 4.0);
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
 TEST_CASE("testing 6.5.5, Numerical operations, expt") {
   auto f = [](Scheme& scm) {
     Cell ret;
@@ -1517,6 +1571,112 @@ TEST_CASE("testing 6.5.5, Numerical operations, expt") {
     Scheme scm;
     f(scm);
   }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing 6.6, Characters") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(char? #\A)
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+(char<? #\A #\B)
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+(char<? #\a #\b)
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+(char<? #\0 #\9)
+)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval(R"(
+(char-ci=? #\A #\a)
+)");
+    CHECK(ret == Cell::bool_true());
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing 6.8, Vectors") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(vector-ref '#(1 1 2 3 5 8 13 21) 5)
+)");
+    CHECK(ret == 8);
+    ret = scm.eval(R"(
+(vector-ref '#(1 1 2 3 5 8 13 21)
+            (inexact->exact
+               (round (* 2 (acos -1)))))
+)");
+    CHECK(ret == 13);
+    ret = scm.eval(R"(
+(let ((vec (vector 0 '(2 2 2 2) "Anna")))
+  (vector-set! vec 1 '("Sue" "Sue"))
+  vec)
+)");
+    Parser parser(R"(
+#(0 ("Sue" "Sue") "Anna")
+)");
+    auto expr = parser.parse();
+    CHECK(ret == expr);
+    ret = scm.eval(R"(
+(vector-set! '#(0 1 2) 1 "doe")
+)");
+    CHECK(ret == Cell::none());
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing 6.9, Control features, procedure?") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval("(procedure? car)");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(procedure? 'car)");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval("(procedure? (lambda (x) (* x x)))");
+    CHECK(ret == Cell::bool_true());
+    ret = scm.eval("(procedure? '(lambda (x) (* x x)))");
+    CHECK(ret == Cell::bool_false());
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing 6.9, Control features, procedure? call/cc") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval("(call-with-current-continuation procedure?)");
+    CHECK(ret == Cell::bool_true());
+  };
   {
     Scheme scm(true);
     f(scm);
@@ -1600,4 +1760,143 @@ TEST_CASE("testing 6.9, Control features, map") {
     Scheme scm(true);
     f(scm);
   }
+}
+
+TEST_CASE("testing 6.9, Control features, for-each") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(let ((v (make-vector 5)))
+  (for-each (lambda (i)
+              (vector-set! v i (* i i)))
+              '(0 1 2 3 4))
+  v)
+)");
+    auto vec = new Cell::Vec();
+    vec->push_back(new Number(0));
+    vec->push_back(new Number(1));
+    vec->push_back(new Number(4));
+    vec->push_back(new Number(9));
+    vec->push_back(new Number(16));
+    CHECK(ret == Cell(vec));
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing 6.9, Control features, force") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval("(force (delay (+ 1 2)))");
+    CHECK(ret == 3);
+    // FIXME:
+    // r4rs -> 2
+    // guile -> Unbound variable: stream
+    //     ret = scm.eval(R"(
+    // (define a-stream
+    //   (letrec ((next
+    //             (lambda (n)
+    //               (cons n (delay (next (+ n 1)))))))
+    //     (next 0)))
+    // )");
+    //     REQUIRE(ret == Cell::none());
+    //     ret = scm.eval("(define head car)");
+    //     REQUIRE(ret == Cell::none());
+    //     ret = scm.eval(R"(
+    // (define tail
+    //   (lambda (sream) (force (cdr stream))))
+    // )");
+    //     REQUIRE(ret == Cell::none());
+    //     ret = scm.eval("(head (tail (tail a-stream)))");
+    //     CHECK(ret == 2);
+
+    ret = scm.eval("(define count 0)");
+    REQUIRE(ret == Cell::none());
+    ret = scm.eval(R"(
+(define p
+  (delay (begin (set! count (+ count 1))
+                (if (> count x)
+                    count
+                    (force p)))))
+)");
+    REQUIRE(ret == Cell::none());
+    ret = scm.eval("(define x 5)");
+    REQUIRE(ret == Cell::none());
+    ret = scm.eval("p");
+    CHECK(ret.is_promise());
+    ret = scm.eval("(force p)");
+    CHECK(ret == 6);
+    ret = scm.eval("p");
+    CHECK(ret.is_promise());
+    ret = scm.eval(R"(
+(begin (set! x 10)
+       (force p))
+)");
+    CHECK(ret == 6);
+
+    ret = scm.eval("(eqv? (delay 1) 1)");
+    CHECK(ret == Cell::bool_false());
+    ret = scm.eval("(pair? (delay (cons 1 2)))");
+    CHECK(ret == Cell::bool_false());
+
+    // implicit forcing
+    // r4rs -> 34
+    // guile -> Wrong type argument in position 1: #<promise #<procedure #f ()>>
+    // ret = scm.eval("(+ (delay (* 3 7)) 13)");
+    // CHECK(ret == 34);
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing 6.9, Control features, call-with-continuation") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(call/cc
+ (lambda (exit)
+   (for-each (lambda (x)
+	       (if (negative? x) (exit x)))
+	     '(54 0 37 -3 245 19))
+   #t))
+)");
+    CHECK(ret == "-3"_num);
+    ret = scm.eval(R"(
+(define list-length
+  (lambda (obj)
+    (call/cc
+      (lambda (return)
+        (letrec ((r
+                  (lambda (obj)
+                    (cond ((null? obj) 0)
+                          ((pair? obj)
+                           (+ (r (cdr obj)) 1))
+                          (else (return #f))))))
+                (r obj))))))
+)");
+    REQUIRE(ret == Cell::none());
+    ret = scm.eval("(list-length '(1 2 3 4))");
+    CHECK(ret == 4);
+    ret = scm.eval("(list-length '(a b . c))");
+    CHECK(ret == Cell::bool_false());
+  };
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing ") {
 }

@@ -39,6 +39,7 @@ public:
   static Procedure *create_map(SymbolTable *env);
 
   static Procedure *create_apply(SymbolTable *env);
+  static Procedure *create_force(SymbolTable *env);
 
 private:
   Symbol *name_;
