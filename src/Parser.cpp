@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <fstream>
 #include <limits>
+#include <optional>
 #include <string>
 using namespace std::string_literals;
 
