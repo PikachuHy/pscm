@@ -51,7 +51,6 @@ jobs:
         with:
           path: ${{env.EM_CACHE_FOLDER}}
           key: emsdk-${{env.EM_VERSION}}-${{ runner.os }}
-          
       - name: Setup emsdk
         uses: PikachuHy/setup-emsdk@master
         with:
