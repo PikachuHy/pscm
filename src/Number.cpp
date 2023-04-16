@@ -17,6 +17,23 @@ std::ostream& operator<<(std::ostream& out, const Number& num) {
   return out;
 }
 
+std::ostream& operator<<(std::ostream& out, const Complex& num) {
+  out << num.real_part_;
+  if (num.imag_part_ > 0) {
+    out << "+";
+  }
+  out << num.imag_part_;
+  out << "i";
+  return out;
+}
+
+std::ostream& operator<<(std::ostream& out, const Rational& num) {
+  out << num.numerator_;
+  out << "/";
+  out << num.denominator_;
+  return out;
+}
+
 Number Number::operator-(const Number& num) {
   if (num.data_.index() != 1) {
     PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
@@ -154,11 +171,27 @@ double Number::to_float() const {
   return std::get<2>(data_);
 }
 
+Rational Number::to_rational() const {
+  PSCM_ASSERT(data_.index() == 3);
+  return std::get<3>(data_);
+}
+
+Complex Number::to_complex() const {
+  PSCM_ASSERT(data_.index() == 4);
+  return std::get<4>(data_);
+}
+
 void Number::display() const {
-  if (data_.index() != 1) {
+  PSCM_ASSERT(data_.index() != 0);
+  if (data_.index() == 1) {
+    std::cout << std::get<1>(data_);
+  }
+  else if (data_.index() == 2) {
+    std::cout << std::get<2>(data_);
+  }
+  else {
     PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
   }
-  std::cout << std::get<1>(data_);
 }
 
 std::string Number::to_string() const {

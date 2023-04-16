@@ -199,12 +199,18 @@ Cell expand_do(Cell args) {
   SPDLOG_INFO("body: {}", body);
   Cell loop = gensym();
   {
+
     if (body.is_pair()) {
-      auto p = body.to_pair();
-      while (p->second.is_pair()) {
-        p = p->second.to_pair();
+      auto new_body = cons(nil, nil);
+      auto p = new_body;
+      while (body.is_pair()) {
+        auto new_pair = cons(car(body), nil);
+        p->second = new_pair;
+        p = new_pair;
+        body = cdr(body);
       }
       p->second = list(cons(loop, steps));
+      body = new_body->second;
     }
     else {
       body = list(cons(loop, steps));

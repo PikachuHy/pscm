@@ -4,15 +4,21 @@
 
 #pragma once
 #include "pscm/Cell.h"
+#include <iosfwd>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace pscm {
 class Number;
 
 class Parser {
 public:
-  Parser(std::string code)
-      : code_(std::move(code)){};
+  Parser(std::string code);
+  Parser(std::string code, std::string_view filename);
+  Parser(std::istream *in);
   Cell parse();
+  Cell next();
 
 private:
   Cell parse_expr();
@@ -21,8 +27,10 @@ private:
   void skip_empty();
   void skip_line();
   void eat(char ch);
+  bool is_eof() const;
   enum class Token {
     NONE,              //
+    END_OF_FILE,       // end of file
     LEFT_PARENTHESES,  // (
     RIGHT_PARENTHESES, // )
     NUMBER,            // 0123456789
@@ -39,14 +47,25 @@ private:
   };
   Token next_token();
   Cell parse_token(Token token, std::size_t start);
+  void advance();
+  char next_char();
+  char peek_char();
+  void read_until(std::string& s, std::string_view end);
 
 private:
   std::string code_;
   std::size_t pos_{};
+  std::istream *in_ = nullptr;
+  bool use_stream_ = false;
   bool has_parsed_ = false;
   Number *last_num_ = nullptr;
   Symbol *last_symbol_ = nullptr;
   bool has_dot = false;
+  bool is_file_ = false;
+  std::size_t row_ = 0;
+  std::size_t col_ = 0;
+  std::vector<std::string_view> lines_;
+  std::string_view filename_;
 };
 
 } // namespace pscm

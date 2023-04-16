@@ -18,3 +18,13 @@
     (void)0;                                                                                                           \
   }                                                                                                                    \
   (void *)0
+
+#define PSCM_ASSERT_WITH_LOC(e, loc)                                                                                   \
+  if (!(e)) {                                                                                                          \
+    SPDLOG_ERROR("ASSERT FAILED here: {}, call from {}", #e, loc.to_string());                                         \
+    assert(e);                                                                                                         \
+  }                                                                                                                    \
+  else {                                                                                                               \
+    (void)0;                                                                                                           \
+  }                                                                                                                    \
+  (void *)0

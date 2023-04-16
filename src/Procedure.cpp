@@ -75,9 +75,9 @@ SymbolTable *Procedure::create_proc_env(Cell args) const {
 Procedure *Procedure::create_for_each(SymbolTable *env) {
   auto name = new Symbol("for-each");
   auto proc = new Symbol("proc");
-  auto list1 = new Symbol("list1");
-  Cell args = cons(proc, cons(list1, nil));
-  Cell body = cons(builtin_for_each, cons(proc, cons(list1, nil)));
+  auto lists = new Symbol("lists");
+  Cell args = cons(proc, lists);
+  Cell body = cons(builtin_for_each, cons(proc, lists));
   body = cons(body, nil);
   return new Procedure(name, args, body, env);
 }
@@ -85,9 +85,9 @@ Procedure *Procedure::create_for_each(SymbolTable *env) {
 Procedure *Procedure::create_map(SymbolTable *env) {
   auto name = new Symbol("map");
   auto proc = new Symbol("proc");
-  auto list1 = new Symbol("list1");
-  Cell args = cons(proc, cons(list1, nil));
-  Cell body = cons(builtin_map, cons(proc, cons(list1, nil)));
+  auto lists = new Symbol("lists");
+  Cell args = cons(proc, lists);
+  Cell body = cons(builtin_map, cons(proc, lists));
   body = cons(body, nil);
   return new Procedure(name, args, body, env);
 }
@@ -99,5 +99,14 @@ Procedure *Procedure::create_apply(SymbolTable *env) {
   Cell body = cons(apply, cons(proc, args));
   body = list(body);
   return new Procedure(name, cons(proc, args), body, env);
+}
+
+Procedure *Procedure::create_force(SymbolTable *env) {
+  auto name = new Symbol("force");
+  auto promise = new Symbol("promise");
+  Cell args = list(promise);
+  Cell body = list(builtin_force, promise);
+  body = cons(body, nil);
+  return new Procedure(name, args, body, env);
 }
 } // namespace pscm

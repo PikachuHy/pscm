@@ -3,6 +3,7 @@
 //
 
 #include "pscm/Symbol.h"
+#include <iostream>
 #include <ostream>
 
 namespace pscm {
@@ -32,6 +33,13 @@ std::ostream& operator<<(std::ostream& out, const Symbol& sym) {
 
 bool Symbol::operator==(const Symbol& sym) const {
   return name_ == sym.name_;
+}
+
+void Symbol::print_debug_info() {
+  if (filename_.empty()) {
+    return;
+  }
+  std::cout << name_ << " from " << filename_ << ":" << row_ << std::endl;
 }
 
 Symbol operator""_sym(const char *data, std::size_t len) {

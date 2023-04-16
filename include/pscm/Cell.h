@@ -7,6 +7,22 @@
 #include <vector>
 
 namespace pscm {
+
+struct SourceLocation {
+  constexpr SourceLocation(const char *filename = __builtin_FILE(), const char *funcname = __builtin_FUNCTION(),
+                           unsigned int linenum = __builtin_LINE())
+      : filename(filename)
+      , funcname(funcname)
+      , linenum(linenum) {
+  }
+
+  const char *filename;
+  const char *funcname;
+  unsigned int linenum;
+
+  std::string to_string() const;
+};
+
 class Scheme;
 class Number;
 class Char;
@@ -17,7 +33,9 @@ class Pair;
 class Procedure;
 class Function;
 class Macro;
+class Promise;
 class Continuation;
+class Port;
 enum class Label {
   DONE,
   EVAL,
@@ -45,15 +63,18 @@ enum class Label {
   APPLY_AND,
   APPLY_OR,
   APPLY_SET,
+  APPLY_DELAY,
   APPLY_LAMBDA,
   APPLY_QUOTE,
   APPLY_QUASIQUOTE,
   APPLY_FOR_EACH,
   APPLY_MAP,
+  APPLY_FORCE,
   APPLY_BEGIN,
   AFTER_EVAL_FOR_EACH_FIRST_EXPR,
   AFTER_EVAL_MAP_FIRST_EXPR,
   AFTER_EVAL_MAP_OTHER_EXPR,
+  AFTER_EVAL_PROMISE,
   AFTER_EVAL_DEFINE_ARG,
   AFTER_EVAL_SET_ARG,
   AFTER_EVAL_COND_TEST,
@@ -84,7 +105,9 @@ public:
   Cell(Function *f);
   Cell(Macro *f);
   Cell(const Procedure *proc);
+  Cell(Promise *p);
   Cell(Continuation *cont);
+  Cell(Port *port);
   explicit Cell(bool val);
 
   ~Cell() {
@@ -104,6 +127,8 @@ public:
     FUNCTION,    // c++ function
     PROCEDURE,   // scheme procedure
     MACRO,       //
+    PROMISE,     // promise
+    PORT,        // port
     CONTINUATION // continuation
   };
   friend std::ostream& operator<<(std::ostream& out, const Cell& cell);
@@ -144,89 +169,79 @@ public:
     return tag_ == Tag::PAIR;
   }
 
-  Pair *to_pair() const {
-    return (Pair *)(data_);
-  }
+  Pair *to_pair(SourceLocation loc = {}) const;
 
   bool is_vec() const {
     return tag_ == Tag::VECTOR;
   }
 
-  Vec *to_vec() const {
-    return (Vec *)(data_);
-  }
+  Vec *to_vec(SourceLocation loc = {}) const;
 
   bool is_sym() const {
     return tag_ == Tag::SYMBOL;
   }
 
-  Symbol *to_symbol() const {
-    return (Symbol *)(data_);
-  }
+  Symbol *to_symbol(SourceLocation loc = {}) const;
 
   bool is_char() const {
     return tag_ == Tag::CHAR;
   }
 
-  Char *to_char() const {
-    return (Char *)(data_);
-  }
+  Char *to_char(SourceLocation loc = {}) const;
 
   bool is_str() const {
     return tag_ == Tag::STRING;
   }
 
-  String *to_str() const {
-    return (String *)(data_);
-  }
+  String *to_str(SourceLocation loc = {}) const;
 
   bool is_num() const {
     return tag_ == Tag::NUMBER;
   }
 
-  Number *to_number() const {
-    return (Number *)(data_);
-  }
+  Number *to_number(SourceLocation loc = {}) const;
 
   bool is_bool() const {
     return tag_ == Tag::BOOL;
   }
 
-  bool to_bool() const {
-    return data_ != nullptr;
-  }
+  bool to_bool(SourceLocation loc = {}) const;
 
   bool is_func() const {
     return tag_ == Tag::FUNCTION;
   }
 
-  Function *to_func() const {
-    return (Function *)(data_);
-  }
+  Function *to_func(SourceLocation loc = {}) const;
 
   bool is_macro() const {
     return tag_ == Tag::MACRO;
   }
 
-  Macro *to_macro() const {
-    return (Macro *)(data_);
-  }
+  Macro *to_macro(SourceLocation loc = {}) const;
 
   bool is_proc() const {
     return tag_ == Tag::PROCEDURE;
   }
 
-  Procedure *to_proc() const {
-    return (Procedure *)data_;
+  Procedure *to_proc(SourceLocation loc = {}) const;
+
+  bool is_promise() const {
+    return tag_ == Tag::PROMISE;
   }
+
+  Promise *to_promise(SourceLocation loc = {}) const;
 
   bool is_cont() const {
     return tag_ == Tag::CONTINUATION;
   }
 
-  Continuation *to_cont() const {
-    return (Continuation *)data_;
+  Continuation *to_cont(SourceLocation loc = {}) const;
+
+  bool is_port() const {
+    return tag_ == Tag::PORT;
   }
+
+  Port *to_port(SourceLocation loc = {}) const;
 
   bool is_self_evaluated() const;
 
@@ -251,21 +266,6 @@ private:
   friend class Scheme;
 };
 
-struct SourceLocation {
-  constexpr SourceLocation(const char *filename = __builtin_FILE(), const char *funcname = __builtin_FUNCTION(),
-                           unsigned int linenum = __builtin_LINE())
-      : filename(filename)
-      , funcname(funcname)
-      , linenum(linenum) {
-  }
-
-  const char *filename;
-  const char *funcname;
-  unsigned int linenum;
-
-  std::string to_string() const;
-};
-
 extern Cell nil;
 extern Cell lambda;
 extern Cell quote;
@@ -275,5 +275,6 @@ extern Cell unquote_splicing;
 extern Cell begin;
 extern Cell builtin_for_each;
 extern Cell builtin_map;
+extern Cell builtin_force;
 extern Cell apply;
 } // namespace pscm
