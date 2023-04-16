@@ -57,3 +57,7 @@ node_modules
 # VSCode
 .vscode
 .VSCodeCounter
+
+# bazel
+bazel-*
+
