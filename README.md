@@ -25,3 +25,48 @@ for details, [go to pscm.dev](https://pscm.dev).
 - Discord: https://discord.gg/Trr5v2WP
 - Telegram: https://t.me/+6k3RgdwpfpYyYzRl
 - QQ Group: 538402289
+
+## Build
+
+### CMake (Recommanded)
+
+```
+mkdir build && cd build
+cmake ..
+make -j
+```
+
+### xmake
+
+```
+xmake config --yes --mode=Release
+xmake build --jobs=4
+```
+
+### Bazel
+
+```
+bazel build :all
+```
+
+### pscm-build (WIP)
+
+```
+pscm-build
+```
+
+## Development Plan
+
+see [Development Plan](https://github.com/PikachuHy/pscm/issues/13)
+
+## License
+
+The project is available under the [MIT](https://opensource.org/licenses/MIT) license.
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=PikachuHy/pscm&type=Date)](https://star-history.com/#PikachuHy/pscm)
+
+## Contributors
+
+![Contributors](https://contrib.rocks/image?repo=PikachuHy/pscm)
