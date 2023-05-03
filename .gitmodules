@@ -4,3 +4,6 @@
 [submodule "3rd/doctest"]
 	path = 3rd/doctest
 	url = https://github.com/doctest/doctest.git
+[submodule "3rd/glob"]
+	path = 3rd/glob
+	url = https://github.com/p-ranav/glob.git
