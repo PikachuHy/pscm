@@ -7,6 +7,7 @@
 #include <string>
 
 namespace pscm {
+class Port;
 
 class Char {
 public:
@@ -31,7 +32,7 @@ public:
   Char to_upcase() const;
   std::int64_t to_int() const;
   friend std::ostream& operator<<(std::ostream& out, const Char& ch);
-  void display() const;
+  void display(Port& port) const;
 
 private:
   std::string ch_;

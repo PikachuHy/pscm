@@ -3,21 +3,31 @@
 //
 
 #include "pscm/Str.h"
+#include "pscm/Port.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
 #include <iostream>
 
 namespace pscm {
-void String::display() const {
+void String::display(Port& port) const {
   for (auto ch : data_) {
-    std::cout << ch;
+    port.write_char(ch);
   }
 }
 
 std::ostream& operator<<(std::ostream& os, const String& s) {
   os << '"';
   for (auto ch : s.data_) {
-    os << ch;
+    switch (ch) {
+    case '"': {
+      os << '\\';
+      os << '"';
+      break;
+    }
+    default: {
+      os << ch;
+    }
+    }
   }
   os << '"';
   return os;

@@ -7,6 +7,7 @@
 #include <string>
 
 namespace pscm {
+class Port;
 
 class String {
 public:
@@ -23,7 +24,7 @@ public:
     return data_.empty();
   }
 
-  void display() const;
+  void display(Port& port) const;
   friend std::ostream& operator<<(std::ostream& os, const String& s);
   bool operator==(const String& rhs) const;
   bool operator<(const String& rhs) const;

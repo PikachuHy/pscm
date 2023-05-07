@@ -48,6 +48,7 @@ cc_binary(
     name = "pscm-main",
     srcs = ["main.cpp"],
     deps = [":pscm"],
+    copts = ["-std=c++20"]
 )
 
 PSCM_TEST_COPTS = [

@@ -15,7 +15,7 @@ public:
   ~Scheme();
   Cell eval(const char *code);
   Cell eval(Cell expr);
-  void load(const char *filename);
+  bool load(const char *filename);
 
 private:
   [[nodiscard]] Cell eval(SymbolTable *env, Cell expr);

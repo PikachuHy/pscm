@@ -14,6 +14,18 @@ std::ostream& operator<<(std::ostream& out, const Number& num) {
   if (num.data_.index() == 1) {
     return out << std::get<1>(num.data_);
   }
+  else if (num.data_.index() == 2) {
+    return out << std::get<2>(num.data_);
+  }
+  else if (num.data_.index() == 3) {
+    return out << std::get<3>(num.data_);
+  }
+  else if (num.data_.index() == 4) {
+    return out << std::get<4>(num.data_);
+  }
+  else {
+    PSCM_THROW_EXCEPTION("invalid number index: " + std::to_string(num.data_.index()) + ", update needed");
+  }
   return out;
 }
 
@@ -188,6 +200,9 @@ void Number::display() const {
   }
   else if (data_.index() == 2) {
     std::cout << std::get<2>(data_);
+  }
+  else if (data_.index() == 3) {
+    std::cout << std::get<3>(data_);
   }
   else {
     PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());

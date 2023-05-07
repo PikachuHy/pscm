@@ -133,6 +133,7 @@ public:
   };
   friend std::ostream& operator<<(std::ostream& out, const Cell& cell);
   std::string to_string() const;
+  void display(Port& port);
 
   static Cell nil() {
     static Cell ret{ Tag::NIL, nullptr };

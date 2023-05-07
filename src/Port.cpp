@@ -111,6 +111,9 @@ public:
 
   char read_char() override {
     PSCM_ASSERT(is_input_port());
+    if (f_.eof()) {
+      return EOF;
+    }
     char ch;
     f_.read(&ch, 1);
     return ch;
@@ -262,7 +265,8 @@ Cell peek_char(Cell args) {
 Cell is_eof_object(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
-  PSCM_THROW_EXCEPTION("not supported now");
+  PSCM_ASSERT(arg.is_char());
+  return Cell(arg == Char::from(EOF));
 }
 
 Cell is_char_ready(Cell args) {
@@ -295,6 +299,38 @@ Cell transcript_on(Cell args) {
 
 Cell transcript_off(Cell args) {
   PSCM_THROW_EXCEPTION("not supported now");
+}
+
+Cell display(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  auto port = cdr(args);
+  if (port.is_nil()) {
+    port = current_output_port(args);
+  }
+  else {
+    port = car(port);
+  }
+  PSCM_ASSERT(port.is_port());
+  auto p = port.to_port();
+  arg.display(*p);
+  return Cell::none();
+}
+
+Cell write(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  auto port = cdr(args);
+  if (port.is_nil()) {
+    port = current_output_port(args);
+  }
+  else {
+    port = car(port);
+  }
+  PSCM_ASSERT(port.is_port());
+  auto p = port.to_port();
+  p->write(arg);
+  return Cell::none();
 }
 
 } // namespace pscm

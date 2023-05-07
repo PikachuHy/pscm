@@ -154,16 +154,22 @@ Cell expand_letrec(Cell args) {
   SPDLOG_INFO("let_var: {}", let_var);
   SPDLOG_INFO("update_let_var: {}", update_let_var);
   auto p = update_let_var;
-  while (p.is_pair()) {
-    if (cdr(p).is_nil()) {
-      auto p2 = p.to_pair();
-      p2->second = body;
-      break;
-    }
-    else {
-      p = cdr(p);
+  if (update_let_var.is_nil()) {
+    update_let_var = cons(nil, body);
+  }
+  else {
+    while (p.is_pair()) {
+      if (cdr(p).is_nil()) {
+        auto p2 = p.to_pair();
+        p2->second = body;
+        break;
+      }
+      else {
+        p = cdr(p);
+      }
     }
   }
+
   //  SPDLOG_INFO("cons(update_let_var, body): {}", Cell(cons(update_let_var, body)));
   Cell expr = cons(let_var, update_let_var);
   SPDLOG_INFO("{}", expr);

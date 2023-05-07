@@ -164,3 +164,39 @@ TEST_CASE("testing parse ,@") {
     f(scm);
   }
 }
+#ifndef WASM_PLATFORM
+TEST_CASE("testing parse 3.3I") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(string->number "3.3I")
+)");
+    CHECK(ret == Cell::bool_false());
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+#endif
+TEST_CASE("testing parse #i-i") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(string->number "#i-i")
+)");
+    CHECK(ret == Number(Complex(0, -1)));
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
