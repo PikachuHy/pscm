@@ -1376,7 +1376,7 @@ Cell string_to_number(Cell args) {
           PSCM_ASSERT(n->is_int());
           auto val = n->to_int();
           auto new_val = std::strtoll(std::to_string(val).c_str(), nullptr, n2);
-          *n = Number(new_val);
+          *n = Number(std::int64_t(new_val));
         }
       }
       return num;
