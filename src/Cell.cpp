@@ -193,7 +193,7 @@ std::ostream& operator<<(std::ostream& out, const Cell& cell) {
     return out << "EXCEPTION: " << (const char *)cell.data_;
   }
   if (cell.tag_ == Cell::Tag::NIL) {
-    return out << "NIL";
+    return out << "()";
   }
   if (cell.tag_ == Cell::Tag::SYMBOL) {
     return out << *cell.to_symbol();
@@ -266,7 +266,7 @@ std::ostream& operator<<(std::ostream& out, const Cell& cell) {
     if (!vec->empty()) {
       for (int i = 0; i < vec->size() - 1; ++i) {
         out << vec->at(i);
-        out << ", ";
+        out << " ";
       }
       out << vec->back();
     }
@@ -288,6 +288,21 @@ std::ostream& operator<<(std::ostream& out, const Cell& cell) {
   SPDLOG_ERROR("TODO: {}", int(cell.tag_));
   //  PSCM_THROW_EXCEPTION("TODO: cell tag ");
   return out << "TODO";
+}
+
+void Cell::display(Port& port) {
+  if (is_char()) {
+    to_char()->display(port);
+    return;
+  }
+  if (is_str()) {
+    to_str()->display(port);
+    return;
+  }
+  auto s = to_string();
+  for (auto ch : s) {
+    port.write_char(ch);
+  }
 }
 
 bool operator==(const Cell& lhs, const Cell& rhs) {

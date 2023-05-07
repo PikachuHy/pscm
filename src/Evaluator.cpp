@@ -210,24 +210,29 @@ Cell div(Cell args) {
 }
 
 Cell less_than(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto a = car(args);
-  auto b = cdr(args);
-  if (b.is_nil()) {
-    PSCM_THROW_EXCEPTION("wrong-number-of-args: " + args.to_string());
+  SPDLOG_INFO("args: {}", args);
+  if (args.is_nil()) {
+    return Cell(true);
   }
-  b = car(b);
-  if (!a.is_num()) {
-    PSCM_THROW_EXCEPTION("Wrong type argument in position 1: " + a.to_string());
+  auto arg = car(args);
+  if (!arg.is_num()) {
+    PSCM_THROW_EXCEPTION("Wrong type argument in position 1: " + arg.to_string());
   }
-  if (!b.is_num()) {
-    PSCM_THROW_EXCEPTION("Wrong type argument in position 2: " + b.to_string());
+  auto n1 = arg.to_number();
+  args = cdr(args);
+  bool ret = true;
+  int index = 2;
+  while (ret && args.is_pair()) {
+    arg = car(args);
+    if (!arg.is_num()) {
+      PSCM_THROW_EXCEPTION("Wrong type argument in position " + std::to_string(index) + ": " + arg.to_string());
+    }
+    ret = (*n1 < *arg.to_number());
+    n1 = arg.to_number();
+    args = cdr(args);
+    index++;
   }
-  auto n1 = a.to_number();
-  auto n2 = b.to_number();
-  PSCM_ASSERT(n1);
-  PSCM_ASSERT(n2);
-  return (*n1 < *n2) ? Cell::bool_true() : Cell::bool_false();
+  return Cell(ret);
 }
 
 Cell less_or_equal_than(Cell args) {
@@ -252,24 +257,24 @@ Cell less_or_equal_than(Cell args) {
 }
 
 Cell equal_to(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto a = car(args);
-  auto b = cdr(args);
-  if (b.is_nil()) {
-    PSCM_THROW_EXCEPTION("wrong-number-of-args: " + args.to_string());
+  if (args.is_nil()) {
+    return Cell::bool_true();
   }
-  b = car(b);
-  if (!a.is_num()) {
-    PSCM_THROW_EXCEPTION("Wrong type argument in position 1: " + a.to_string());
-  }
-  if (!b.is_num()) {
-    PSCM_THROW_EXCEPTION("Wrong type argument in position 2: " + b.to_string());
-  }
-  auto n1 = a.to_number();
-  auto n2 = b.to_number();
-  PSCM_ASSERT(n1);
-  PSCM_ASSERT(n2);
-  return (*n1 == *n2) ? Cell::bool_true() : Cell::bool_false();
+  auto arg = car(args);
+  PSCM_ASSERT(arg.is_num());
+  bool ret = true;
+  int index = 1;
+  for_each(
+      [&ret, &arg, &index](Cell expr, auto) {
+        if (ret) {
+          if (!expr.is_num()) {
+            PSCM_THROW_EXCEPTION("Wrong type argument in position " + std::to_string(index) + ": " + expr.to_string());
+          }
+          ret = (arg == expr);
+        }
+      },
+      args);
+  return Cell(ret);
 }
 
 Cell greater_than(Cell args) {
@@ -352,7 +357,7 @@ Cell is_odd(Cell args) {
   auto num = arg.to_number();
   PSCM_ASSERT(num->is_int());
   auto n = num->to_int();
-  return (n % 2 == 1) ? Cell::bool_true() : Cell::bool_false();
+  return (std::abs(n) % 2 == 1) ? Cell::bool_true() : Cell::bool_false();
 }
 
 Cell is_even(Cell args) {
@@ -471,7 +476,14 @@ Cell modulo(Cell args) {
   auto n1 = num1->to_int();
   auto n2 = num2->to_int();
   auto m = n1 / n2;
-  return new Number(n1 - n2 * m);
+  auto ret = n1 - n2 * m;
+  if (ret > 0 && n2 < 0) {
+    ret += n2;
+  }
+  else if (ret < 0 && n2 > 0) {
+    ret += n2;
+  }
+  return new Number(ret);
 }
 
 Cell builtin_not(Cell args) {
@@ -484,56 +496,6 @@ Cell builtin_not(Cell args) {
     return Cell::bool_true();
   }
   return Cell::bool_false();
-}
-
-Cell display(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto arg = car(args);
-  if (arg.is_char()) {
-    PSCM_ASSERT(arg.to_char());
-    arg.to_char()->display();
-  }
-  else if (arg.is_num()) {
-    PSCM_ASSERT(arg.to_number());
-    arg.to_number()->display();
-  }
-  else if (arg.is_str()) {
-    PSCM_ASSERT(arg.to_str());
-    arg.to_str()->display();
-  }
-  else {
-    PSCM_THROW_EXCEPTION("not supported now");
-  }
-  return Cell::none();
-}
-
-Cell write(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto arg = car(args);
-  auto port = cdr(args);
-  if (!port.is_nil()) {
-    port = car(port);
-    PSCM_ASSERT(port.is_port());
-    auto p = port.to_port();
-    p->write(arg);
-    return Cell::none();
-  }
-  if (arg.is_char()) {
-    PSCM_ASSERT(arg.to_char());
-    arg.to_char()->display();
-  }
-  else if (arg.is_num()) {
-    PSCM_ASSERT(arg.to_number());
-    arg.to_number()->display();
-  }
-  else if (arg.is_str()) {
-    PSCM_ASSERT(arg.to_str());
-    arg.to_str()->display();
-  }
-  else {
-    std::cout << arg;
-  }
-  return Cell::none();
 }
 
 Cell newline(Cell args) {
@@ -976,11 +938,21 @@ Cell expt(Cell args) {
     return new Number(1);
   }
   else {
+    bool is_negative = false;
+    if (n2 < 0) {
+      is_negative = true;
+      n2 = -n2;
+    }
     auto ret = n1;
     for (int i = 0; i < n2 - 1; ++i) {
       ret *= n1;
     }
-    return new Number(ret);
+    if (!is_negative || ret == 1 || ret == -1) {
+      return new Number(ret);
+    }
+    else {
+      return new Number(Rational(1, ret));
+    }
   }
 }
 
@@ -1377,6 +1349,9 @@ Cell is_rational(Cell args) {
   auto arg = car(args);
   PSCM_ASSERT(arg.is_num());
   auto num = arg.to_number();
+  if (num->is_int()) {
+    return Cell::bool_true();
+  }
   return Cell(num->is_rational());
 }
 
@@ -1389,6 +1364,21 @@ Cell string_to_number(Cell args) {
   try {
     auto num = parser.parse();
     if (num.is_num()) {
+      args = cdr(args);
+      if (args.is_pair()) {
+        arg = car(args);
+        PSCM_ASSERT(arg.is_num());
+        auto n = arg.to_number();
+        PSCM_ASSERT(n->is_int());
+        auto n2 = n->to_int();
+        if (n2 != 10) {
+          n = num.to_number();
+          PSCM_ASSERT(n->is_int());
+          auto val = n->to_int();
+          auto new_val = std::strtoll(std::to_string(val).c_str(), nullptr, n2);
+          *n = Number(new_val);
+        }
+      }
       return num;
     }
   }
@@ -1402,8 +1392,34 @@ Cell number_to_string(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
   PSCM_ASSERT(arg.is_num());
-  auto s = arg.to_string();
-  return new String(s);
+  auto num = arg.to_number();
+  PSCM_ASSERT(num->is_int());
+  auto n = num->to_int();
+  args = cdr(args);
+  if (args.is_nil()) {
+    return new String(std::to_string(n));
+  }
+  arg = car(args);
+  PSCM_ASSERT(arg.is_num());
+  num = arg.to_number();
+  PSCM_ASSERT(num->is_int());
+  auto m = num->to_int();
+  if (m < 2 || m > 36) {
+    PSCM_THROW_EXCEPTION("Value out of range 2 to 36: " + std::to_string(m));
+  }
+  std::string s;
+  static std::string alphabet = "abcdefghijklmnoprstuvwxyz";
+  while (n != 0) {
+    auto item = n % m;
+    if (item < 10) {
+      s.push_back('0' + item);
+    }
+    else {
+      s.push_back(alphabet.at(item - 10));
+    }
+    n /= m;
+  }
+  return new String(std::string(s.rbegin(), s.rend()));
 }
 
 Cell is_char(Cell args) {
@@ -1551,6 +1567,9 @@ Cell is_char_upper_case(Cell args) {
   auto arg = car(args);
   PSCM_ASSERT(arg.is_char());
   auto ch = arg.to_char();
+  if (!ch->is_alphabetic()) {
+    return Cell::bool_false();
+  }
   return Cell(ch->to_upcase() == *ch);
 }
 
@@ -1559,6 +1578,9 @@ Cell is_char_lower_case(Cell args) {
   auto arg = car(args);
   PSCM_ASSERT(arg.is_char());
   auto ch = arg.to_char();
+  if (!ch->is_alphabetic()) {
+    return Cell::bool_false();
+  }
   return Cell(ch->to_downcase() == *ch);
 }
 
@@ -1594,6 +1616,19 @@ Cell char_downcase(Cell args) {
   PSCM_ASSERT(arg.is_char());
   auto ch = arg.to_char();
   return new Char(ch->to_downcase());
+}
+
+Cell proc_exit(Cell args) {
+  if (args.is_nil()) {
+    std::exit(0);
+  }
+  auto arg = car(args);
+  PSCM_ASSERT(arg.is_num());
+  auto num = arg.to_number();
+  PSCM_ASSERT(num->is_int());
+  auto status = num->to_int();
+  std::exit(status);
+  return {};
 }
 
 Cell reverse_argl(Cell argl) {
@@ -1640,7 +1675,7 @@ Cell Evaluator::eval(Cell expr, SymbolTable *env) {
 
 void Evaluator::run() {
   while (true) {
-    if (step_ > 10000) {
+    if (step_ > 100000) {
       PSCM_THROW_EXCEPTION("evaluator terminate due to reach max step: " + std::to_string(step_));
     }
     step_++;
@@ -1654,7 +1689,7 @@ void Evaluator::run() {
     case Label::EVAL: {
       PRINT_STEP();
       SPDLOG_INFO("eval expr: {}", reg_.expr);
-      if (reg_.expr.is_self_evaluated()) {
+      if (reg_.expr.is_none() || reg_.expr.is_self_evaluated()) {
         reg_.val = reg_.expr;
         GOTO(reg_.cont);
       }
@@ -2098,7 +2133,7 @@ void Evaluator::run() {
           PSCM_POP_STACK(cont);
           GOTO(reg_.cont);
         }
-        reg_.expr = list(proc, car(list1));
+        reg_.expr = list(proc, list(quote, car(list1)));
         reg_.unev = list(cdr(list1));
       }
       else if (len == 2) {
@@ -2109,7 +2144,7 @@ void Evaluator::run() {
           PSCM_POP_STACK(cont);
           GOTO(reg_.cont);
         }
-        reg_.expr = list(proc, car(list1), car(list2));
+        reg_.expr = list(proc, list(quote, car(list1)), list(quote, car(list2)));
         reg_.unev = list(cdr(list1), cdr(list2));
       }
       else {
@@ -2188,7 +2223,7 @@ void Evaluator::run() {
           PSCM_POP_STACK(cont);
           GOTO(reg_.cont);
         }
-        reg_.expr = list(proc, car(list1));
+        reg_.expr = list(proc, list(quote, car(list1)));
         reg_.unev = list(cdr(list1));
       }
       else if (len == 2) {
@@ -2199,7 +2234,7 @@ void Evaluator::run() {
           PSCM_POP_STACK(cont);
           GOTO(reg_.cont);
         }
-        reg_.expr = list(proc, car(list1), car(list2));
+        reg_.expr = list(proc, list(quote, car(list1)), list(quote, car(list2)));
         reg_.unev = list(cdr(list1), cdr(list2));
       }
       else {
@@ -2260,7 +2295,8 @@ void Evaluator::run() {
       auto clause = car(reg_.unev);
       auto tmp = cdr(clause);
       if (tmp.is_nil()) {
-        PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
+        reg_.val = Cell::bool_true();
+        GOTO(Label::AFTER_APPLY_MACRO);
       }
       auto arrow = car(tmp);
       if (arrow.is_sym() && *arrow.to_symbol() == "=>"_sym) {

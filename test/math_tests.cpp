@@ -1,3 +1,6 @@
+//
+// Created by PikachuHy on 2023/2/23.
+//
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 #include <pscm/Number.h>
@@ -11,15 +14,13 @@ using namespace pscm;
 using namespace std::string_literals;
 using namespace doctest;
 
-TEST_CASE("testing cond, empty") {
+TEST_CASE("testing expt -1 -255") {
   auto f = [](Scheme& scm) {
     Cell ret;
     ret = scm.eval(R"(
-(cond ((eq? 1 2))
-      ((eq? 1 1))
-      (else 'a))
+(expt -1 -255)
 )");
-    CHECK(ret == Cell::bool_true());
+    CHECK(ret == -1);
   };
   {
     Scheme scm;
@@ -31,25 +32,13 @@ TEST_CASE("testing cond, empty") {
   }
 }
 
-TEST_CASE("testing 4.2.1, Conditionals, cond") {
+TEST_CASE("testing number?") {
   auto f = [](Scheme& scm) {
     Cell ret;
     ret = scm.eval(R"(
-(cond ((> 3 2) 'greater)
-      ((< 3 2) 'less))
+(number? 3)
 )");
-    CHECK(ret == "greater"_sym);
-    ret = scm.eval(R"(
-    (cond ((> 3 3) 'greater)
-          ((< 3 3) 'less)
-          (else 'equal))
-    )");
-    CHECK(ret == "equal"_sym);
-    ret = scm.eval(R"(
-    (cond ((assv 'b '((a 1) (b 2))) => cadr)
-          (else #f))
-    )");
-    CHECK(ret == 2);
+    CHECK(ret == Cell::bool_true());
   };
   {
     Scheme scm;

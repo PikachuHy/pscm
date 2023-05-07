@@ -146,7 +146,7 @@ Cell write_char(Cell args);
 Cell load(Cell args);
 Cell transcript_on(Cell args);
 Cell transcript_off(Cell args);
-
+Cell proc_exit(Cell args);
 class SymbolTable;
 class Scheme;
 

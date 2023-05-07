@@ -68,6 +68,7 @@ Cell scm_lambda(Scheme& scm, SymbolTable *env, Cell args) {
 }
 
 Cell scm_cond(Scheme& scm, SymbolTable *env, Cell args) {
+  auto args_bak = args;
   if (args.is_nil()) {
     PSCM_THROW_EXCEPTION("Missing clauses (cond)");
   }
@@ -79,18 +80,17 @@ Cell scm_cond(Scheme& scm, SymbolTable *env, Cell args) {
       PSCM_THROW_EXCEPTION("Bad cond clause " + clause.to_string() + " in expression " + args.to_string());
     }
     auto test = car(clause);
-    auto expr = cdr(clause);
-    if (expr.is_nil()) {
-      return Cell::bool_true();
-    }
-    expr = car(expr);
     SPDLOG_INFO("test: {}", test);
+    auto expr = cdr(clause);
     SPDLOG_INFO("expr: {}", expr);
     if (test.is_sym()) {
       PSCM_ASSERT(test.to_symbol());
       auto sym = test.to_symbol();
       if (*sym == cond_else) {
-        return expr;
+        if (expr.is_nil()) {
+          PSCM_THROW_EXCEPTION("Bad cond clause (else) in expression " + args_bak.to_string());
+        }
+        return car(expr);
       }
     }
     auto ret = scm.eval(env, test);
@@ -99,10 +99,10 @@ Cell scm_cond(Scheme& scm, SymbolTable *env, Cell args) {
         continue;
       }
     }
-    auto tmp = cdr(clause);
-    if (tmp.is_nil()) {
-      PSCM_THROW_EXCEPTION("Invalid cond expr: " + clause.to_string());
+    if (expr.is_nil()) {
+      return Cell::bool_true();
     }
+    auto tmp = cdr(clause);
     SPDLOG_INFO("tmp: {}", tmp);
     auto arrow = car(tmp);
     if (arrow.is_sym() && *arrow.to_symbol() == "=>"_sym) {
@@ -112,7 +112,7 @@ Cell scm_cond(Scheme& scm, SymbolTable *env, Cell args) {
       return cons(apply, cons(f, f_args));
     }
     else {
-      return expr;
+      return car(expr);
     }
   }
   return Cell::none();
@@ -405,10 +405,10 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("string-set!"), new Function("string-set!", string_set));
   env->insert(new Symbol("string=?"), new Function("string=?", is_string_equal));
   env->insert(new Symbol("string-ci=?"), new Function("string-ci=?", is_string_equal_case_insensitive));
-  env->insert(new Symbol("string<?"), new Function("string<?", is_string_equal));
-  env->insert(new Symbol("string>?"), new Function("string>?", is_string_equal));
-  env->insert(new Symbol("string<=?"), new Function("string<=?", is_string_equal));
-  env->insert(new Symbol("string>=?"), new Function("string>=?", is_string_equal));
+  env->insert(new Symbol("string<?"), new Function("string<?", is_string_less));
+  env->insert(new Symbol("string>?"), new Function("string>?", is_string_greater));
+  env->insert(new Symbol("string<=?"), new Function("string<=?", is_string_less_or_equal));
+  env->insert(new Symbol("string>=?"), new Function("string>=?", is_string_greater_or_equal));
   env->insert(new Symbol("string-ci<?"), new Function("string-ci<?", is_string_less_case_insensitive));
   env->insert(new Symbol("string-ci>?"), new Function("string-ci>?", is_string_greater_case_insensitive));
   env->insert(new Symbol("string-ci<=?"), new Function("string-ci<=?", is_string_less_or_equal_case_insensitive));
@@ -463,6 +463,8 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("transcript-on"), new Function("transcript-on", transcript_on));
   env->insert(new Symbol("transcript-off"), new Function("transcript-off", transcript_off));
 
+  env->insert(new Symbol("exit"), new Function("exit", proc_exit));
+
   env->insert(new Symbol("define"), new Macro("define", Label::APPLY_DEFINE, scm_define));
   env->insert(new Symbol("cond"), new Macro("cond", Label::APPLY_COND, scm_cond));
   env->insert(new Symbol("if"), new Macro("if", Label::APPLY_IF, scm_if));
@@ -501,9 +503,17 @@ Scheme::Scheme(bool use_register_machine)
   }
   eval(R"(
 (define (call-with-output-file filename proc)
-  (let ((port (open-output-file filename)))
-    (apply proc (list port))
-    (close-output-port port)))
+  (let* ((port (open-output-file filename))
+        (ret (apply proc (list port))))
+    (close-output-port port)
+    ret))
+)");
+  eval(R"(
+(define (call-with-input-file filename proc)
+  (let* ((port (open-input-file filename))
+         (ret (apply proc (list port))))
+    (close-input-port port)
+    ret))
 )");
   auto new_env = new SymbolTable(env);
   envs_.push_back(new_env);
@@ -538,13 +548,13 @@ Cell Scheme::eval(const char *code) {
   }
 }
 
-void Scheme::load(const char *filename) {
+bool Scheme::load(const char *filename) {
   std::cout << "load: " << filename << std::endl;
   std::fstream ifs;
   ifs.open(filename, std::ios::in);
   if (!ifs.is_open()) {
     SPDLOG_ERROR("load file {} error", filename);
-    return;
+    return false;
   }
   ifs.seekg(0, ifs.end);
   auto sz = ifs.tellg();
@@ -567,7 +577,9 @@ void Scheme::load(const char *filename) {
   }
   catch (Exception& ex) {
     SPDLOG_ERROR("load file {} error", filename);
+    return false;
   }
+  return true;
 }
 
 Cell Scheme::eval_args(pscm::SymbolTable *env, pscm::Cell args, SourceLocation loc) {
@@ -667,10 +679,11 @@ Cell Scheme::lookup(SymbolTable *env, Cell expr, SourceLocation loc) {
   PSCM_ASSERT(expr.is_sym());
   auto sym = expr.to_symbol();
   PSCM_ASSERT(sym);
-  auto ret = env->get_or(sym, {}, loc);
-  if (ret.is_none()) {
+  bool has_sym = env->contains(sym);
+  if (!has_sym) {
     PSCM_THROW_EXCEPTION("Unbound variable: "s + std::string(sym->name()));
   }
+  auto ret = env->get_or(sym, {}, loc);
   return ret;
 }
 

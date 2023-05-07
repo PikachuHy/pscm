@@ -70,6 +70,9 @@ public:
       }
       PSCM_THROW_EXCEPTION("Invalid Number: "s + std::string(data_));
     }
+    if (pos_ != data_.size()) {
+      PSCM_THROW_EXCEPTION("Invalid Number: "s + std::string(data_));
+    }
     return num;
   }
 
@@ -410,9 +413,17 @@ Cell Parser::parse_literal() {
     }
     else {
       auto name = last_symbol_->name();
-      if (!name.empty() && name[0] == 'e') {
+      if (name.empty()) {
+        PSCM_THROW_EXCEPTION("Unsupported literal: " + std::string(last_symbol_->name()));
+      }
+      if (name[0] == 'e') {
         // parse number literal
         auto val = std::stod(std::string(name.substr(1)));
+        return new Number(val);
+      }
+      if (name[0] == 'i') {
+        NumberParser parser(name.substr(1));
+        auto val = parser.parse();
         return new Number(val);
       }
       PSCM_THROW_EXCEPTION("Unsupported literal: " + std::string(last_symbol_->name()));
@@ -428,7 +439,10 @@ Cell Parser::parse_literal() {
     // read char
     auto start = pos_;
     auto tok = next_token();
-    if (tok == Token::SYMBOL) {
+    if (tok == Token::DOT) {
+      return Char::from('.');
+    }
+    else if (tok == Token::SYMBOL) {
       auto key = last_symbol_->name();
       if (key.size() == 1) {
         return Char::from(key[0]);
@@ -482,27 +496,67 @@ Cell Parser::parse_literal() {
 Cell Parser::parse_string() {
   auto start = pos_;
   std::string s;
-  while (pos_ < code_.size()) {
-    if (code_[pos_] == '"') {
+  while (!is_eof()) {
+    if (peek_char() == '"') {
+      next_char();
       break;
     }
-    if (code_[pos_] == '\\') {
-      if (pos_ + 1 < code_.size()) {
-        advance();
+    if (peek_char() == '\\') {
+      next_char();
+      if (is_eof()) {
+        PSCM_THROW_EXCEPTION("Invalid String: ");
       }
-      else {
-        PSCM_THROW_EXCEPTION("Invalid String: " + code_.substr(start));
+      auto ch = peek_char();
+      switch (ch) {
+      case 't': {
+        s.push_back('\t');
+        break;
       }
+      case 'n': {
+        s.push_back('\n');
+        break;
+      }
+      case '"': {
+        s.push_back('"');
+        break;
+      }
+      case '\\': {
+        s.push_back('\\');
+        break;
+      }
+      default: {
+        PSCM_THROW_EXCEPTION("Unsupported char \\"s + ch + ", current string: " + s);
+      }
+      }
+      next_char();
     }
-    s.push_back(code_[pos_]);
-    advance();
+    else {
+      s.push_back(next_char());
+    }
   }
-  if (pos_ < code_.size() && code_[pos_] == '"') {
-    Cell ret(new String(s));
-    advance();
-    return ret;
-  }
-  PSCM_THROW_EXCEPTION("Invalid string: " + code_.substr(start));
+  Cell ret(new String(s));
+  return ret;
+  // while (pos_ < code_.size()) {
+  //   if (code_[pos_] == '"') {
+  //     break;
+  //   }
+  //   if (code_[pos_] == '\\') {
+  //     if (pos_ + 1 < code_.size()) {
+  //       advance();
+  //     }
+  //     else {
+  //       PSCM_THROW_EXCEPTION("Invalid String: " + code_.substr(start));
+  //     }
+  //   }
+  //   s.push_back(code_[pos_]);
+  //   advance();
+  // }
+  // if (pos_ < code_.size() && code_[pos_] == '"') {
+  //   Cell ret(new String(s));
+  //   advance();
+  //   return ret;
+  // }
+  // PSCM_THROW_EXCEPTION("Invalid string: " + code_.substr(start));
 }
 
 void Parser::skip_empty() {

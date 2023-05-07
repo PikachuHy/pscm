@@ -3,6 +3,7 @@
 //
 
 #include "pscm/Char.h"
+#include "pscm/Port.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
 #include <string>
@@ -16,7 +17,7 @@ static Char ch_newline("\n");
 static Char ch_add("+");
 static Char ch_minus("-");
 static Char ch_semicolon(";");
-static Char ch_point(";");
+static Char ch_point(".");
 
 Cell Char::from(char ch) {
   if (ch == '@') {
@@ -47,6 +48,20 @@ Cell Char::from(char ch) {
     static Char tmp("?");
     return &tmp;
   }
+  else if (ch == '(') {
+    static Char tmp("(");
+    return &tmp;
+  }
+  else if (ch == '#') {
+    static Char tmp("#");
+    return &tmp;
+  }
+  else if (ch == EOF) {
+    std::string s;
+    s.resize(1);
+    s[0] = ch;
+    return new Char(std::move(s));
+  }
   else if (std::isalnum(ch)) {
     std::string s;
     s.resize(1);
@@ -60,6 +75,18 @@ Cell Char::from(char ch) {
 
 std::ostream& operator<<(std::ostream& out, const Char& ch) {
   PSCM_ASSERT(!ch.ch_.empty());
+  if (ch.ch_.size() == 1) {
+    switch (ch.ch_.at(0)) {
+    case '\n': {
+      out << "#\\newline";
+      return out;
+    }
+    case ' ': {
+      out << "#\\space";
+      return out;
+    }
+    }
+  }
   return out << "#\\" << ch.ch_;
 }
 
@@ -83,10 +110,11 @@ bool Char::operator>=(const Char& rhs) const {
   return ch_ >= rhs.ch_;
 }
 
-void Char::display() const {
+void Char::display(Port& port) const {
   PSCM_ASSERT(!ch_.empty());
-  std::cout << ch_;
-  std::cout.flush();
+  for (auto ch : ch_) {
+    port.write_char(ch);
+  }
 }
 
 bool Char::is_alphabetic() const {
