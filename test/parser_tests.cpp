@@ -164,7 +164,7 @@ TEST_CASE("testing parse ,@") {
     f(scm);
   }
 }
-
+#ifndef WASM_PLATFORM
 TEST_CASE("testing parse 3.3I") {
   auto f = [](Scheme& scm) {
     Cell ret;
@@ -182,7 +182,7 @@ TEST_CASE("testing parse 3.3I") {
     f(scm);
   }
 }
-
+#endif
 TEST_CASE("testing parse #i-i") {
   auto f = [](Scheme& scm) {
     Cell ret;

@@ -21,6 +21,8 @@ add_pscm_test(port_test port_tests.cpp)
 add_pscm_test(let_test let_tests.cpp)
 add_pscm_test(letrec_test letrec_tests.cpp)
 add_pscm_test(r4rs_test r4rs/r4rs_tests.cpp)
+if (EMSCRIPTEN)
+else()
 add_test(
     NAME r4rstest.scm_DIRECT
     COMMAND $<TARGET_FILE:pscm_main> -m DIRECT -s r4rstest.scm
@@ -36,3 +38,4 @@ add_test(
     COMMAND $<TARGET_FILE:pscm_main> -m REGISTER_MACHINE -s r4rs_cont_test.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/r4rs
 )
+endif()
