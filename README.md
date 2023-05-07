@@ -28,33 +28,7 @@ for details, [go to pscm.dev](https://pscm.dev).
 
 ## Build
 
-### CMake (Recommanded)
-
-```
-mkdir build && cd build
-cmake ..
-make -j
-```
-
-### xmake
-
-```
-xmake config --yes --mode=Release
-xmake build --jobs=4
-```
-
-### Bazel
-
-```
-bazel build :all
-```
-
-### pscm-build (WIP)
-
-```
-pscm-build
-```
-
+see [Build pscm](https://pscm.dev/cn/how_to_build_pscm)
 ## Development Plan
 
 see [Development Plan](https://github.com/PikachuHy/pscm/issues/13)

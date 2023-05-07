@@ -13,10 +13,16 @@ pscm 是 PikachuHy's Scheme 的缩写，
 - 把MSVC版本的TeXmacs跑起来
 - 在浏览器上（WebAssembly）运行
 
-pscm 依然处于非常简陋的状态，当前的版本
+::: warning
+pscm 依然处于非常简陋的状态
+:::
+
+当前的版本
 
 - 通过 SICP 中的 Register Machine 结合拷贝栈的方式简单实现了 continuation 。
 - 通过 EMSDK 封装 C 接口，可以在浏览器上运行
+- 基本通过 r4rstest.scm 测试，详见 [R4RS Support](r4rs_support.md)
+- `map` 和 `for-each` 参数最多 2 个，有需求再增加参数个数
 
 接下来需要探索的事情是如何对接 LLVM 的能力，将 pscm 代码编译成二进制文件。
 
@@ -54,7 +60,7 @@ pscm 不局限于 Scheme 语言/语法，它更多是我学习编译原理的一
 
 - 内存问题
 
-暂时没管
+暂时没管，有意向使用 [Boehm garbage collector](https://github.com/ivmai/bdwgc)
 
 - 代码风格
 

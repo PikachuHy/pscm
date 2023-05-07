@@ -1,6 +1,6 @@
 export default {
   lang: 'en-US',
-  title: 'pscm',
+  title: "PikachuHy's Scheme",
   description: 'a scheme language implementation',
   base: '/',
   lastUpdated: true,
@@ -58,20 +58,54 @@ function nav() {
 function sidebarGuideZh() {
   return [
     {
-      text: 'pscm 简介',
-      link: '/cn/intro'
+      text: 'pscm',
+      collapsible: true,
+      items: [
+        {
+          text: 'pscm 简介',
+          link: '/cn/intro'
+        },
+        {
+          text: '如何构建 pscm',
+          link: '/cn/how_to_build_pscm'
+        },
+        {
+          text: 'pscm 数据类型',
+          link: '/cn/cell'
+        },
+        {
+          text: 'Register Machine',
+          link: '/cn/register_machine'
+        },
+        {
+          text: 'Continuation',
+          link: '/cn/continuation'
+        },
+        {
+          text: 'R4RS Support',
+          link: '/cn/r4rs_support'
+        },
+      ]
     },
     {
-      text: 'pscm 数据类型',
-      link: '/cn/cell'
+      text: 'pscm-build',
+      collapsible: true,
+      items: [
+        {
+          text: 'pscm-build 简介',
+          link: '/cn/pscm_build'
+        },
+      ]
     },
     {
-      text: 'Register Machine',
-      link: '/cn/register_machine'
-    },
-    {
-      text: 'Continuation',
-      link: '/cn/continuation'
-    },
+      text: 'misc',
+      collapsible: true,
+      items: [
+        {
+          text: '代码统计',
+          link: '/cn/code_statistics'
+        }
+      ]
+    }
   ]
 }
