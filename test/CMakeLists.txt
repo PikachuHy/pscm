@@ -22,6 +22,8 @@ add_pscm_test(let_test let_tests.cpp)
 add_pscm_test(letrec_test letrec_tests.cpp)
 add_pscm_test(r4rs_test r4rs/r4rs_tests.cpp)
 if (EMSCRIPTEN)
+elseif (WIN32)
+# TODO: handle EOF
 else()
 add_test(
     NAME r4rstest.scm_DIRECT
