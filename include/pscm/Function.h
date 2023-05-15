@@ -27,6 +27,10 @@ public:
   Cell call(Cell args, SourceLocation loc = {});
   friend std::ostream& operator<<(std::ostream& out, const Function& func);
 
+  std::string_view name() const {
+    return name_;
+  }
+
 private:
   std::string name_;
   std::variant<std::monostate, Cell::ScmFunc, ScmFunc2> f_;

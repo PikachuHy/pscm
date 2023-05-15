@@ -36,6 +36,7 @@ class Macro;
 class Promise;
 class Continuation;
 class Port;
+class Module;
 enum class Label {
   DONE,
   EVAL,
@@ -53,11 +54,13 @@ enum class Label {
   AFTER_APPLY_FUNC,
   AFTER_APPLY_PROC,
   AFTER_APPLY_MACRO,
+  AFTER_APPLY_USER_DEFINED_MACRO,
   AFTER_APPLY_CONT,
   AFTER_EVAL_FIRST_EXPR,
   AFTER_EVAL_OTHER_EXPR,
   APPLY_APPLY, // call apply from scheme
   APPLY_DEFINE,
+  APPLY_DEFINE_MACRO,
   APPLY_COND,
   APPLY_IF,
   APPLY_AND,
@@ -71,6 +74,8 @@ enum class Label {
   APPLY_MAP,
   APPLY_FORCE,
   APPLY_BEGIN,
+  APPLY_LOAD,
+  APPLY_EVAL,
   AFTER_EVAL_FOR_EACH_FIRST_EXPR,
   AFTER_EVAL_MAP_FIRST_EXPR,
   AFTER_EVAL_MAP_OTHER_EXPR,
@@ -85,6 +90,17 @@ enum class Label {
 };
 std::string to_string(Label label);
 std::ostream& operator<<(std::ostream& out, const Label& pos);
+
+class SmallObject {
+public:
+  SmallObject(long tag, void *data)
+      : tag(tag)
+      , data(data) {
+  }
+
+  long tag;
+  void *data;
+};
 
 class Cell {
 public:
@@ -108,6 +124,8 @@ public:
   Cell(Promise *p);
   Cell(Continuation *cont);
   Cell(Port *port);
+  Cell(SmallObject *smob);
+  Cell(Module *module);
   explicit Cell(bool val);
 
   ~Cell() {
@@ -129,10 +147,13 @@ public:
     MACRO,       //
     PROMISE,     // promise
     PORT,        // port
+    SMOB,        // guile small object
+    MODULE,      // module
     CONTINUATION // continuation
   };
   friend std::ostream& operator<<(std::ostream& out, const Cell& cell);
   std::string to_string() const;
+  std::string pretty_string() const;
   void display(Port& port);
 
   static Cell nil() {
@@ -244,6 +265,18 @@ public:
 
   Port *to_port(SourceLocation loc = {}) const;
 
+  bool is_smob() const {
+    return tag_ == Tag::SMOB;
+  }
+
+  SmallObject *to_smob(SourceLocation loc = {}) const;
+
+  bool is_module() const {
+    return tag_ == Tag::MODULE;
+  }
+
+  Module *to_module(SourceLocation loc = {}) const;
+
   bool is_self_evaluated() const;
 
   [[nodiscard]] Cell is_eqv(const Cell& rhs) const;
@@ -278,4 +311,6 @@ extern Cell builtin_for_each;
 extern Cell builtin_map;
 extern Cell builtin_force;
 extern Cell apply;
+extern Cell builtin_load;
+extern Cell builtin_eval;
 } // namespace pscm

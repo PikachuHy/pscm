@@ -21,10 +21,13 @@
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
+#include <filesystem>
 #include <fstream>
+#include <numeric>
 #include <ostream>
 #include <sstream>
 #include <unordered_set>
+namespace fs = std::filesystem;
 #define PSCM_PUSH_STACK(reg_name)                                                                                      \
   SPDLOG_DEBUG("push {} stack: {}", #reg_name, stack_.reg_name.size());                                                \
   reg_type_stack_.push_back(reg_##reg_name);                                                                           \
@@ -486,6 +489,38 @@ Cell modulo(Cell args) {
   return new Number(ret);
 }
 
+Cell proc_gcd(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg1 = car(args);
+  auto arg2 = cadr(args);
+  PSCM_ASSERT(arg1.is_num());
+  PSCM_ASSERT(arg2.is_num());
+  auto num1 = arg1.to_number();
+  auto num2 = arg2.to_number();
+  PSCM_ASSERT(num1->is_int());
+  PSCM_ASSERT(num2->is_int());
+  auto n1 = num1->to_int();
+  auto n2 = num2->to_int();
+  auto ret = std::gcd(n1, n2);
+  return new Number(ret);
+}
+
+Cell proc_lcm(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg1 = car(args);
+  auto arg2 = cadr(args);
+  PSCM_ASSERT(arg1.is_num());
+  PSCM_ASSERT(arg2.is_num());
+  auto num1 = arg1.to_number();
+  auto num2 = arg2.to_number();
+  PSCM_ASSERT(num1->is_int());
+  PSCM_ASSERT(num2->is_int());
+  auto n1 = num1->to_int();
+  auto n2 = num2->to_int();
+  auto ret = std::lcm(n1, n2);
+  return new Number(ret);
+}
+
 Cell builtin_not(Cell args) {
   PSCM_ASSERT(args.is_pair());
   if (args.is_nil()) {
@@ -578,43 +613,6 @@ Cell set_cdr(Cell args) {
   }
   pair.to_pair()->second = obj;
   return Cell::none();
-}
-
-Cell proc_cons(Cell args) {
-  auto a = car(args);
-  auto b = cadr(args);
-  return cons(a, b);
-}
-
-Cell proc_car(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto arg = car(args);
-  return car(arg);
-}
-
-Cell proc_cdr(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto arg = car(args);
-  return cdr(arg);
-}
-
-Cell proc_cdar(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto arg = car(args);
-  return cdar(arg);
-}
-
-Cell proc_cadr(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  SPDLOG_INFO("args: {}", args);
-  auto arg = car(args);
-  return cadr(arg);
-}
-
-Cell proc_cddr(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto arg = car(args);
-  return cddr(arg);
 }
 
 Cell is_eqv(Cell args) {
@@ -857,21 +855,26 @@ Cell append(Cell args) {
   if (args.is_nil()) {
     return nil;
   }
+  auto pair = cons(nil, nil);
+  auto it = pair;
   auto list = car(args);
   if (list.is_nil() || list.is_pair()) {
     if (list.is_nil()) {
       return cadr(args);
     }
     auto p = list;
-    while (p.is_pair() && cdr(p).is_pair()) {
+    while (p.is_pair()) {
+      auto new_pair = cons(car(p), nil);
+      it->second = new_pair;
+      it = new_pair;
       p = cdr(p);
     }
-    p.to_pair()->second = cadr(args);
+    it->second = cadr(args);
   }
   else {
     PSCM_THROW_EXCEPTION("Wrong type argument in position 1 (expecting empty list): " + list.to_string());
   }
-  return list;
+  return pair->second;
 }
 
 Cell reverse(Cell args) {
@@ -1661,8 +1664,9 @@ Cell construct_apply_argl(Cell argl) {
   return args->second;
 }
 
-Evaluator::Evaluator(Scheme& scm)
-    : scm_(scm) {
+Evaluator::Evaluator(Scheme& scm, Evaluator *parent)
+    : scm_(scm)
+    , parent_(parent) {
 }
 
 Cell Evaluator::eval(Cell expr, SymbolTable *env) {
@@ -1688,7 +1692,7 @@ void Evaluator::run() {
     }
     case Label::EVAL: {
       PRINT_STEP();
-      SPDLOG_INFO("eval expr: {}", reg_.expr);
+      SPDLOG_INFO("eval expr: {}", reg_.expr.pretty_string());
       if (reg_.expr.is_none() || reg_.expr.is_self_evaluated()) {
         reg_.val = reg_.expr;
         GOTO(reg_.cont);
@@ -1725,10 +1729,23 @@ void Evaluator::run() {
       PRINT_STEP();
       PSCM_ASSERT(reg_.proc.is_macro());
       auto f = reg_.proc.to_macro();
-      PSCM_ASSERT(f->is_func());
-      reg_.cont = Label::AFTER_APPLY_MACRO;
-      reg_.expr = f->call(reg_.unev);
-      GOTO(Label::EVAL);
+      if (f->is_func()) {
+        reg_.cont = Label::AFTER_APPLY_MACRO;
+        reg_.expr = f->call(reg_.unev);
+        GOTO(Label::EVAL);
+      }
+      else {
+        // TODO: use DIRECT mode to evaluate macro code
+        auto proc = f->to_proc();
+        reg_.cont = Label::AFTER_APPLY_USER_DEFINED_MACRO;
+        PSCM_PUSH_STACK(env);
+        PSCM_PUSH_STACK(cont);
+        reg_.argl = reg_.unev;
+        PSCM_PUSH_STACK(argl);
+        reg_.proc = proc;
+        GOTO(Label::APPLY_PROC);
+      }
+      PSCM_THROW_EXCEPTION("not supported macro: " + reg_.proc.to_string());
     }
     case Label::APPLY_FUNC: {
       PRINT_STEP();
@@ -1922,6 +1939,13 @@ void Evaluator::run() {
       PSCM_POP_STACK(cont);
       GOTO(reg_.cont);
     }
+    case Label::AFTER_APPLY_USER_DEFINED_MACRO: {
+      PRINT_STEP();
+      PSCM_POP_STACK(env);
+      PSCM_POP_STACK(cont);
+      reg_.expr = reg_.val;
+      GOTO(Label::EVAL);
+    }
     case Label::AFTER_APPLY_MACRO: {
       PRINT_STEP();
       PSCM_POP_STACK(cont);
@@ -1980,6 +2004,24 @@ void Evaluator::run() {
       PSCM_PUSH_STACK(val);
       reg_.cont = Label::AFTER_EVAL_DEFINE_ARG;
       GOTO(Label::EVAL);
+    }
+    case Label::APPLY_DEFINE_MACRO: {
+      PRINT_STEP();
+      auto var_name = car(reg_.unev);
+      auto val = cdr(reg_.unev);
+      auto proc_name = car(var_name);
+      auto args = cdr(var_name);
+      auto expr = cons(lambda, cons(args, val));
+      reg_.val = proc_name;
+      PSCM_ASSERT(proc_name.is_sym());
+      auto proc_name_sym = proc_name.to_symbol();
+      auto proc = new Procedure(proc_name_sym, args, val, reg_.env);
+      std::string name = std::string(proc_name_sym->name());
+      auto macro = new Macro(name, proc);
+      reg_.env->insert(proc_name_sym, macro);
+      reg_.val = Cell::none();
+      PSCM_POP_STACK(cont);
+      GOTO(reg_.cont);
     }
     case Label::APPLY_COND: {
       PRINT_STEP();
@@ -2059,6 +2101,27 @@ void Evaluator::run() {
         reg_.unev = cdr(reg_.unev);
         GOTO(Label::EVAL);
       }
+    }
+    case Label::APPLY_LOAD: {
+      auto args = reg_.unev;
+      auto env = reg_.env;
+      PSCM_ASSERT(args.is_pair());
+      auto arg = car(args);
+      PSCM_ASSERT(arg.is_sym());
+      auto sym = arg.to_symbol();
+      auto val = env->get(sym);
+      PSCM_ASSERT(val.is_str());
+      auto s = val.to_str();
+      auto filename = s->str();
+      bool ok = load(std::string(filename).c_str(), env);
+      reg_.val = Cell(ok);
+      PSCM_POP_STACK(cont);
+      GOTO(reg_.cont);
+    }
+    case Label::APPLY_EVAL: {
+      PRINT_STEP();
+      reg_.expr = car(reg_.unev);
+      GOTO(Label::EVAL);
     }
     case Label::AFTER_EVAL_DEFINE_ARG: {
       PRINT_STEP();
@@ -2299,17 +2362,19 @@ void Evaluator::run() {
         GOTO(Label::AFTER_APPLY_MACRO);
       }
       auto arrow = car(tmp);
-      if (arrow.is_sym() && *arrow.to_symbol() == "=>"_sym) {
+      auto arrow_sym = "=>"_sym;
+      if (arrow.is_sym() && *arrow.to_symbol() == arrow_sym && !reg_.env->contains(&arrow_sym)) {
         auto recipient = cadr(tmp);
         reg_.expr = cons(recipient, list(list(quote, reg_.val)));
         reg_.cont = Label::AFTER_APPLY_MACRO;
         GOTO(Label::EVAL);
       }
       else {
-        auto expr = cadr(clause);
-        reg_.expr = expr;
-        SPDLOG_INFO("cond expr: {}", reg_.expr);
         reg_.cont = Label::AFTER_APPLY_MACRO;
+        PSCM_PUSH_STACK(cont);
+        reg_.cont = Label::AFTER_EVAL_FIRST_EXPR;
+        reg_.expr = cadr(clause);
+        reg_.unev = cddr(clause);
         GOTO(Label::EVAL);
       }
     }
@@ -2509,6 +2574,40 @@ std::string Evaluator::Stack::to_string() const {
   std::stringstream ss;
   ss << *this;
   return ss.str();
+}
+
+bool Evaluator::load(const char *filename, SymbolTable *env) {
+  std::cout << "load: " << filename << std::endl;
+  if (!fs::exists(filename)) {
+    SPDLOG_ERROR("file not found: {}", filename);
+    return false;
+  }
+  std::fstream ifs;
+  ifs.open(filename, std::ios::in);
+  if (!ifs.is_open()) {
+    SPDLOG_ERROR("load file {} error", filename);
+    return false;
+  }
+  ifs.seekg(0, ifs.end);
+  auto sz = ifs.tellg();
+  ifs.seekg(0, ifs.beg);
+  std::string code;
+  code.resize(sz);
+  ifs.read(code.data(), sz);
+  try {
+    Parser parser(code, filename);
+    Cell expr = parser.next();
+    while (!expr.is_none()) {
+      Evaluator child(scm_, this);
+      child.eval(expr, env);
+      expr = parser.next();
+    }
+  }
+  catch (Exception& ex) {
+    SPDLOG_ERROR("load file {} error", filename);
+    return false;
+  }
+  return true;
 }
 
 template <typename T>

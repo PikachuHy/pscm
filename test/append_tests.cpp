@@ -1,26 +1,35 @@
-//
-// Created by PikachuHy on 2023/2/23.
-//
+
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
+#include <filesystem>
+#include <fstream>
+#include <pscm/Char.h>
 #include <pscm/Number.h>
 #include <pscm/Pair.h>
+#include <pscm/Parser.h>
 #include <pscm/Scheme.h>
+#include <pscm/Str.h>
 #include <pscm/Symbol.h>
 #include <pscm/scm_utils.h>
+#include <sstream>
 #include <string>
 using namespace doctest;
 using namespace pscm;
 using namespace std::string_literals;
 using namespace doctest;
+namespace fs = std::filesystem;
 
-TEST_CASE("testing expt -1 -255") {
+TEST_CASE("testing append, 0") {
   auto f = [](Scheme& scm) {
     Cell ret;
     ret = scm.eval(R"(
-(expt -1 -255)
+(define a '(1 2 3))
 )");
-    CHECK(ret == -1);
+    ret = scm.eval("(append a 4)");
+    ret = scm.eval(R"(
+a
+)");
+    CHECK(ret == list(1, 2, 3));
   };
   {
     Scheme scm;
@@ -32,37 +41,12 @@ TEST_CASE("testing expt -1 -255") {
   }
 }
 
-TEST_CASE("testing number?") {
+TEST_CASE("testing append, 1") {
   auto f = [](Scheme& scm) {
     Cell ret;
-    ret = scm.eval(R"(
-(number? 3)
-)");
-    CHECK(ret == Cell::bool_true());
-  };
-  {
-    Scheme scm;
-    f(scm);
-  }
-  {
-    Scheme scm(true);
-    f(scm);
-  }
-}
-
-TEST_CASE("testing /") {
-  auto f = [](Scheme& scm) {
-    Cell ret;
-    ret = scm.eval(R"(
-(/ 1 3)
-)");
-    Number num(Rational(1, 3));
-    CHECK(ret == Cell(&num));
-    ret = scm.eval(R"(
-(* (/ 1 3) 100)
-)");
-    Number num2(Rational(100, 3));
-    CHECK(ret == Cell(&num2));
+    ret = scm.eval("(append '(a b) '(c . d))");
+    Cell ret2 = scm.eval("`(a b c . d)");
+    CHECK(ret == ret2);
   };
   {
     Scheme scm;

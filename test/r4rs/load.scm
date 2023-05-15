@@ -1,0 +1,7 @@
+(display "Start...")
+(if (not (load "init.scm")) (exit 1))
+(display "Load init.scm OK") (newline)
+(if (not (load "r4rstest.scm")) (exit 1))
+(display "Load r4rstest.scm OK") (newline)
+(display "Done!!!")
+(newline)

@@ -34,6 +34,7 @@ private:
   double real_part_;
   double imag_part_;
 };
+class Number;
 
 class Rational {
 public:
@@ -64,6 +65,7 @@ public:
 private:
   int64_t numerator_;
   int64_t denominator_;
+  friend class Number;
 };
 
 class Number {

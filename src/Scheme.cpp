@@ -20,11 +20,13 @@
 #include "pscm/scm_utils.h"
 #include "pscm/version.h"
 #include "spdlog/spdlog.h"
+#include <filesystem>
 #include <fstream>
 #include <string>
 #include <string_view>
 using namespace std::string_literals;
 using namespace std::string_view_literals;
+namespace fs = std::filesystem;
 
 namespace pscm {
 
@@ -46,6 +48,18 @@ Cell scm_define(Scheme& scm, SymbolTable *env, Cell args) {
     return {};
   }
   throw Exception("Invalid define args: " + args.to_string());
+}
+
+Cell scm_define_macro(Scheme& scm, SymbolTable *env, Cell args) {
+  auto first_arg = car(args);
+  PSCM_ASSERT(first_arg.is_pair());
+  auto proc_name = car(first_arg);
+  auto proc_args = cdr(first_arg);
+  PSCM_ASSERT(proc_name.is_sym());
+  auto sym = proc_name.to_symbol();
+  auto proc = new Procedure(sym, proc_args, cdr(args), env);
+  env->insert(sym, new Macro(std::string(sym->name()), proc));
+  return {};
 }
 
 Cell scm_set(Scheme& scm, SymbolTable *env, Cell args) {
@@ -105,13 +119,18 @@ Cell scm_cond(Scheme& scm, SymbolTable *env, Cell args) {
     auto tmp = cdr(clause);
     SPDLOG_INFO("tmp: {}", tmp);
     auto arrow = car(tmp);
-    if (arrow.is_sym() && *arrow.to_symbol() == "=>"_sym) {
+    auto arrow_sym = "=>"_sym;
+    if (arrow.is_sym() && *arrow.to_symbol() == arrow_sym && !env->contains(&arrow_sym)) {
       auto recipient = cadr(tmp);
       auto f = scm.eval(env, recipient);
       auto f_args = list(quote, list(list(ret)));
       return cons(apply, cons(f, f_args));
     }
     else {
+      while (expr.is_pair() && cdr(expr).is_pair()) {
+        [[maybe_unused]] auto ret = scm.eval(env, car(expr));
+        expr = cdr(expr);
+      }
       return car(expr);
     }
   }
@@ -305,6 +324,33 @@ Cell scm_force(Scheme& scm, SymbolTable *env, Cell args) {
   return list(quote, ret);
 }
 
+Cell debug_set(Scheme& scm, SymbolTable *env, Cell args) {
+  return Cell::none();
+}
+
+Cell scm_load(Scheme& scm, SymbolTable *env, Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  PSCM_ASSERT(arg.is_sym());
+  auto sym = arg.to_symbol();
+  auto val = env->get(sym);
+  PSCM_ASSERT(val.is_str());
+  auto s = val.to_str();
+  auto filename = s->str();
+  bool ok = scm.load(std::string(filename).c_str());
+  return Cell(ok);
+}
+
+Cell scm_eval(Scheme& scm, SymbolTable *env, Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  PSCM_ASSERT(arg.is_sym());
+  auto sym = arg.to_symbol();
+  auto expr = env->get(sym);
+  auto ret = scm.eval(env, expr);
+  return ret;
+}
+
 Cell lambda = new Macro("lambda", Label::APPLY_LAMBDA);
 Cell quote = new Macro("quote", Label::APPLY_QUOTE);
 Cell unquote = new Macro("unquote", Label::APPLY_QUOTE);
@@ -315,11 +361,19 @@ Cell begin = new Macro("begin", Label::APPLY_BEGIN, scm_begin);
 Cell builtin_for_each = new Macro("builtin_for-each", Label::APPLY_FOR_EACH, scm_for_each);
 Cell builtin_map = new Macro("builtin_map", Label::APPLY_MAP, scm_map);
 Cell builtin_force = new Macro("builtin_force", Label::APPLY_FORCE, scm_force);
+Cell builtin_load = new Macro("builtin_load", Label::APPLY_LOAD, scm_load);
+Cell builtin_eval = new Macro("builtin_eval", Label::APPLY_EVAL, scm_eval);
 Cell apply = new Macro("builtin_apply", Label::APPLY_APPLY);
 
 Cell version(Cell) {
   static String ver(std::string() + PSCM_VERSION + " (" + GIT_BRANCH + "@" + GIT_HASH + ")");
   return &ver;
+}
+
+void Scheme::add_func(Symbol *sym, Function *func) {
+  PSCM_ASSERT(sym);
+  PSCM_ASSERT(func);
+  envs_.back()->insert(sym, func);
 }
 
 Scheme::Scheme(bool use_register_machine)
@@ -345,6 +399,8 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("quotient"), new Function("quotient", quotient));
   env->insert(new Symbol("remainder"), new Function("remainder", remainder));
   env->insert(new Symbol("modulo"), new Function("modulo", modulo));
+  env->insert(new Symbol("gcd"), new Function("gcd", proc_gcd));
+  env->insert(new Symbol("lcm"), new Function("lcm", proc_lcm));
   env->insert(new Symbol("not"), new Function("not", builtin_not));
   env->insert(new Symbol("display"), new Function("display", display));
   env->insert(new Symbol("write"), new Function("write", write));
@@ -357,11 +413,14 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("set-cdr!"), new Function("set-cdr!", set_cdr));
   env->insert(new Symbol("set-car!"), new Function("set-car!", set_car));
   env->insert(new Symbol("assv"), new Function("assv", assv));
-  env->insert(new Symbol("cons"), new Function("car", proc_cons));
+  env->insert(new Symbol("cons"), new Function("cons", proc_cons));
   env->insert(new Symbol("car"), new Function("car", proc_car));
+  env->insert(new Symbol("caar"), new Function("caar", proc_caar));
   env->insert(new Symbol("cdr"), new Function("cdr", proc_cdr));
   env->insert(new Symbol("cadr"), new Function("cadr", proc_cadr));
   env->insert(new Symbol("cdar"), new Function("cdar", proc_cdar));
+  env->insert(new Symbol("cddr"), new Function("cddr", proc_cddr));
+  env->insert(new Symbol("caddr"), new Function("cddr", proc_caddr));
   env->insert(new Symbol("eqv?"), new Function("eqv?", is_eqv));
   env->insert(new Symbol("eq?"), new Function("eqv?", is_eq));
   env->insert(new Symbol("equal?"), new Function("equal?", is_equal));
@@ -492,6 +551,9 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("map"), Procedure::create_map(env));
   env->insert(new Symbol("apply"), Procedure::create_apply(env));
   env->insert(new Symbol("force"), Procedure::create_force(env));
+  env->insert(new Symbol("load"), Procedure::create_load(env));
+  env->insert(new Symbol("eval"), Procedure::create_eval(env));
+  env->insert(new Symbol("call-with-output-string"), Procedure::create_call_with_output_string(env));
   {
     auto proc_args = cons(new Symbol("producer"), cons(new Symbol("consumer"), nil));
     auto proc = new Procedure(&call_with_values, proc_args, nil, env);
@@ -501,6 +563,15 @@ Scheme::Scheme(bool use_register_machine)
     auto proc = new Procedure(&values, new Symbol("obj"), nil, env);
     env->insert(&values, proc);
   }
+  // TODO: texmacs support
+  env->insert(new Symbol("debug-set!"), new Macro("debug-set!", Label::APPLY_DEFINE, debug_set));
+  env->insert(new Symbol("define-public"), new Macro("define-public", Label::APPLY_DEFINE, scm_define));
+  env->insert(new Symbol("primitive-load"), new Macro("primitive-load", Label::APPLY_DEFINE, scm_define));
+  env->insert(new Symbol("current-module"), new Function("current-module", current_module));
+  env->insert(new Symbol("define-macro"), new Macro("define-macro", Label::APPLY_DEFINE_MACRO, scm_define_macro));
+
+  env->insert(new Symbol("gensym"), new Function("gensym", proc_gensym));
+
   eval(R"(
 (define (call-with-output-file filename proc)
   (let* ((port (open-output-file filename))
@@ -550,6 +621,10 @@ Cell Scheme::eval(const char *code) {
 
 bool Scheme::load(const char *filename) {
   std::cout << "load: " << filename << std::endl;
+  if (!fs::exists(filename)) {
+    SPDLOG_ERROR("file not found: {}", filename);
+    return false;
+  }
   std::fstream ifs;
   ifs.open(filename, std::ios::in);
   if (!ifs.is_open()) {
@@ -610,11 +685,13 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
     proc = eval(env, car(expr));
     args = cdr(expr);
     if (proc.is_func()) {
-      SPDLOG_INFO("proc args: {}", args);
+      SPDLOG_INFO("proc {} args: {}", proc, args.pretty_string());
       PSCM_ASSERT(args.is_pair() || args.is_nil());
       auto f = proc.to_func();
       auto func_args = eval_args(env, args);
-      return f->call(func_args);
+      auto ret = f->call(func_args);
+      SPDLOG_INFO("proc {} ret: {}", expr.pretty_string(), ret.pretty_string());
+      return ret;
     }
     else if (proc.is_macro()) {
       PSCM_ASSERT(args.is_pair() || args.is_nil());
@@ -681,6 +758,7 @@ Cell Scheme::lookup(SymbolTable *env, Cell expr, SourceLocation loc) {
   PSCM_ASSERT(sym);
   bool has_sym = env->contains(sym);
   if (!has_sym) {
+    sym->print_debug_info();
     PSCM_THROW_EXCEPTION("Unbound variable: "s + std::string(sym->name()));
   }
   auto ret = env->get_or(sym, {}, loc);

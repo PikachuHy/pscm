@@ -60,6 +60,10 @@ Cell cddr(Cell c, SourceLocation loc) {
   return p->second;
 }
 
+Cell cdddr(Cell c, SourceLocation loc) {
+  return cdr(cddr(c, loc), loc);
+}
+
 Cell caddr(Cell c, SourceLocation loc) {
   return car(cdr(cdr(c, loc), loc), loc);
 }
@@ -84,4 +88,53 @@ int list_length(Cell expr) {
   }
   return len;
 }
+
+Cell proc_cons(Cell args) {
+  auto a = car(args);
+  auto b = cadr(args);
+  return cons(a, b);
+}
+
+Cell proc_car(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  return car(arg);
+}
+
+Cell proc_caar(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  return caar(arg);
+}
+
+Cell proc_cdr(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  return cdr(arg);
+}
+
+Cell proc_cdar(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  return cdar(arg);
+}
+
+Cell proc_cadr(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  return cadr(arg);
+}
+
+Cell proc_cddr(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  return cddr(arg);
+}
+
+Cell proc_caddr(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  return caddr(arg);
+}
+
 } // namespace pscm

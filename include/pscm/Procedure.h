@@ -40,6 +40,9 @@ public:
 
   static Procedure *create_apply(SymbolTable *env);
   static Procedure *create_force(SymbolTable *env);
+  static Procedure *create_load(SymbolTable *env);
+  static Procedure *create_eval(SymbolTable *env);
+  static Procedure *create_call_with_output_string(SymbolTable *env);
 
 private:
   Symbol *name_;
