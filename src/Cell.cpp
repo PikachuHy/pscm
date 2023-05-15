@@ -95,6 +95,18 @@ Cell::Cell(Port *port) {
   data_ = (void *)port;
 }
 
+Cell::Cell(SmallObject *smob) {
+  ref_count_++;
+  tag_ = Tag::SMOB;
+  data_ = (void *)smob;
+}
+
+Cell::Cell(Module *module) {
+  ref_count_++;
+  tag_ = Tag::MODULE;
+  data_ = (void *)module;
+}
+
 Cell::Cell(bool val) {
   tag_ = Tag::BOOL;
   if (val) {
@@ -106,6 +118,122 @@ Cell::Cell(bool val) {
 }
 
 std::string Cell::to_string() const {
+  std::stringstream ss;
+  ss << *this;
+  return ss.str();
+}
+
+std::string Cell::pretty_string() const {
+  if (is_none()) {
+    return "";
+  }
+  if (is_nil()) {
+    return "()";
+  }
+  if (is_bool()) {
+    if (to_bool()) {
+      return "#t";
+    }
+    else {
+      return "#f";
+    }
+  }
+  if (is_sym()) {
+    auto sym = to_symbol();
+    if (sym->name().find(' ') != std::string_view::npos) {
+      std::stringstream ss;
+      ss << "\e[;34m";
+      ss << *this;
+      ss << "\e[0m";
+      return ss.str();
+    }
+    else {
+      std::stringstream ss;
+      ss << *this;
+      return ss.str();
+    }
+  }
+  if (is_macro()) {
+    auto macro = to_macro();
+    auto name = std::string(macro->name());
+    std::stringstream ss;
+    ss << "\e[;35m";
+    ss << name;
+    ss << "\e[0m";
+    return ss.str();
+  }
+  if (is_func()) {
+    auto func = to_func();
+    return std::string(func->name());
+  }
+  if (is_pair()) {
+    std::stringstream ss;
+    if (car(*this).is_macro()) {
+      auto macro = car(*this).to_macro();
+      if (macro->name() == "quote") {
+        ss << "'";
+        ss << cadr(*this).pretty_string();
+        return ss.str();
+      }
+      else if (macro->name() == "quasiquote") {
+        ss << "`";
+        ss << cadr(*this).pretty_string();
+        return ss.str();
+      }
+      else if (macro->name() == "unquote") {
+        ss << ",";
+        ss << cadr(*this).pretty_string();
+        return ss.str();
+      }
+    }
+    else if (car(*this).is_sym()) {
+      auto sym = car(*this).to_symbol();
+      if (sym->name() == "quasiquote") {
+        ss << "`";
+        ss << cadr(*this).pretty_string();
+        return ss.str();
+      }
+      else if (sym->name() == "unquote") {
+        ss << ",";
+        ss << cadr(*this).pretty_string();
+        return ss.str();
+      }
+      else if (sym->name() == "unquote-splicing") {
+        ss << ",@";
+        ss << cadr(*this).pretty_string();
+        return ss.str();
+      }
+    }
+
+    ss << '(';
+    auto it = *this;
+    ss << car(it).pretty_string();
+    it = cdr(it);
+    while (it.is_pair()) {
+      ss << " ";
+      if (car(it).is_sym() && car(it).to_symbol()->name() == "unquote") {
+        if (cddr(it).is_nil()) {
+          ss << ".";
+          ss << " ";
+          ss << ",";
+          ss << cadr(it).pretty_string();
+          break;
+        }
+      }
+      ss << car(it).pretty_string();
+      it = cdr(it);
+    }
+    ss << ')';
+    return ss.str();
+  }
+  if (is_num()) {
+    std::stringstream ss;
+    ss << *to_number();
+    return ss.str();
+  }
+  if (is_str()) {
+    return std::string(to_str()->str());
+  }
   std::stringstream ss;
   ss << *this;
   return ss.str();
@@ -174,6 +302,16 @@ Continuation *Cell::to_cont(SourceLocation loc) const {
 Port *Cell::to_port(SourceLocation loc) const {
   PSCM_ASSERT_WITH_LOC(is_port(), loc);
   return (Port *)(data_);
+}
+
+SmallObject *Cell::to_smob(SourceLocation loc) const {
+  PSCM_ASSERT_WITH_LOC(is_smob(), loc);
+  return (SmallObject *)(data_);
+}
+
+Module *Cell::to_module(SourceLocation loc) const {
+  PSCM_ASSERT_WITH_LOC(is_module(), loc);
+  return (Module *)(data_);
 }
 
 Cell Cell::ex(const char *msg) {
@@ -444,6 +582,10 @@ std::ostream& operator<<(std::ostream& out, const Label& pos) {
     out << "APPLY_MACRO";
     break;
   }
+  case Label::AFTER_APPLY_USER_DEFINED_MACRO: {
+    out << "AFTER_APPLY_USER_DEFINED_MACRO";
+    break;
+  }
   case Label::APPLY_CONT: {
     out << "APPLY_CONT";
     break;
@@ -472,6 +614,10 @@ std::ostream& operator<<(std::ostream& out, const Label& pos) {
     out << "APPLY_DEFINE";
     break;
   }
+  case Label::APPLY_DEFINE_MACRO: {
+    out << "APPLY_DEFINE_MACRO";
+    break;
+  }
   case Label::APPLY_COND: {
     out << "APPLY_COND";
     break;
@@ -498,6 +644,14 @@ std::ostream& operator<<(std::ostream& out, const Label& pos) {
   }
   case Label::APPLY_BEGIN: {
     out << "APPLY_BEGIN";
+    break;
+  }
+  case Label::APPLY_LOAD: {
+    out << "APPLY_LOAD";
+    break;
+  }
+  case Label::APPLY_EVAL: {
+    out << "APPLY_EVAL";
     break;
   }
   case Label::AFTER_EVAL_DEFINE_ARG: {
@@ -596,6 +750,7 @@ bool Cell::is_self_evaluated() const {
   case Tag::FUNCTION:
   case Tag::NIL:
   case Tag::PROMISE:
+  case Tag::PORT:
   case Tag::CONTINUATION: {
     return true;
   }

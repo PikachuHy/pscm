@@ -1272,7 +1272,7 @@ TEST_CASE("testing 6.3, Pairs and lists, append") {
     ret = scm.eval("(append '(a (b)) '((c)))");
     CHECK(ret == list(&a, list(&b), list(&c)));
     ret = scm.eval("(append '(a b) '(c . d))");
-    CHECK(ret == cons(&a, cons(&b, cons(&c, &d))));
+    CHECK(ret == Cell(cons(&a, cons(&b, cons(&c, &d)))));
     ret = scm.eval("(append '() 'a)");
     CHECK(ret == a);
   };

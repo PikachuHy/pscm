@@ -635,7 +635,7 @@ Parser::Token Parser::next_token() {
     }
   }
   default: {
-    auto row = row_;
+    auto row = row_ + 1;
     auto col = col_;
     std::string s;
     s.push_back(ch);

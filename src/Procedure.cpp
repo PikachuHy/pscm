@@ -109,4 +109,22 @@ Procedure *Procedure::create_force(SymbolTable *env) {
   body = cons(body, nil);
   return new Procedure(name, args, body, env);
 }
+
+Procedure *Procedure::create_load(SymbolTable *env) {
+  auto name = new Symbol("load");
+  auto filename = new Symbol("filename");
+  Cell args = list(filename);
+  Cell body = list(builtin_load, filename);
+  body = cons(body, nil);
+  return new Procedure(name, args, body, env);
+}
+
+Procedure *Procedure::create_eval(SymbolTable *env) {
+  auto name = new Symbol("eval");
+  auto filename = new Symbol("expr");
+  Cell args = list(filename);
+  Cell body = list(builtin_eval, filename);
+  body = cons(body, nil);
+  return new Procedure(name, args, body, env);
+}
 } // namespace pscm

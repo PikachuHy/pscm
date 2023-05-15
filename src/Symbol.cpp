@@ -3,6 +3,9 @@
 //
 
 #include "pscm/Symbol.h"
+#include "pscm/Cell.h"
+#include "pscm/common_def.h"
+#include <fstream>
 #include <iostream>
 #include <ostream>
 
@@ -39,7 +42,21 @@ void Symbol::print_debug_info() {
   if (filename_.empty()) {
     return;
   }
-  std::cout << name_ << " from " << filename_ << ":" << row_ << std::endl;
+  std::cout << name_ << " from " << filename_ << ":" << row_ << ":" << col_ << std::endl;
+  std::fstream in;
+  in.open(filename_);
+  if (!in.is_open()) {
+    SPDLOG_ERROR("open file error: {}", filename_);
+  }
+  std::string line;
+  for (size_t i = 0; i < row_; i++) {
+    std::getline(in, line);
+  }
+  std::cout << line << std::endl;
+  for (size_t i = 1; i < col_; i++) {
+    std::cout << ' ';
+  }
+  std::cout << "^" << std::endl;
 }
 
 Symbol operator""_sym(const char *data, std::size_t len) {
@@ -50,5 +67,9 @@ Symbol *gensym() {
   static int index = 0;
   auto sym = new Symbol(" g" + std::to_string(index++));
   return sym;
+}
+
+Cell proc_gensym(Cell args) {
+  return gensym();
 }
 } // namespace pscm

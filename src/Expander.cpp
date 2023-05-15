@@ -103,7 +103,7 @@ Cell expand_let(Cell args) {
 
   auto a = cons(lambda, cons(var, body));
   Cell b = cons(a, arg);
-  SPDLOG_INFO("let -> {}", b);
+  SPDLOG_INFO("let -> {}", b.pretty_string());
   return b;
 }
 
@@ -149,10 +149,10 @@ Cell expand_letrec(Cell args) {
       },
       vars, vals);
 
-  SPDLOG_INFO("vars: {}", vars);
-  SPDLOG_INFO("vals: {}", vals);
-  SPDLOG_INFO("let_var: {}", let_var);
-  SPDLOG_INFO("update_let_var: {}", update_let_var);
+  SPDLOG_INFO("vars: {}", vars.pretty_string());
+  SPDLOG_INFO("vals: {}", vals.pretty_string());
+  SPDLOG_INFO("let_var: {}", let_var.pretty_string());
+  SPDLOG_INFO("update_let_var: {}", update_let_var.pretty_string());
   auto p = update_let_var;
   if (update_let_var.is_nil()) {
     update_let_var = cons(nil, body);
@@ -172,7 +172,7 @@ Cell expand_letrec(Cell args) {
 
   //  SPDLOG_INFO("cons(update_let_var, body): {}", Cell(cons(update_let_var, body)));
   Cell expr = cons(let_var, update_let_var);
-  SPDLOG_INFO("{}", expr);
+  SPDLOG_INFO("{}", expr.pretty_string());
   return expand_let(expr);
 }
 
@@ -302,6 +302,7 @@ Cell QuasiQuotationExpander::combine_skeletons(pscm::Cell left, pscm::Cell right
 }
 
 Cell QuasiQuotationExpander::expand(pscm::Cell expr) {
+  SPDLOG_INFO("`entry: {}", expr.pretty_string());
   return expand(expr, 0);
 }
 
@@ -317,7 +318,7 @@ Cell QuasiQuotationExpander::convert_vector_to_list(const Cell::Vec& vec) {
 }
 
 Cell QuasiQuotationExpander::expand(pscm::Cell expr, int nesting) {
-  SPDLOG_INFO("expand: {}, nesting: {}", expr, nesting);
+  SPDLOG_INFO("expand: {}, nesting: {}", expr.pretty_string(), nesting);
   if (expr.is_vec()) {
     SPDLOG_INFO("expr: {}", expr);
     auto l = convert_vector_to_list(*expr.to_vec());
@@ -356,7 +357,7 @@ Cell QuasiQuotationExpander::expand(pscm::Cell expr, int nesting) {
     if (nesting == 0) {
       auto new_expr = expand(cdr(expr), nesting);
       auto ret = list(new Symbol("append"), cadr(car(expr)), new_expr);
-      SPDLOG_INFO("ret: {}", ret);
+      SPDLOG_INFO(",@: {}", ret);
       return ret;
     }
     else {

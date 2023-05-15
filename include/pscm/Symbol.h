@@ -32,7 +32,7 @@ public:
 
 private:
   std::string name_;
-  std::string_view filename_;
+  std::string filename_;
   std::size_t row_;
   std::size_t col_;
 };

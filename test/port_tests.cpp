@@ -52,7 +52,7 @@ TEST_CASE("testing call-with-input-file") {
   auto f = [](Scheme& scm) {
     Cell ret;
     ret = scm.eval(R"(
-(call-with-output-file "tmp.txt" 
+(call-with-output-file "tmp.txt"
     (lambda (port)
             (write 1 port)
             (newline port)))
@@ -92,6 +92,25 @@ TEST_CASE("testing write \"") {
     Parser parser(&fin);
     ret = parser.next();
     CHECK(ret == "te \" \" st"_str);
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing call-with-output-string") {
+
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(call-with-output-string (lambda (port) (display "Hello World" port)))
+)");
+    CHECK(ret == "Hello World"_str);
   };
   {
     Scheme scm;

@@ -60,3 +60,39 @@ TEST_CASE("testing 4.2.1, Conditionals, cond") {
     f(scm);
   }
 }
+
+TEST_CASE("testing cond, multi statements") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(cond ((> 3 2) (+ 1) (+ 2)))
+)");
+    CHECK(ret == 2);
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing cond, =>") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(let ((=> 1)) (cond (#t => 'ok)))
+)");
+    CHECK(ret == "ok"_sym);
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}

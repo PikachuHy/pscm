@@ -25,6 +25,8 @@ Cell proc_min(Cell args);
 Cell quotient(Cell args);
 Cell remainder(Cell args);
 Cell modulo(Cell args);
+Cell proc_gcd(Cell args);
+Cell proc_lcm(Cell args);
 Cell builtin_not(Cell args);
 Cell write(Cell args);
 Cell display(Cell args);
@@ -38,10 +40,12 @@ Cell set_car(Cell args);
 Cell set_cdr(Cell args);
 Cell proc_cons(Cell args);
 Cell proc_car(Cell args);
+Cell proc_caar(Cell args);
 Cell proc_cdr(Cell args);
 Cell proc_cdar(Cell args);
 Cell proc_cadr(Cell args);
 Cell proc_cddr(Cell args);
+Cell proc_caddr(Cell args);
 Cell is_eqv(Cell args);
 Cell is_eq(Cell args);
 Cell is_equal(Cell args);
@@ -147,12 +151,16 @@ Cell load(Cell args);
 Cell transcript_on(Cell args);
 Cell transcript_off(Cell args);
 Cell proc_exit(Cell args);
+
+Cell current_module(Cell args);
+Cell proc_gensym(Cell args);
+
 class SymbolTable;
 class Scheme;
 
 class Evaluator {
 public:
-  Evaluator(Scheme& scm);
+  Evaluator(Scheme& scm, Evaluator *parent = nullptr);
   Cell eval(Cell expr, SymbolTable *env);
 
   struct Register {
@@ -182,6 +190,7 @@ public:
 
 private:
   void run();
+  bool load(const char *filename, SymbolTable *env);
   Label eval_map_expr(Label default_pos);
 
 private:
@@ -194,5 +203,6 @@ private:
   std::vector<RegisterType> reg_type_stack_;
   std::size_t step_ = 0;
   Scheme& scm_;
+  Evaluator *parent_;
 };
 } // namespace pscm

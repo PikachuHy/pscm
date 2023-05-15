@@ -1,10 +1,14 @@
 #include "pscm/Port.h"
 #include "pscm/Cell.h"
 #include "pscm/Char.h"
+#include "pscm/Function.h"
 #include "pscm/Pair.h"
 #include "pscm/Parser.h"
+#include "pscm/Procedure.h"
 #include "pscm/Str.h"
+#include "pscm/Symbol.h"
 #include "pscm/common_def.h"
+#include "pscm/scm_utils.h"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -65,6 +69,10 @@ public:
     std::cout << obj;
   }
 
+  Type type() const override {
+    return Type::STANDARD_PORT;
+  }
+
   friend std::ostream& operator<<(std::ostream& out, const StandardPort& port) {
     out << "#";
     out << "<";
@@ -84,7 +92,93 @@ public:
   bool is_input_;
 };
 
-// class StringPort : public Port {};
+class StringPort : public Port {
+public:
+  StringPort(std::ios_base::openmode mode)
+      : mode_(mode) {
+  }
+
+  bool is_input_port() const override {
+    return mode_ & std::ios::in;
+  }
+
+  bool is_output_port() const override {
+    return mode_ & std::ios::out;
+  }
+
+  void close() override {
+    // do nothing
+  }
+
+  char read_char() override {
+    PSCM_ASSERT(is_input_port());
+    if (ss_.eof()) {
+      return EOF;
+    }
+    char ch;
+    ss_.read(&ch, 1);
+    return ch;
+  }
+
+  char peek_char() override {
+    PSCM_ASSERT(is_input_port());
+    char ch;
+    ch = ss_.peek();
+    return ch;
+  }
+
+  void write_char(int ch) override {
+    PSCM_ASSERT(is_output_port());
+    ss_.write((const char *)&ch, 1);
+  }
+
+  std::string to_string() const override {
+    std::stringstream ss;
+    ss << *this;
+    return ss.str();
+  }
+
+  Cell read() override {
+    Parser parser((std::istream *)&ss_);
+    auto expr = parser.parse();
+    return expr;
+  }
+
+  void write(Cell obj) override {
+    ss_ << obj;
+  }
+
+  Type type() const override {
+    return Type::STRING_PORT;
+  }
+
+  std::string str() const {
+    return ss_.str();
+  }
+
+  friend std::ostream& operator<<(std::ostream& out, const StringPort& port) {
+    out << "#";
+    out << "<";
+    if (port.is_input_port()) {
+      out << "input";
+    }
+    else if (port.is_output_port()) {
+      out << "output";
+    }
+    else {
+      PSCM_ASSERT("Invalid port");
+    }
+    out << ": ";
+    out << "string ";
+    out << (void *)&port;
+    out << ">";
+    return out;
+  }
+
+private:
+  std::stringstream ss_;
+  std::ios_base::openmode mode_;
+};
 
 class FilePort : public Port {
 public:
@@ -145,6 +239,10 @@ public:
 
   void write(Cell obj) override {
     f_ << obj;
+  }
+
+  Type type() const override {
+    return Type::FILE_PORT;
   }
 
   friend std::ostream& operator<<(std::ostream& out, const FilePort& port) {
@@ -333,4 +431,38 @@ Cell write(Cell args) {
   return Cell::none();
 }
 
+Cell builtin_create_string_port(Cell args) {
+  auto port = new StringPort(std::ios::out);
+  return Cell(port);
+}
+
+Cell builtin_string_port_to_string(Cell args) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  PSCM_ASSERT(arg.is_port());
+  auto port = arg.to_port();
+  PSCM_ASSERT(port->type() == Port::Type::STRING_PORT);
+  auto sp = (StringPort *)port;
+  auto s = sp->str();
+  return new String(s);
+}
+
+/*
+(let ((port (builtin_create_string_port)))
+      (apply proc (list port))
+      (builtin_string_port_to_string port))
+*/
+Procedure *Procedure::create_call_with_output_string(SymbolTable *env) {
+  auto name = new Symbol("call-with-output-string");
+  auto proc = new Symbol("proc");
+  auto func_create = new Function("builtin_create_string_port", builtin_create_string_port);
+  auto func_str = new Function("builtin_string_port_to_string", builtin_string_port_to_string);
+  auto port_sym = new Symbol("port");
+  auto call_proc = list(new Symbol("apply"), proc, list(new Symbol("list"), port_sym));
+  Cell body = list(new Symbol("let"), list(list(port_sym, list(func_create))), call_proc, list(func_str, port_sym));
+  SPDLOG_INFO("call-with-output-string body: {}", body.pretty_string());
+  Cell args = list(proc);
+  body = cons(body, nil);
+  return new Procedure(name, args, body, env);
+}
 } // namespace pscm

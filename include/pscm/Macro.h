@@ -9,6 +9,7 @@
 
 namespace pscm {
 class Scheme;
+class Procedure;
 
 class Macro {
 public:
@@ -29,6 +30,12 @@ public:
       , f_(f) {
   }
 
+  Macro(std::string name, Procedure *proc)
+      : name_(std::move(name))
+      , pos_(Label::APPLY_MACRO)
+      , f_(proc) {
+  }
+
   [[nodiscard]] Cell call(Scheme& scm, SymbolTable *env, Cell args);
   [[nodiscard]] Cell call(Cell args);
 
@@ -40,12 +47,24 @@ public:
     return f_.index() == 2;
   }
 
+  bool is_proc() const {
+    return f_.index() == 3;
+  }
+
+  Procedure *to_proc() const {
+    return std::get<3>(f_);
+  }
+
+  std::string name() const {
+    return name_;
+  }
+
   friend std::ostream& operator<<(std::ostream& out, const Macro& macro);
 
 private:
   std::string name_;
   Label pos_;
-  std::variant<std::monostate, Cell::ScmMacro, Cell::ScmFunc> f_;
+  std::variant<std::monostate, Cell::ScmMacro, Cell::ScmFunc, Procedure *> f_;
 };
 
 } // namespace pscm
