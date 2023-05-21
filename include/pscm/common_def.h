@@ -28,3 +28,14 @@
     (void)0;                                                                                                           \
   }                                                                                                                    \
   (void *)0
+
+#define PSCM_CONCAT2(a, b) PSCM_CONCAT2_INNER(a, b)
+#define PSCM_CONCAT2_INNER(a, b) a##b
+
+#define PSCM_DEFINE_BUILTIN_PROC_INNER(func_name, api_name)                                                            \
+  func_name(Cell args);                                                                                                \
+  static ApiManager PSCM_CONCAT2(__api_manager_, func_name)(func_name, api_name);                                      \
+  Cell func_name(Cell args)
+
+#define PSCM_DEFINE_BUILTIN_PROC(module, name)                                                                         \
+  Cell PSCM_DEFINE_BUILTIN_PROC_INNER(PSCM_CONCAT2(_##module##__proc__, __COUNTER__), name)

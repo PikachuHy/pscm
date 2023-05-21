@@ -568,53 +568,6 @@ Cell is_boolean(Cell args) {
   return arg.is_bool() ? Cell::bool_true() : Cell::bool_false();
 }
 
-Cell create_list(Cell args) {
-  PSCM_ASSERT(args.is_pair() || args.is_nil());
-  return args;
-}
-
-Cell is_list(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  std::unordered_set<Pair *> p_set;
-  auto arg = car(args);
-  while (arg.is_pair()) {
-    if (p_set.contains(arg.to_pair())) {
-      return Cell::bool_false();
-    }
-    p_set.insert(arg.to_pair());
-    arg = cdr(arg);
-  }
-  return arg.is_nil() ? Cell::bool_true() : Cell::bool_false();
-}
-
-Cell is_pair(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto arg = car(args);
-  return Cell(arg.is_pair());
-}
-
-Cell set_car(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto pair = car(args);
-  auto obj = cadr(args);
-  if (!pair.is_pair()) {
-    PSCM_THROW_EXCEPTION("Invalid set-car! args: " + args.to_string());
-  }
-  pair.to_pair()->first = obj;
-  return Cell::none();
-}
-
-Cell set_cdr(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto pair = car(args);
-  auto obj = cadr(args);
-  if (!pair.is_pair()) {
-    PSCM_THROW_EXCEPTION("Invalid set-cdr! args: " + args.to_string());
-  }
-  pair.to_pair()->second = obj;
-  return Cell::none();
-}
-
 Cell is_eqv(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto obj1 = car(args);
@@ -831,81 +784,6 @@ Cell is_zero(Cell args) {
   }
   auto num = arg.to_number();
   return Cell(num->is_zero());
-}
-
-Cell is_null(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto arg = car(args);
-  return Cell(arg.is_nil());
-}
-
-Cell length(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto arg = car(args);
-  int count = 0;
-  for_each(
-      [&count](Cell expr, auto) {
-        count++;
-      },
-      arg);
-  return new Number(count);
-}
-
-Cell append(Cell args) {
-  if (args.is_nil()) {
-    return nil;
-  }
-  auto pair = cons(nil, nil);
-  auto it = pair;
-  auto list = car(args);
-  if (list.is_nil() || list.is_pair()) {
-    if (list.is_nil()) {
-      return cadr(args);
-    }
-    auto p = list;
-    while (p.is_pair()) {
-      auto new_pair = cons(car(p), nil);
-      it->second = new_pair;
-      it = new_pair;
-      p = cdr(p);
-    }
-    it->second = cadr(args);
-  }
-  else {
-    PSCM_THROW_EXCEPTION("Wrong type argument in position 1 (expecting empty list): " + list.to_string());
-  }
-  return pair->second;
-}
-
-Cell reverse(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto arg = car(args);
-  return reverse_argl(arg);
-}
-
-Cell list_ref(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto list = car(args);
-  auto k = cadr(args);
-  if (!k.is_num()) {
-    PSCM_THROW_EXCEPTION("Wrong type (expecting exact integer): " + k.to_string());
-  }
-  auto num = k.to_number();
-  if (!num->is_int()) {
-    PSCM_THROW_EXCEPTION("Wrong type (expecting exact integer): " + k.to_string());
-  }
-  auto n = num->to_int();
-  Cell ret;
-  int i = 0;
-  for_each(
-      [&ret, &i, n](Cell expr, auto) {
-        if (i == n) {
-          ret = expr;
-        }
-        i++;
-      },
-      list);
-  return ret;
 }
 
 Cell proc_acos(Cell args) {
@@ -1987,21 +1865,21 @@ void Evaluator::run() {
     }
     case Label::APPLY_DEFINE: {
       PRINT_STEP();
-      auto var_name = car(reg_.unev);
+      auto key = car(reg_.unev);
       auto val = cdr(reg_.unev);
-      if (var_name.is_sym()) {
-        reg_.val = var_name;
-        SPDLOG_INFO("val: {}", val);
-        reg_.expr = car(val);
+      auto env = reg_.env;
+      while (!key.is_sym()) {
+        auto proc_name = car(key);
+        auto proc_args = cdr(key);
+        auto proc = new Procedure(nullptr, proc_args, val, env);
+        key = proc_name;
+        val = list(proc);
       }
-      else {
-        auto proc_name = car(var_name);
-        auto args = cdr(var_name);
-        auto expr = cons(lambda, cons(args, val));
-        reg_.val = proc_name;
-        reg_.expr = expr;
-      }
+      reg_.expr = key;
+      PSCM_PUSH_STACK(expr);
+      PSCM_PUSH_STACK(unev);
       PSCM_PUSH_STACK(val);
+      reg_.expr = car(val);
       reg_.cont = Label::AFTER_EVAL_DEFINE_ARG;
       GOTO(Label::EVAL);
     }
@@ -2127,14 +2005,17 @@ void Evaluator::run() {
       PRINT_STEP();
       auto val = reg_.val;
       PSCM_POP_STACK(val);
-      auto var_name = reg_.val;
-      PSCM_ASSERT(var_name.is_sym());
-      auto sym = var_name.to_symbol();
+      PSCM_POP_STACK(unev);
+      auto expr = reg_.expr;
+      PSCM_POP_STACK(expr);
+      auto key = reg_.expr;
+      PSCM_ASSERT(key.is_sym());
+      auto sym = key.to_symbol();
       reg_.env->insert(sym, val);
-      if (val.is_proc()) {
+      if (val.is_proc() && (cadr(reg_.unev).is_pair() || car(reg_.unev).is_pair())) {
         auto proc = val.to_proc();
         PSCM_ASSERT(proc);
-        proc->name_ = sym;
+        proc->set_name(sym);
       }
       reg_.val = Cell{};
       PSCM_POP_STACK(cont);

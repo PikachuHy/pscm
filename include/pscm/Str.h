@@ -32,7 +32,7 @@ public:
   bool operator<=(const String& rhs) const;
   bool operator>=(const String& rhs) const;
 
-  std::string_view str() const {
+  const std::string& str() const {
     return data_;
   }
 

@@ -64,6 +64,14 @@ Cell Char::from(char ch) {
     static Char tmp("%");
     return &tmp;
   }
+  else if (ch == '=') {
+    static Char tmp("=");
+    return &tmp;
+  }
+  else if (ch == '/') {
+    static Char tmp("/");
+    return &tmp;
+  }
   else if (ch == EOF) {
     std::string s;
     s.resize(1);
@@ -71,6 +79,12 @@ Cell Char::from(char ch) {
     return new Char(std::move(s));
   }
   else if (std::isalnum(ch)) {
+    std::string s;
+    s.resize(1);
+    s[0] = ch;
+    return new Char(std::move(s));
+  }
+  else if (int(ch) <= 32) {
     std::string s;
     s.resize(1);
     s[0] = ch;

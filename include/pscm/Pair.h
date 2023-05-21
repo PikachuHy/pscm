@@ -32,4 +32,6 @@ Cell caddr(Cell c, SourceLocation loc = {});
 Cell cadddr(Cell c, SourceLocation loc = {});
 
 [[nodiscard]] int list_length(Cell expr);
+void set_car(Cell list, Cell val);
+void set_cdr(Cell list, Cell val);
 } // namespace pscm

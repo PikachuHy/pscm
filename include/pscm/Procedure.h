@@ -21,6 +21,14 @@ public:
 
   friend std::ostream& operator<<(std::ostream& out, const Procedure& proc);
 
+  Symbol *name() const {
+    return name_;
+  }
+
+  void set_name(Symbol *name) {
+    name_ = name;
+  }
+
   [[nodiscard]] Cell args() const {
     return args_;
   }

@@ -133,7 +133,8 @@ TEST_CASE("testing ;;") {
     ret = scm.eval(R"(
 (define (float-print-test x)
               ;;   (else (display xx) (newline))
-              )))))
+              '2
+              )
 )");
     CHECK(ret == Cell::none());
   };

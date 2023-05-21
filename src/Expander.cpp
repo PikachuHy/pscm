@@ -63,8 +63,8 @@ Cell expand_case(Cell args) {
 Cell expand_named_let(Cell name, Cell bindings, Cell body) {
   auto var = map(car, bindings);
   auto arg = map(cadr, bindings);
-  SPDLOG_INFO("var: {}", var);
-  SPDLOG_INFO("arg: {}", arg);
+  SPDLOG_DEBUG("var: {}", var);
+  SPDLOG_DEBUG("arg: {}", arg);
   auto new_bindings = map(
       [](Cell expr, auto loc) {
         auto var = car(expr);
@@ -74,16 +74,16 @@ Cell expand_named_let(Cell name, Cell bindings, Cell body) {
         return list(new Symbol(std::string(sym->name()) + "="s), init);
       },
       bindings);
-  SPDLOG_INFO("new-bindings: {}", new_bindings);
+  SPDLOG_DEBUG("new-bindings: {}", new_bindings);
   Cell let_init = cons(list(name, Cell::bool_false()), new_bindings);
   auto l2 = new Symbol("lambda");
   auto let_body = list(new Symbol("set!"), name, cons(l2, cons(map(car, bindings), body)));
   Cell let_body2 = cons(name, map(car, new_bindings));
-  SPDLOG_INFO("let init: {}", let_init);
-  SPDLOG_INFO("let body: {}", let_body);
-  SPDLOG_INFO("let body2: {}", let_body2);
+  SPDLOG_DEBUG("let init: {}", let_init);
+  SPDLOG_DEBUG("let body: {}", let_body);
+  SPDLOG_DEBUG("let body2: {}", let_body2);
   auto full_let = list(let_init, let_body, let_body2);
-  SPDLOG_INFO("let: {}", full_let);
+  SPDLOG_DEBUG("let: {}", full_let);
   return expand_let(full_let);
 }
 
@@ -103,7 +103,7 @@ Cell expand_let(Cell args) {
 
   auto a = cons(lambda, cons(var, body));
   Cell b = cons(a, arg);
-  SPDLOG_INFO("let -> {}", b.pretty_string());
+  SPDLOG_DEBUG("let -> {}", b.pretty_string());
   return b;
 }
 
@@ -149,10 +149,10 @@ Cell expand_letrec(Cell args) {
       },
       vars, vals);
 
-  SPDLOG_INFO("vars: {}", vars.pretty_string());
-  SPDLOG_INFO("vals: {}", vals.pretty_string());
-  SPDLOG_INFO("let_var: {}", let_var.pretty_string());
-  SPDLOG_INFO("update_let_var: {}", update_let_var.pretty_string());
+  SPDLOG_DEBUG("vars: {}", vars.pretty_string());
+  SPDLOG_DEBUG("vals: {}", vals.pretty_string());
+  SPDLOG_DEBUG("let_var: {}", let_var.pretty_string());
+  SPDLOG_DEBUG("update_let_var: {}", update_let_var.pretty_string());
   auto p = update_let_var;
   if (update_let_var.is_nil()) {
     update_let_var = cons(nil, body);
@@ -170,9 +170,9 @@ Cell expand_letrec(Cell args) {
     }
   }
 
-  //  SPDLOG_INFO("cons(update_let_var, body): {}", Cell(cons(update_let_var, body)));
+  //  SPDLOG_DEBUG("cons(update_let_var, body): {}", Cell(cons(update_let_var, body)));
   Cell expr = cons(let_var, update_let_var);
-  SPDLOG_INFO("{}", expr.pretty_string());
+  SPDLOG_DEBUG("{}", expr.pretty_string());
   return expand_let(expr);
 }
 
@@ -197,12 +197,12 @@ Cell expand_do(Cell args) {
   auto test = car(test_and_expr);
   auto expr = cdr(test_and_expr);
 
-  SPDLOG_INFO("var: {}", variables);
-  SPDLOG_INFO("init: {}", inits);
-  SPDLOG_INFO("step: {}", steps);
-  SPDLOG_INFO("test: {}", test);
-  SPDLOG_INFO("expr: {}", expr);
-  SPDLOG_INFO("body: {}", body);
+  SPDLOG_DEBUG("var: {}", variables);
+  SPDLOG_DEBUG("init: {}", inits);
+  SPDLOG_DEBUG("step: {}", steps);
+  SPDLOG_DEBUG("test: {}", test);
+  SPDLOG_DEBUG("expr: {}", expr);
+  SPDLOG_DEBUG("body: {}", body);
   Cell loop = gensym();
   {
 
@@ -228,11 +228,11 @@ Cell expand_do(Cell args) {
     if_clause = cons(new Symbol("begin"), expr);
   }
   auto proc_body = list(&sym_if, test, if_clause, else_clause);
-  SPDLOG_INFO("proc body: {}", proc_body);
+  SPDLOG_DEBUG("proc body: {}", proc_body);
   auto proc_def = list(lambda, variables, proc_body);
   auto var_def = list(loop, proc_def);
   auto letrec_args = list(list(var_def), cons(loop, inits));
-  SPDLOG_INFO("letrec: {}", letrec_args);
+  SPDLOG_DEBUG("letrec: {}", letrec_args);
   return expand_letrec(letrec_args);
 }
 
@@ -302,7 +302,7 @@ Cell QuasiQuotationExpander::combine_skeletons(pscm::Cell left, pscm::Cell right
 }
 
 Cell QuasiQuotationExpander::expand(pscm::Cell expr) {
-  SPDLOG_INFO("`entry: {}", expr.pretty_string());
+  SPDLOG_DEBUG("`entry: {}", expr.pretty_string());
   return expand(expr, 0);
 }
 
@@ -318,15 +318,15 @@ Cell QuasiQuotationExpander::convert_vector_to_list(const Cell::Vec& vec) {
 }
 
 Cell QuasiQuotationExpander::expand(pscm::Cell expr, int nesting) {
-  SPDLOG_INFO("expand: {}, nesting: {}", expr.pretty_string(), nesting);
+  SPDLOG_DEBUG("expand: {}, nesting: {}", expr.pretty_string(), nesting);
   if (expr.is_vec()) {
-    SPDLOG_INFO("expr: {}", expr);
+    SPDLOG_DEBUG("expr: {}", expr);
     auto l = convert_vector_to_list(*expr.to_vec());
-    SPDLOG_INFO("l: {}", l);
+    SPDLOG_DEBUG("l: {}", l);
     auto new_expr = expand(l, nesting);
-    SPDLOG_INFO("new_expr: {}", new_expr);
+    SPDLOG_DEBUG("new_expr: {}", new_expr);
     auto ret = list(new Symbol("apply"), new Symbol("vector"), new_expr);
-    SPDLOG_INFO("expand ret: {}", ret);
+    SPDLOG_DEBUG("expand ret: {}", ret);
     return ret;
   }
   else if (!expr.is_pair()) {
@@ -343,7 +343,7 @@ Cell QuasiQuotationExpander::expand(pscm::Cell expr, int nesting) {
     }
     else {
       auto new_right = expand(cdr(expr), nesting - 1);
-      SPDLOG_INFO("new right: {}", new_right);
+      SPDLOG_DEBUG("new right: {}", new_right);
       static Symbol sym_unquote("unquote");
       return combine_skeletons(list(quote, &sym_unquote), new_right, expr);
     }
@@ -357,7 +357,7 @@ Cell QuasiQuotationExpander::expand(pscm::Cell expr, int nesting) {
     if (nesting == 0) {
       auto new_expr = expand(cdr(expr), nesting);
       auto ret = list(new Symbol("append"), cadr(car(expr)), new_expr);
-      SPDLOG_INFO(",@: {}", ret);
+      SPDLOG_DEBUG(",@: {}", ret);
       return ret;
     }
     else {

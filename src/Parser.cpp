@@ -5,6 +5,7 @@
 #include "pscm/Parser.h"
 #include "pscm/Char.h"
 #include "pscm/Exception.h"
+#include "pscm/Keyword.h"
 #include "pscm/Number.h"
 #include "pscm/Pair.h"
 #include "pscm/Str.h"
@@ -293,7 +294,14 @@ Cell Parser::parse_token(pscm::Parser::Token token, std::size_t start) {
       break;
     }
     case Token::SYMBOL: {
-      ret = Cell(last_symbol_);
+      PSCM_ASSERT(last_symbol_);
+      PSCM_ASSERT(!last_symbol_->name().empty());
+      if (last_symbol_->name()[0] == ':') {
+        ret = Cell(new Keyword(last_symbol_));
+      }
+      else {
+        ret = Cell(last_symbol_);
+      }
       has_parsed_ = true;
       break;
     }
@@ -452,6 +460,21 @@ Cell Parser::parse_literal() {
       }
       else if (key == "newline") {
         return Char::from('\n');
+      }
+      else if (key == "return") {
+        return Char::from(13);
+      }
+      else if (key == "ht") {
+        return Char::from(9);
+      }
+      else if (key == "lf") {
+        return Char::from(10);
+      }
+      else if (key == "vt") {
+        return Char::from(11);
+      }
+      else if (key == "ff") {
+        return Char::from(12);
       }
       else {
         PSCM_THROW_EXCEPTION("Unsupported literal: " + std::string(key));

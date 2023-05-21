@@ -37,6 +37,8 @@ class Promise;
 class Continuation;
 class Port;
 class Module;
+class HashTable;
+class Keyword;
 enum class Label {
   DONE,
   EVAL,
@@ -102,6 +104,13 @@ public:
   void *data;
 };
 
+#define PSCM_CELL_TYPE(Type, type, tag)                                                                                \
+  Cell(Type *t);                                                                                                       \
+  bool is_##type() const {                                                                                             \
+    return tag_ == Tag::tag;                                                                                           \
+  }                                                                                                                    \
+  Type *to_##type(SourceLocation loc = {}) const
+
 class Cell {
 public:
   typedef Cell (*ScmFunc)(Cell);
@@ -126,6 +135,7 @@ public:
   Cell(Port *port);
   Cell(SmallObject *smob);
   Cell(Module *module);
+  Cell(HashTable *hash_table);
   explicit Cell(bool val);
 
   ~Cell() {
@@ -149,6 +159,8 @@ public:
     PORT,        // port
     SMOB,        // guile small object
     MODULE,      // module
+    HASH_TABLE,  // hash table
+    KEYWORD,     // keyword
     CONTINUATION // continuation
   };
   friend std::ostream& operator<<(std::ostream& out, const Cell& cell);
@@ -277,6 +289,13 @@ public:
 
   Module *to_module(SourceLocation loc = {}) const;
 
+  bool is_hash_table() const {
+    return tag_ == Tag::HASH_TABLE;
+  }
+
+  HashTable *to_hash_table(SourceLocation loc = {}) const;
+  PSCM_CELL_TYPE(Keyword, keyword, KEYWORD);
+
   bool is_self_evaluated() const;
 
   [[nodiscard]] Cell is_eqv(const Cell& rhs) const;
@@ -314,3 +333,13 @@ extern Cell apply;
 extern Cell builtin_load;
 extern Cell builtin_eval;
 } // namespace pscm
+
+namespace std {
+template <>
+struct hash<pscm::Cell> {
+  using result_type = std::size_t;
+  using argument_type = pscm::Cell;
+  std::size_t operator()(const pscm::Cell& rhs) const;
+};
+
+} // namespace std

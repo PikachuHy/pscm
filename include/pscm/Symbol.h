@@ -10,12 +10,12 @@ namespace pscm {
 
 class Symbol {
 public:
-  Symbol(std::string_view sym)
-      : name_(sym.data(), sym.size()) {
+  Symbol(std::string name)
+      : name_(std::move(name)) {
   }
 
-  Symbol(std::string_view sym, std::string_view filename, std::size_t row, std::size_t col)
-      : name_(sym.data(), sym.size())
+  Symbol(std::string name, std::string_view filename, std::size_t row, std::size_t col)
+      : name_(std::move(name))
       , filename_(filename)
       , row_(row)
       , col_(col) {

@@ -3,6 +3,7 @@
 //
 
 #include "pscm/Symbol.h"
+#include "pscm/ApiManager.h"
 #include "pscm/Cell.h"
 #include "pscm/common_def.h"
 #include <fstream>
@@ -60,7 +61,7 @@ void Symbol::print_debug_info() {
 }
 
 Symbol operator""_sym(const char *data, std::size_t len) {
-  return Symbol(std::string_view(data, len));
+  return Symbol(std::string(data, len));
 }
 
 Symbol *gensym() {
@@ -69,7 +70,8 @@ Symbol *gensym() {
   return sym;
 }
 
-Cell proc_gensym(Cell args) {
+PSCM_DEFINE_BUILTIN_PROC(Symbol, "gensym") {
   return gensym();
 }
+
 } // namespace pscm

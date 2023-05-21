@@ -3,7 +3,9 @@
 //
 
 #include "pscm/Function.h"
+#include "pscm/ApiManager.h"
 #include "pscm/common_def.h"
+#include "pscm/scm_utils.h"
 #include <ostream>
 
 namespace pscm {
@@ -30,5 +32,9 @@ std::ostream& operator<<(std::ostream& out, const Function& func) {
   out << func.name_;
   out << ">";
   return out;
+}
+
+PSCM_DEFINE_BUILTIN_PROC(Function, "noop") {
+  return Cell::bool_false();
 }
 } // namespace pscm

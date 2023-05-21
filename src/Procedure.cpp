@@ -3,6 +3,7 @@
 //
 
 #include "pscm/Procedure.h"
+#include "pscm/ApiManager.h"
 #include "pscm/Exception.h"
 #include "pscm/Expander.h"
 #include "pscm/Pair.h"
@@ -126,5 +127,13 @@ Procedure *Procedure::create_eval(SymbolTable *env) {
   Cell body = list(builtin_eval, filename);
   body = cons(body, nil);
   return new Procedure(name, args, body, env);
+}
+
+PSCM_DEFINE_BUILTIN_PROC(Procedure, "procedure-name") {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  PSCM_ASSERT(arg.is_proc());
+  auto proc = arg.to_proc();
+  return proc->name();
 }
 } // namespace pscm

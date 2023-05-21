@@ -18,7 +18,7 @@ Cell Macro::call(Scheme& scm, SymbolTable *env, Cell args) {
     auto proc = std::get<3>(f_);
     auto ret = scm.call_proc(env, proc, args);
     ret = scm.eval(env, ret);
-    SPDLOG_INFO("expand result: {}", ret);
+    SPDLOG_DEBUG("expand result: {}", ret);
     return ret;
   }
   else {
@@ -35,11 +35,11 @@ Cell Macro::call(Cell args) {
 std::ostream& operator<<(std::ostream& out, const Macro& macro) {
   out << "#";
   out << "<";
-  if (macro.is_func()) {
-    out << "primitive-built-macro!";
+  if (macro.is_proc()) {
+    out << "macro!";
   }
   else {
-    out << "macro!";
+    out << "primitive-builtin-macro!";
   }
 
   out << " ";

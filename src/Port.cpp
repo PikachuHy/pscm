@@ -1,4 +1,5 @@
 #include "pscm/Port.h"
+#include "pscm/ApiManager.h"
 #include "pscm/Cell.h"
 #include "pscm/Char.h"
 #include "pscm/Function.h"
@@ -391,6 +392,24 @@ Cell write_char(Cell args) {
   return Cell::none();
 }
 
+PSCM_DEFINE_BUILTIN_PROC(Port, "make-soft-port") {
+  PSCM_ASSERT(args.is_pair());
+  auto pv = car(args);
+  auto mode = cadr(args);
+  PSCM_ASSERT(pv.is_vec());
+  PSCM_ASSERT(mode.is_str());
+  auto v = pv.to_vec();
+  auto s = mode.to_str()->str();
+  PSCM_ASSERT(v->size() == 5 || v->size() == 6);
+  for (size_t i = 0; i < 5; i++) {
+    if (!v->at(i).is_proc()) {
+      PSCM_THROW_EXCEPTION("Type error, required proc, but got: " + v->at(i).to_string());
+    }
+  }
+  // TODO:
+  return Cell::none();
+}
+
 Cell transcript_on(Cell args) {
   PSCM_THROW_EXCEPTION("not supported now");
 }
@@ -460,7 +479,7 @@ Procedure *Procedure::create_call_with_output_string(SymbolTable *env) {
   auto port_sym = new Symbol("port");
   auto call_proc = list(new Symbol("apply"), proc, list(new Symbol("list"), port_sym));
   Cell body = list(new Symbol("let"), list(list(port_sym, list(func_create))), call_proc, list(func_str, port_sym));
-  SPDLOG_INFO("call-with-output-string body: {}", body.pretty_string());
+  SPDLOG_DEBUG("call-with-output-string body: {}", body.pretty_string());
   Cell args = list(proc);
   body = cons(body, nil);
   return new Procedure(name, args, body, env);

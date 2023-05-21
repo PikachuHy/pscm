@@ -6,7 +6,10 @@
 #include "pscm/Char.h"
 #include "pscm/Continuation.h"
 #include "pscm/Function.h"
+#include "pscm/HashTable.h"
+#include "pscm/Keyword.h"
 #include "pscm/Macro.h"
+#include "pscm/Module.h"
 #include "pscm/Number.h"
 #include "pscm/Pair.h"
 #include "pscm/Port.h"
@@ -105,6 +108,12 @@ Cell::Cell(Module *module) {
   ref_count_++;
   tag_ = Tag::MODULE;
   data_ = (void *)module;
+}
+
+Cell::Cell(HashTable *hash_table) {
+  ref_count_++;
+  tag_ = Tag::HASH_TABLE;
+  data_ = (void *)hash_table;
 }
 
 Cell::Cell(bool val) {
@@ -314,6 +323,24 @@ Module *Cell::to_module(SourceLocation loc) const {
   return (Module *)(data_);
 }
 
+HashTable *Cell::to_hash_table(SourceLocation loc) const {
+  PSCM_ASSERT_WITH_LOC(is_hash_table(), loc);
+  return (HashTable *)(data_);
+}
+
+#define PSCM_DEFINE_CELL_TYPE(Type, type, tag)                                                                         \
+  Cell::Cell(Type *t) {                                                                                                \
+    ref_count_++;                                                                                                      \
+    tag_ = Tag::tag;                                                                                                   \
+    data_ = (void *)t;                                                                                                 \
+  }                                                                                                                    \
+  Type *Cell::to_##type(SourceLocation loc) const {                                                                    \
+    PSCM_ASSERT_WITH_LOC(is_##type(), loc);                                                                            \
+    return (Type *)(data_);                                                                                            \
+  }
+
+PSCM_DEFINE_CELL_TYPE(Keyword, keyword, KEYWORD)
+
 Cell Cell::ex(const char *msg) {
   static Cell ret{ Tag::EXCEPTION, nullptr };
   auto len = strlen(msg);
@@ -422,6 +449,15 @@ std::ostream& operator<<(std::ostream& out, const Cell& cell) {
   }
   if (cell.tag_ == Cell::Tag::PORT) {
     return out << cell.to_port()->to_string();
+  }
+  if (cell.tag_ == Cell::Tag::MODULE) {
+    return out << *cell.to_module();
+  }
+  if (cell.tag_ == Cell::Tag::HASH_TABLE) {
+    return out << *cell.to_hash_table();
+  }
+  if (cell.tag_ == Cell::Tag::KEYWORD) {
+    return out << *cell.to_keyword();
   }
   SPDLOG_ERROR("TODO: {}", int(cell.tag_));
   //  PSCM_THROW_EXCEPTION("TODO: cell tag ");
@@ -740,22 +776,12 @@ std::ostream& operator<<(std::ostream& out, const Label& pos) {
 
 bool Cell::is_self_evaluated() const {
   switch (tag_) {
-  case Tag::NUMBER:
-  case Tag::CHAR:
-  case Tag::STRING:
-  case Tag::BOOL:
-  case Tag::VECTOR:
-  case Tag::MACRO:
-  case Tag::PROCEDURE:
-  case Tag::FUNCTION:
-  case Tag::NIL:
-  case Tag::PROMISE:
-  case Tag::PORT:
-  case Tag::CONTINUATION: {
-    return true;
+  case Tag::PAIR:
+  case Tag::SYMBOL: {
+    return false;
   }
   default: {
-    return false;
+    return true;
   }
   }
 }
@@ -797,3 +823,12 @@ std::string SourceLocation::to_string() const {
   return name + ":" + std::to_string(linenum); // + " " + std::string(funcname);
 }
 } // namespace pscm
+
+namespace std {
+std::size_t hash<pscm::Cell>::operator()(const pscm::Cell& cell) const {
+  std::stringstream ss;
+  ss << cell;
+  auto s = ss.str();
+  return std::hash<std::string>()(s);
+}
+} // namespace std
