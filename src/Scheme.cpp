@@ -16,6 +16,7 @@
 #include "pscm/Parser.h"
 #include "pscm/Procedure.h"
 #include "pscm/Promise.h"
+#include "pscm/SchemeProxy.h"
 #include "pscm/Str.h"
 #include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
@@ -33,7 +34,7 @@ namespace fs = std::filesystem;
 
 namespace pscm {
 
-Cell scm_define(Scheme& scm, SymbolTable *env, Cell args) {
+Symbol *scm_define(SchemeProxy scm, SymbolTable *env, Cell args) {
   SPDLOG_INFO("args: {}", args);
   PSCM_ASSERT(args.is_pair());
   auto key = car(args);
@@ -54,32 +55,21 @@ Cell scm_define(Scheme& scm, SymbolTable *env, Cell args) {
     proc->set_name(sym);
   }
   env->insert(sym, val);
+  return sym;
+}
+
+PSCM_DEFINE_BUILTIN_MACRO(Scheme, "define", Label::APPLY_DEFINE) {
+  scm_define(scm, env, args);
   return Cell::none();
 }
 
-Cell scm_define_macro(Scheme& scm, SymbolTable *env, Cell args) {
-  auto first_arg = car(args);
-  Procedure *proc;
-  Symbol *sym;
-  if (first_arg.is_sym()) {
-    sym = first_arg.to_symbol();
-    auto ret = scm.eval(env, cadr(args));
-    PSCM_ASSERT(ret.is_proc());
-    proc = ret.to_proc();
-  }
-  else {
-    auto proc_name = car(first_arg);
-    auto proc_args = cdr(first_arg);
-    SPDLOG_INFO("{} {}", proc_name, proc_args);
-    PSCM_ASSERT(proc_name.is_sym());
-    sym = proc_name.to_symbol();
-    proc = new Procedure(sym, proc_args, cdr(args), env);
-  }
-  env->insert(sym, new Macro(std::string(sym->name()), proc));
-  return {};
+PSCM_DEFINE_BUILTIN_MACRO(Scheme, "define-public", Label::APPLY_DEFINE) {
+  auto sym = scm_define(scm, env, args);
+  scm.current_module()->export_symbol(sym);
+  return Cell::none();
 }
 
-Cell scm_set(Scheme& scm, SymbolTable *env, Cell args) {
+PSCM_DEFINE_BUILTIN_MACRO(Scheme, "set!", Label::APPLY_SET) {
   PSCM_ASSERT(args.is_pair());
   auto k = car(args);
   PSCM_ASSERT(k.is_sym());
@@ -98,7 +88,7 @@ Cell scm_lambda(Scheme& scm, SymbolTable *env, Cell args) {
   return new Procedure(nullptr, car(args), cdr(args), env);
 }
 
-Cell scm_cond(Scheme& scm, SymbolTable *env, Cell args) {
+PSCM_DEFINE_BUILTIN_MACRO(Scheme, "cond", Label::APPLY_COND) {
   auto args_bak = args;
   if (args.is_nil()) {
     PSCM_THROW_EXCEPTION("Missing clauses (cond)");
@@ -154,7 +144,7 @@ Cell scm_cond(Scheme& scm, SymbolTable *env, Cell args) {
   return Cell::none();
 }
 
-Cell scm_if(Scheme& scm, SymbolTable *env, Cell args) {
+PSCM_DEFINE_BUILTIN_MACRO(Scheme, "if", Label::APPLY_IF) {
   auto test = car(args);
   auto consequent = cadr(args);
   auto alternate = cddr(args);
@@ -171,7 +161,7 @@ Cell scm_if(Scheme& scm, SymbolTable *env, Cell args) {
   }
 }
 
-Cell scm_and(Scheme& scm, SymbolTable *env, Cell args) {
+PSCM_DEFINE_BUILTIN_MACRO(Scheme, "and", Label::APPLY_AND) {
   Cell pred = Cell::bool_true();
   while (args.is_pair() && cdr(args).is_pair()) {
     auto expr = car(args);
@@ -189,7 +179,7 @@ Cell scm_and(Scheme& scm, SymbolTable *env, Cell args) {
   }
 }
 
-Cell scm_or(Scheme& scm, SymbolTable *env, Cell args) {
+PSCM_DEFINE_BUILTIN_MACRO(Scheme, "or", Label::APPLY_OR) {
   Cell pred = Cell::bool_false();
   while (args.is_pair() && cdr(args).is_pair()) {
     auto expr = car(args);
@@ -208,7 +198,7 @@ Cell scm_or(Scheme& scm, SymbolTable *env, Cell args) {
   }
 }
 
-Cell scm_begin(Scheme& scm, SymbolTable *env, Cell args) {
+PSCM_DEFINE_BUILTIN_MACRO(Scheme, "begin", Label::APPLY_BEGIN) {
   while (args.is_pair() && cdr(args).is_pair()) {
     [[maybe_unused]] auto ret = scm.eval(env, car(args));
     args = cdr(args);
@@ -221,236 +211,24 @@ Cell scm_begin(Scheme& scm, SymbolTable *env, Cell args) {
   }
 }
 
-Cell scm_quasiquote(Scheme& scm, SymbolTable *env, Cell args) {
+Cell scm_quasiquote(SchemeProxy scm, SymbolTable *env, Cell args) {
   PSCM_ASSERT(args.is_pair());
   QuasiQuotationExpander expander(scm, env);
   auto ret = expander.expand(car(args));
   return ret;
 }
 
-Cell scm_map(Scheme& scm, SymbolTable *env, Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  Cell ret;
-  auto proc = car(args);
-  PSCM_ASSERT(proc.is_sym());
-  auto lists = cdr(args);
-  SPDLOG_INFO("lists: {}", lists);
-  PSCM_ASSERT(lists.is_sym());
-  proc = env->get(proc.to_symbol());
-  lists = env->get(lists.to_symbol());
-  int len = 0;
-  ret = for_each(
-      [&len](auto, auto) {
-        len++;
-      },
-      lists);
-  switch (len) {
-  case 0: {
-    break;
-  }
-  case 1: {
-    ret = map(
-        [&scm, env, proc](Cell expr, auto loc) {
-          return scm.eval(env, cons(proc, list(list(quote, expr))));
-        },
-        car(lists));
-    break;
-  }
-  case 2: {
-    ret = map(
-        [&scm, env, proc](Cell expr1, Cell expr2, auto loc) {
-          return scm.eval(env, cons(proc, list(list(quote, expr1), list(quote, expr2))));
-        },
-        car(lists), cadr(lists));
-    break;
-  }
-  default: {
-    PSCM_THROW_EXCEPTION("not supported now");
-  }
-  }
-  return list(quote, ret);
-}
-
-Cell scm_for_each(Scheme& scm, SymbolTable *env, Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  Cell ret;
-  auto proc = car(args);
-  PSCM_ASSERT(proc.is_sym());
-  auto lists = cdr(args);
-  PSCM_ASSERT(lists.is_sym());
-  proc = env->get(proc.to_symbol());
-  lists = env->get(lists.to_symbol());
-  int len = 0;
-  ret = for_each(
-      [&len](auto, auto) {
-        len++;
-      },
-      lists);
-  switch (len) {
-  case 0: {
-    break;
-  }
-  case 1: {
-    ret = for_each(
-        [&scm, env, proc](Cell expr, auto loc) {
-          [[maybe_unused]] auto ret = scm.eval(env, cons(proc, list(list(quote, expr))));
-        },
-        car(lists));
-    break;
-  }
-  case 2: {
-    ret = for_each(
-        [&scm, env, proc](Cell expr1, Cell expr2, auto loc) {
-          [[maybe_unused]] auto ret = scm.eval(env, cons(proc, list(list(quote, expr1), list(quote, expr2))));
-        },
-        car(lists), cadr(lists));
-    break;
-  }
-  default: {
-    PSCM_THROW_EXCEPTION("not supported now");
-  }
-  }
-  return list(quote, ret);
-}
-
-Cell scm_delay(Scheme& scm, SymbolTable *env, Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  Cell expr = car(args);
-  auto proc = new Procedure(nullptr, nil, list(expr), env);
-  return new Promise(proc);
-}
-
-Cell scm_force(Scheme& scm, SymbolTable *env, Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  Cell promise = car(args);
-  PSCM_ASSERT(promise.is_sym());
-  // SPDLOG_INFO("promise: {}", promise);
-  // promise = scm.eval(env, promise);
-  promise = env->get(promise.to_symbol());
-  PSCM_ASSERT(promise.is_promise());
-  auto p = promise.to_promise();
-  Cell ret;
-  if (p->ready()) {
-    ret = p->result();
-  }
-  else {
-    auto proc = p->proc();
-    ret = scm.eval(env, list(proc));
-    p->set_result(ret);
-  }
-  return list(quote, ret);
+PSCM_DEFINE_BUILTIN_MACRO(Scheme, "quasiquote", Label::APPLY_QUASIQUOTE) {
+  return scm_quasiquote(scm, env, args);
 }
 
 Cell debug_set(Scheme& scm, SymbolTable *env, Cell args) {
   return Cell::none();
 }
 
-Cell scm_load(Scheme& scm, SymbolTable *env, Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto arg = car(args);
-  PSCM_ASSERT(arg.is_sym());
-  auto sym = arg.to_symbol();
-  auto val = env->get(sym);
-  PSCM_ASSERT(val.is_str());
-  auto s = val.to_str();
-  auto filename = s->str();
-  bool ok = scm.load(std::string(filename).c_str());
-  return Cell(ok);
-}
-
-Cell scm_eval(Scheme& scm, SymbolTable *env, Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto arg = car(args);
-  PSCM_ASSERT(arg.is_sym());
-  auto sym = arg.to_symbol();
-  auto expr = env->get(sym);
-  auto ret = scm.eval(env, expr);
-  return ret;
-}
-
-std::string check_module(Cell name) {
-  std::string path;
-  for_each(
-      [&path](Cell expr, auto) {
-        PSCM_ASSERT(expr.is_sym());
-        auto name = expr.to_symbol()->name();
-        path += name;
-        path += '/';
-      },
-      name);
-  if (path.empty()) {
-    PSCM_THROW_EXCEPTION("bad module name: " + name.to_string());
-  }
-  path.resize(path.size() - 1);
-  path += ".scm";
-  // TODO: search load-path
-  std::string load_path = "/Users/pikachu/pr/vau/resources/progs/";
-  std::string fullname = load_path + path;
-  if (!fs::exists(fullname)) {
-    SPDLOG_ERROR("file not exist: {}", fullname);
-    PSCM_THROW_EXCEPTION("module not found: " + name.to_string());
-  }
-  return fullname;
-}
-
-Cell scm_define_module(Scheme& scm, SymbolTable *env, Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  return Cell::none();
-}
-
-Cell scm_resolve_module(Scheme& scm, SymbolTable *env, Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto arg = car(args);
-  auto name = scm.eval(env, arg);
-  SPDLOG_INFO("module name: {}", name);
-  PSCM_ASSERT(name.is_pair());
-  check_module(name);
-  auto m = new Module(arg);
-  return m;
-}
-
-Cell scm_use_modules(Scheme& scm, SymbolTable *env, Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  for_each(
-      [&scm](Cell expr, auto) {
-        PSCM_ASSERT(expr.is_pair());
-        // TODO: use module
-        auto path = check_module(expr);
-        SPDLOG_INFO("use module: {}", expr);
-        scm.load_module(path.c_str(), new Module(expr));
-      },
-      args);
-  return Cell::none();
-}
-
-Cell scm_is_defined(Scheme& scm, SymbolTable *env, Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto val = scm.eval(env, car(args));
-  PSCM_ASSERT(val.is_sym());
-  auto sym = val.to_symbol();
-  auto has_sym = env->contains(sym);
-  return Cell(has_sym);
-}
-
-Cell scm_export(Scheme& scm, SymbolTable *env, Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto val = scm.eval(env, car(args));
-  // TODO: export
-  return Cell::none();
-}
-
 Cell lambda = new Macro("lambda", Label::APPLY_LAMBDA);
 Cell quote = new Macro("quote", Label::APPLY_QUOTE);
 Cell unquote = new Macro("unquote", Label::APPLY_QUOTE);
-Cell quasiquote = new Macro("quasiquote", Label::APPLY_QUASIQUOTE, scm_quasiquote);
-Cell unquote_splicing = new Macro("unquote-splicing", Label::APPLY_QUOTE, scm_quasiquote);
-Cell begin = new Macro("begin", Label::APPLY_BEGIN, scm_begin);
-// TODO: #<primitive-generic for-each>
-Cell builtin_for_each = new Macro("builtin_for-each", Label::APPLY_FOR_EACH, scm_for_each);
-Cell builtin_map = new Macro("builtin_map", Label::APPLY_MAP, scm_map);
-Cell builtin_force = new Macro("builtin_force", Label::APPLY_FORCE, scm_force);
-Cell builtin_load = new Macro("builtin_load", Label::APPLY_LOAD, scm_load);
-Cell builtin_eval = new Macro("builtin_eval", Label::APPLY_EVAL, scm_eval);
 Cell apply = new Macro("builtin_apply", Label::APPLY_APPLY);
 
 Cell version(Cell) {
@@ -461,12 +239,15 @@ Cell version(Cell) {
 void Scheme::add_func(Symbol *sym, Function *func) {
   PSCM_ASSERT(sym);
   PSCM_ASSERT(func);
-  envs_.back()->insert(sym, func);
+  root_env_->insert(sym, func);
 }
 
 Scheme::Scheme(bool use_register_machine)
     : use_register_machine_(use_register_machine) {
+  current_module_ = nullptr;
+  auto builitin_private_env = new SymbolTable();
   auto env = new SymbolTable();
+  ApiManager::install_api(env);
   envs_.push_back(env);
   env->insert(new Symbol("version"), new Function("version", version));
   env->insert(new Symbol("+"), new Function("+", add));
@@ -594,13 +375,6 @@ Scheme::Scheme(bool use_register_machine)
 
   env->insert(new Symbol("exit"), new Function("exit", proc_exit));
 
-  env->insert(new Symbol("define"), new Macro("define", Label::APPLY_DEFINE, scm_define));
-  env->insert(new Symbol("cond"), new Macro("cond", Label::APPLY_COND, scm_cond));
-  env->insert(new Symbol("if"), new Macro("if", Label::APPLY_IF, scm_if));
-  env->insert(new Symbol("and"), new Macro("and", Label::APPLY_AND, scm_and));
-  env->insert(new Symbol("or"), new Macro("or", Label::APPLY_OR, scm_or));
-  env->insert(new Symbol("set!"), new Macro("set!", Label::APPLY_SET, scm_set));
-  env->insert(new Symbol("delay"), new Macro("delay", Label::APPLY_DELAY, scm_delay));
   env->insert(new Symbol("let"), new Macro("let", expand_let));
   env->insert(new Symbol("let*"), new Macro("let*", expand_let_star));
   env->insert(new Symbol("letrec"), new Macro("letrec", expand_letrec));
@@ -608,23 +382,13 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("do"), new Macro("do", expand_do));
   env->insert(new Symbol("quote"), quote);
   env->insert(new Symbol("unquote"), unquote);
-  env->insert(new Symbol("unquote-splicing"), unquote_splicing);
   env->insert(new Symbol("lambda"), lambda);
-  env->insert(new Symbol("begin"), begin);
-  env->insert(new Symbol("quasiquote"), quasiquote);
   {
     auto proc = new Procedure(&callcc, cons(new Symbol("proc"), nil), nil, env);
     env->insert(&callcc, proc);
     env->insert(new Symbol("call/cc"), proc);
   }
-  env->insert(new Symbol("for-each"), Procedure::create_for_each(env));
-  auto proc_map = Procedure::create_map(env);
-  env->insert(new Symbol("map"), proc_map);
-  env->insert(new Symbol("map-in-order"), proc_map);
   env->insert(new Symbol("apply"), Procedure::create_apply(env));
-  env->insert(new Symbol("force"), Procedure::create_force(env));
-  env->insert(new Symbol("load"), Procedure::create_load(env));
-  env->insert(new Symbol("eval"), Procedure::create_eval(env));
   env->insert(new Symbol("call-with-output-string"), Procedure::create_call_with_output_string(env));
   {
     auto proc_args = cons(new Symbol("producer"), cons(new Symbol("consumer"), nil));
@@ -637,32 +401,29 @@ Scheme::Scheme(bool use_register_machine)
   }
   // TODO: texmacs support
   env->insert(new Symbol("debug-set!"), new Macro("debug-set!", Label::APPLY_DEFINE, debug_set));
-  env->insert(new Symbol("define-public"), new Macro("define-public", Label::APPLY_DEFINE, scm_define));
-  env->insert(new Symbol("primitive-load"), new Macro("primitive-load", Label::APPLY_DEFINE, scm_define));
-  env->insert(new Symbol("define-macro"), new Macro("define-macro", Label::APPLY_DEFINE_MACRO, scm_define_macro));
-  env->insert(new Symbol("define-module"), new Macro("define-module", Label::APPLY_DEFINE_MACRO, scm_define_module));
-  env->insert(new Symbol("resolve-module"), new Macro("resolve-module", Label::APPLY_DEFINE_MACRO, scm_resolve_module));
-  env->insert(new Symbol("use-modules"), new Macro("use-modules", Label::APPLY_DEFINE_MACRO, scm_use_modules));
-  env->insert(new Symbol("defined?"), new Macro("defined?", Label::APPLY_DEFINE_MACRO, scm_is_defined));
-  env->insert(new Symbol("export"), new Macro("export", Label::APPLY_DEFINE_MACRO, scm_export));
+  env->insert(new Symbol("%load-path"), nil);
 
-  eval(R"(
+  eval_internal(env, R"(
 (define (call-with-output-file filename proc)
   (let* ((port (open-output-file filename))
         (ret (apply proc (list port))))
     (close-output-port port)
     ret))
 )");
-  eval(R"(
+  eval_internal(env, R"(
 (define (call-with-input-file filename proc)
   (let* ((port (open-input-file filename))
          (ret (apply proc (list port))))
     (close-input-port port)
     ret))
 )");
-  ApiManager::install_proc(env);
+  root_env_ = env;
+  env->insert(new Symbol("map-in-order"), env->get(&Symbol::map));
+  env->insert(new Symbol("primitive-load"), env->get(&Symbol::load));
   auto new_env = new SymbolTable(env);
   envs_.push_back(new_env);
+  current_module_ = create_module(nil);
+  module_list_.push_back(current_module_);
 }
 
 Scheme::~Scheme() {
@@ -681,10 +442,31 @@ Cell Scheme::eval(const char *code) {
       return Cell::none();
     }
     if (use_register_machine_) {
-      ret = Evaluator(*this).eval(ret, envs_.back());
+      ret = Evaluator(*this).eval(ret, current_module_->env());
     }
     else {
       ret = eval(ret);
+    }
+    return ret;
+  }
+  catch (Exception& ex) {
+    SPDLOG_ERROR("eval {} error: {}", code, ex.what());
+    return Cell::ex(ex.what());
+  }
+}
+
+Cell Scheme::eval_internal(SymbolTable *env, const char *code) {
+  try {
+    Parser parser(code);
+    auto ret = parser.parse();
+    if (ret.is_none()) {
+      return Cell::none();
+    }
+    if (use_register_machine_) {
+      ret = Evaluator(*this).eval(ret, env);
+    }
+    else {
+      ret = eval(env, ret);
     }
     return ret;
   }
@@ -846,7 +628,8 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
 
 Cell Scheme::eval(Cell expr) {
   PSCM_ASSERT(!envs_.empty());
-  auto env = envs_.back();
+  PSCM_ASSERT(current_module_);
+  auto env = current_module_->env();
   auto ret = eval(env, expr);
   return ret;
 }
@@ -856,9 +639,6 @@ Cell Scheme::lookup(SymbolTable *env, Cell expr, SourceLocation loc) {
   PSCM_ASSERT(expr.is_sym());
   auto sym = expr.to_symbol();
   PSCM_ASSERT(sym);
-  if (sym->name() == "list") {
-    std::cout << "???" << std::endl;
-  }
   bool has_sym = env->contains(sym);
   if (!has_sym) {
     sym->print_debug_info();
@@ -888,17 +668,18 @@ Cell Scheme::call_proc(SymbolTable *& env, Procedure *proc, Cell args, SourceLoc
   }
 }
 
-void Scheme::load_module(const std::string& filename, Module *module) {
+void Scheme::load_module(const std::string& filename, Cell module_name) {
+  auto old_module = current_module_;
   std::cout << "load: " << filename << std::endl;
   if (!fs::exists(filename)) {
     SPDLOG_ERROR("file not found: {}", filename);
-    PSCM_THROW_EXCEPTION("load module error: " + Cell(module).to_string());
+    PSCM_THROW_EXCEPTION("load module error: " + Cell(module_name).to_string());
   }
   std::fstream ifs;
   ifs.open(filename, std::ios::in);
   if (!ifs.is_open()) {
     SPDLOG_ERROR("load file {} error", filename);
-    PSCM_THROW_EXCEPTION("load module error: " + Cell(module).to_string());
+    PSCM_THROW_EXCEPTION("load module error: " + Cell(module_name).to_string());
   }
   ifs.seekg(0, ifs.end);
   auto sz = ifs.tellg();
@@ -921,8 +702,14 @@ void Scheme::load_module(const std::string& filename, Module *module) {
   }
   catch (Exception& ex) {
     SPDLOG_ERROR("load file {} error", filename);
-    PSCM_THROW_EXCEPTION("load module error: " + Cell(module).to_string());
+    PSCM_THROW_EXCEPTION("load module error: " + Cell(module_name).to_string());
   }
+  current_module_ = old_module;
+}
+
+Module *Scheme::create_module(Cell name) {
+  auto env = new SymbolTable(root_env_);
+  return new Module(name, env);
 }
 
 PSCM_DEFINE_BUILTIN_PROC(Scheme, "select") {
@@ -933,5 +720,15 @@ PSCM_DEFINE_BUILTIN_PROC(Scheme, "select") {
 PSCM_DEFINE_BUILTIN_PROC(Scheme, "scm-error") {
   SPDLOG_ERROR("scm-error: {}", args);
   return Cell::none();
+}
+
+PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(Scheme, "eval", Label::APPLY_EVAL, "(expr)") {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  PSCM_ASSERT(arg.is_sym());
+  auto sym = arg.to_symbol();
+  auto expr = env->get(sym);
+  auto ret = scm.eval(env, expr);
+  return ret;
 }
 } // namespace pscm

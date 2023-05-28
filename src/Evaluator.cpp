@@ -9,6 +9,7 @@
 #include "pscm/Expander.h"
 #include "pscm/Function.h"
 #include "pscm/Macro.h"
+#include "pscm/Module.h"
 #include "pscm/Number.h"
 #include "pscm/Pair.h"
 #include "pscm/Parser.h"
@@ -16,6 +17,7 @@
 #include "pscm/Procedure.h"
 #include "pscm/Promise.h"
 #include "pscm/Scheme.h"
+#include "pscm/SchemeProxy.h"
 #include "pscm/Str.h"
 #include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
@@ -82,7 +84,7 @@ public:
 };
 
 namespace pscm {
-extern Cell scm_quasiquote(Scheme& scm, SymbolTable *env, Cell args);
+extern Cell scm_quasiquote(SchemeProxy scm, SymbolTable *env, Cell args);
 
 Cell add(Cell args) {
   PSCM_ASSERT(args.is_pair() || args.is_nil());
@@ -1576,6 +1578,9 @@ void Evaluator::run() {
         GOTO(reg_.cont);
       }
       if (reg_.expr.is_sym()) {
+        if (!reg_.env->contains(reg_.expr.to_symbol())) {
+          int a = 0;
+        }
         reg_.val = reg_.env->get(reg_.expr.to_symbol());
         auto sym = reg_.expr.to_symbol();
         GOTO(reg_.cont);
@@ -1991,7 +1996,7 @@ void Evaluator::run() {
       PSCM_ASSERT(val.is_str());
       auto s = val.to_str();
       auto filename = s->str();
-      bool ok = load(std::string(filename).c_str(), env);
+      bool ok = load(std::string(filename).c_str(), SchemeProxy(scm_).current_module()->env());
       reg_.val = Cell(ok);
       PSCM_POP_STACK(cont);
       GOTO(reg_.cont);
@@ -2000,6 +2005,12 @@ void Evaluator::run() {
       PRINT_STEP();
       reg_.expr = car(reg_.unev);
       GOTO(Label::EVAL);
+    }
+    case Label::APPLY_CURRENT_MODULE: {
+      auto m = SchemeProxy(scm_).current_module();
+      reg_.val = Cell(m);
+      PSCM_POP_STACK(cont);
+      GOTO(reg_.cont);
     }
     case Label::AFTER_EVAL_DEFINE_ARG: {
       PRINT_STEP();

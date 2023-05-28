@@ -63,6 +63,8 @@ enum class Label {
   APPLY_APPLY, // call apply from scheme
   APPLY_DEFINE,
   APPLY_DEFINE_MACRO,
+  APPLY_DEFINE_MODULE,
+  APPLY_IS_DEFINED,
   APPLY_COND,
   APPLY_IF,
   APPLY_AND,
@@ -78,6 +80,10 @@ enum class Label {
   APPLY_BEGIN,
   APPLY_LOAD,
   APPLY_EVAL,
+  APPLY_CURRENT_MODULE,
+  APPLY_USE_MODULES,
+  APPLY_RESOLVE_MODULE,
+  APPLY_EXPORT,
   AFTER_EVAL_FOR_EACH_FIRST_EXPR,
   AFTER_EVAL_MAP_FIRST_EXPR,
   AFTER_EVAL_MAP_OTHER_EXPR,
@@ -110,11 +116,13 @@ public:
     return tag_ == Tag::tag;                                                                                           \
   }                                                                                                                    \
   Type *to_##type(SourceLocation loc = {}) const
+class SchemeProxy;
 
 class Cell {
 public:
   typedef Cell (*ScmFunc)(Cell);
   typedef Cell (*ScmMacro)(Scheme&, SymbolTable *, Cell);
+  typedef Cell (*ScmMacro2)(SchemeProxy, SymbolTable *, Cell);
   using Vec = std::vector<Cell>;
 
   Cell() {
@@ -320,18 +328,9 @@ private:
 };
 
 extern Cell nil;
-extern Cell lambda;
 extern Cell quote;
-extern Cell unquote;
-extern Cell quasiquote;
-extern Cell unquote_splicing;
-extern Cell begin;
-extern Cell builtin_for_each;
-extern Cell builtin_map;
-extern Cell builtin_force;
+extern Cell lambda;
 extern Cell apply;
-extern Cell builtin_load;
-extern Cell builtin_eval;
 } // namespace pscm
 
 namespace std {

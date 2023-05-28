@@ -654,6 +654,10 @@ std::ostream& operator<<(std::ostream& out, const Label& pos) {
     out << "APPLY_DEFINE_MACRO";
     break;
   }
+  case Label::APPLY_IS_DEFINED: {
+    out << "APPLY_IS_DEFINED";
+    break;
+  }
   case Label::APPLY_COND: {
     out << "APPLY_COND";
     break;
@@ -688,6 +692,22 @@ std::ostream& operator<<(std::ostream& out, const Label& pos) {
   }
   case Label::APPLY_EVAL: {
     out << "APPLY_EVAL";
+    break;
+  }
+  case Label::APPLY_CURRENT_MODULE: {
+    out << "APPLY_CURRENT_MODULE";
+    break;
+  }
+  case Label::APPLY_USE_MODULES: {
+    out << "APPLY_USE_MODULES";
+    break;
+  }
+  case Label::APPLY_RESOLVE_MODULE: {
+    out << "APPLY_RESOLVE_MODULE";
+    break;
+  }
+  case Label::APPLY_EXPORT: {
+    out << "APPLY_EXPORT";
     break;
   }
   case Label::AFTER_EVAL_DEFINE_ARG: {

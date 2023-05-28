@@ -6,6 +6,8 @@
 #include "pscm/ApiManager.h"
 #include "pscm/Cell.h"
 #include "pscm/Exception.h"
+#include "pscm/SchemeProxy.h"
+#include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
 #include <string>
@@ -344,6 +346,91 @@ PSCM_DEFINE_BUILTIN_PROC(List, "last-pair") {
     list = cdr(list);
   }
   return cons(car(list), nil);
+}
+
+PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(List, "for-each", Label::APPLY_FOR_EACH, "(proc . lists)") {
+  PSCM_ASSERT(args.is_pair());
+  Cell ret;
+  auto proc = car(args);
+  PSCM_ASSERT(proc.is_sym());
+  auto lists = cdr(args);
+  PSCM_ASSERT(lists.is_sym());
+  proc = env->get(proc.to_symbol());
+  lists = env->get(lists.to_symbol());
+  int len = 0;
+  ret = for_each(
+      [&len](auto, auto) {
+        len++;
+      },
+      lists);
+  switch (len) {
+  case 0: {
+    break;
+  }
+  case 1: {
+    ret = for_each(
+        [&scm, env, proc](Cell expr, auto loc) {
+          [[maybe_unused]] auto ret = scm.eval(env, cons(proc, list(list(quote, expr))));
+        },
+        car(lists));
+    break;
+  }
+  case 2: {
+    ret = for_each(
+        [&scm, env, proc](Cell expr1, Cell expr2, auto loc) {
+          [[maybe_unused]] auto ret = scm.eval(env, cons(proc, list(list(quote, expr1), list(quote, expr2))));
+        },
+        car(lists), cadr(lists));
+    break;
+  }
+  default: {
+    PSCM_THROW_EXCEPTION("not supported now");
+  }
+  }
+  return list(quote, ret);
+}
+
+PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(List, "map", Label::APPLY_MAP, "(proc . lists)") {
+  PSCM_ASSERT(args.is_pair());
+  Cell ret;
+  auto proc = car(args);
+  PSCM_ASSERT(proc.is_sym());
+  auto lists = cdr(args);
+  SPDLOG_INFO("lists: {}", lists);
+  PSCM_ASSERT(lists.is_sym());
+  proc = env->get(proc.to_symbol());
+  lists = env->get(lists.to_symbol());
+  int len = 0;
+  ret = for_each(
+      [&len](auto, auto) {
+        len++;
+      },
+      lists);
+  switch (len) {
+  case 0: {
+    break;
+  }
+  case 1: {
+    ret = map(
+        [&scm, env, proc](Cell expr, auto loc) {
+          return scm.eval(env, cons(proc, list(list(quote, expr))));
+        },
+        car(lists));
+    break;
+  }
+  case 2: {
+    ret = map(
+        [&scm, env, proc](Cell expr1, Cell expr2, auto loc) {
+          return scm.eval(env, cons(proc, list(list(quote, expr1), list(quote, expr2))));
+        },
+        car(lists), cadr(lists));
+    break;
+  }
+  default: {
+    PSCM_THROW_EXCEPTION("not supported now");
+  }
+  }
+  return list(quote, ret);
 }
 
 } // namespace pscm

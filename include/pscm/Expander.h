@@ -4,6 +4,7 @@
 
 #pragma once
 #include "pscm/Cell.h"
+#include "pscm/SchemeProxy.h"
 
 namespace pscm {
 Cell expand_let(Cell args);
@@ -17,7 +18,7 @@ class Expander {};
 
 class QuasiQuotationExpander {
 public:
-  QuasiQuotationExpander(Scheme& scm, SymbolTable *env)
+  QuasiQuotationExpander(SchemeProxy scm, SymbolTable *env)
       : scm_(scm)
       , env_(env) {
   }
@@ -36,7 +37,7 @@ private:
   [[nodiscard]] Cell expand(Cell expr, int nesting);
 
 private:
-  Scheme& scm_;
+  SchemeProxy scm_;
   SymbolTable *env_;
 };
 } // namespace pscm

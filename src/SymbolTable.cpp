@@ -23,7 +23,7 @@ bool SymbolTable::contains(Symbol *sym) const {
 
 void SymbolTable::insert(Symbol *sym, Cell cell) {
   PSCM_ASSERT(sym);
-  map_[sym->name()] = cell;
+  map_[sym->name()] = new Entry{ .data = cell };
 }
 
 bool SymbolTable::remove(Symbol *sym) {
@@ -35,7 +35,7 @@ Cell SymbolTable::get(Symbol *sym, SourceLocation loc) const {
   PSCM_ASSERT(sym);
   auto name = sym->name();
   if (map_.contains(name)) {
-    return map_.at(name);
+    return map_.at(name)->data;
   }
   if (parent_) {
     return parent_->get(sym, loc);
@@ -46,7 +46,7 @@ Cell SymbolTable::get(Symbol *sym, SourceLocation loc) const {
 Cell SymbolTable::get_or(Symbol *sym, Cell default_value, SourceLocation loc) const {
   PSCM_ASSERT(sym);
   if (map_.contains(sym->name())) {
-    return map_.at(sym->name());
+    return map_.at(sym->name())->data;
   }
   if (parent_) {
     return parent_->get_or(sym, default_value, loc);
@@ -59,7 +59,7 @@ void SymbolTable::set(Symbol *sym, Cell value, SourceLocation loc) {
   PSCM_ASSERT(sym);
   auto name = sym->name();
   if (map_.contains(name)) {
-    map_[name] = value;
+    map_[name]->data = value;
     return;
   }
   if (parent_) {
@@ -70,4 +70,7 @@ void SymbolTable::set(Symbol *sym, Cell value, SourceLocation loc) {
   }
 }
 
+void SymbolTable::use(SymbolTable *env, Symbol *sym) {
+  this->map_[sym->name()] = env->map_.at(sym->name());
+}
 } // namespace pscm

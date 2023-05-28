@@ -3,11 +3,14 @@
 #include "pscm/Cell.h"
 #include "pscm/Char.h"
 #include "pscm/Function.h"
+#include "pscm/Macro.h"
 #include "pscm/Pair.h"
 #include "pscm/Parser.h"
 #include "pscm/Procedure.h"
+#include "pscm/SchemeProxy.h"
 #include "pscm/Str.h"
 #include "pscm/Symbol.h"
+#include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
 #include <fstream>
@@ -483,5 +486,18 @@ Procedure *Procedure::create_call_with_output_string(SymbolTable *env) {
   Cell args = list(proc);
   body = cons(body, nil);
   return new Procedure(name, args, body, env);
+}
+
+PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(Port, "load", Label::APPLY_LOAD, "(filename)") {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  PSCM_ASSERT(arg.is_sym());
+  auto sym = arg.to_symbol();
+  auto val = env->get(sym);
+  PSCM_ASSERT(val.is_str());
+  auto s = val.to_str();
+  auto filename = s->str();
+  bool ok = scm.load(std::string(filename).c_str());
+  return Cell(ok);
 }
 } // namespace pscm

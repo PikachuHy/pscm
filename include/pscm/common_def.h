@@ -39,3 +39,19 @@
 
 #define PSCM_DEFINE_BUILTIN_PROC(module, name)                                                                         \
   Cell PSCM_DEFINE_BUILTIN_PROC_INNER(PSCM_CONCAT2(_##module##__proc__, __COUNTER__), name)
+
+#define PSCM_DEFINE_BUILTIN_MACRO_INNER(func_name, api_name, label)                                                    \
+  func_name(SchemeProxy scm, SymbolTable *env, Cell args);                                                             \
+  static ApiManager PSCM_CONCAT2(__api_manager_, func_name)(func_name, api_name, label);                               \
+  Cell func_name(SchemeProxy scm, SymbolTable *env, Cell args)
+
+#define PSCM_DEFINE_BUILTIN_MACRO(module, name, label)                                                                 \
+  Cell PSCM_DEFINE_BUILTIN_MACRO_INNER(PSCM_CONCAT2(_##module##__macro__, __COUNTER__), name, label)
+
+#define PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER_INNER(func_name, api_name, label, proc_args)                            \
+  func_name(SchemeProxy scm, SymbolTable *env, Cell args);                                                             \
+  static ApiManager PSCM_CONCAT2(__api_manager_, func_name)(func_name, api_name, label, proc_args);                    \
+  Cell func_name(SchemeProxy scm, SymbolTable *env, Cell args)
+
+#define PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(module, name, label, args)                                              \
+  Cell PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER_INNER(PSCM_CONCAT2(_##module##__macro__, __COUNTER__), name, label, args)
