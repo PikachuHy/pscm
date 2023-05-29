@@ -26,8 +26,14 @@ public:
     return parent_;
   }
 
+  void use(SymbolTable *env, Symbol *sym);
+
 private:
-  std::unordered_map<std::string_view, Cell> map_;
+  struct Entry {
+    Cell data;
+  };
+
+  std::unordered_map<std::string_view, Entry *> map_;
   SymbolTable *parent_;
 };
 

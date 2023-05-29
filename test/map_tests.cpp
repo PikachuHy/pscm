@@ -63,9 +63,10 @@ TEST_CASE("testing map let set!") {
     CHECK(ret == list(1, 2, 3));
   };
   {
-    // Scheme scm;
-    // f(scm);
-  } {
+    Scheme scm;
+    f(scm);
+  }
+  {
     Scheme scm(true);
     f(scm);
   }

@@ -42,14 +42,7 @@ public:
   bool check_args(Cell args) const;
 
   SymbolTable *create_proc_env(Cell args) const;
-
-  static Procedure *create_for_each(SymbolTable *env);
-  static Procedure *create_map(SymbolTable *env);
-
   static Procedure *create_apply(SymbolTable *env);
-  static Procedure *create_force(SymbolTable *env);
-  static Procedure *create_load(SymbolTable *env);
-  static Procedure *create_eval(SymbolTable *env);
   static Procedure *create_call_with_output_string(SymbolTable *env);
 
 private:

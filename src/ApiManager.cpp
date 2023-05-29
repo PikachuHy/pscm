@@ -1,8 +1,13 @@
 #include "pscm/ApiManager.h"
 #include "pscm/Function.h"
+#include "pscm/Macro.h"
+#include "pscm/Pair.h"
+#include "pscm/Parser.h"
+#include "pscm/Procedure.h"
 #include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
+#include "pscm/scm_utils.h"
 #include <tuple>
 #include <vector>
 
@@ -12,6 +17,11 @@ std::vector<ApiManager *>& ApiManager::api_list() {
   return list;
 }
 
+SymbolTable *ApiManager::private_env() {
+  static SymbolTable env;
+  return &env;
+}
+
 ApiManager::ApiManager(Cell::ScmFunc f, std::string name, SourceLocation loc)
     : f_(f)
     , name_(name)
@@ -19,19 +29,53 @@ ApiManager::ApiManager(Cell::ScmFunc f, std::string name, SourceLocation loc)
   ApiManager::api_list().push_back(this);
 }
 
-void ApiManager::install_proc(SymbolTable *env) {
-  SPDLOG_INFO("proc count: {}", ApiManager::api_list().size());
+ApiManager::ApiManager(Cell::ScmMacro2 f, std::string name, Label label, SourceLocation loc)
+    : f_(f)
+    , name_(name)
+    , label_(label)
+    , loc_(loc) {
+  ApiManager::api_list().push_back(this);
+}
+
+ApiManager::ApiManager(Cell::ScmMacro2 f, std::string name, Label label, const char *args, SourceLocation loc)
+    : name_(name)
+    , label_(label)
+    , loc_(loc) {
+  auto proc_args = Parser(args).parse();
+  PSCM_ASSERT(!proc_args.is_none());
+  auto builtin_sym = new Symbol("builtin_" + name);
+  auto builtin_macro = new Macro(name, label, f);
+  ApiManager::private_env()->insert(builtin_sym, builtin_macro);
+  Cell proc_body = cons(builtin_macro, proc_args);
+  proc_body = list(proc_body);
+  auto proc = new Procedure(new Symbol(name), proc_args, proc_body, ApiManager::private_env());
+  f_ = proc;
+  ApiManager::api_list().push_back(this);
+}
+
+void ApiManager::install_api(SymbolTable *env) {
+  SPDLOG_INFO("api count: {}", ApiManager::api_list().size());
   for (const auto& api_manager : ApiManager::api_list()) {
-    auto f = api_manager->f_;
     auto name = api_manager->name_;
     auto loc = api_manager->loc_;
     auto sym = new Symbol(name);
     if (env->contains(sym)) {
-      SPDLOG_ERROR("replication procedure defined in: {}", loc.to_string());
-      PSCM_THROW_EXCEPTION("replication procedure install, previous is " + env->get(sym).to_string());
+      SPDLOG_ERROR("replication api defined in: {}", loc.to_string());
+      PSCM_THROW_EXCEPTION("replication api install, previous is " + env->get(sym).to_string());
     }
     SPDLOG_INFO("insert {} from {}", name, loc.to_string());
-    env->insert(sym, new Function(name, f));
+    if (api_manager->is_func()) {
+      auto f = std::get<0>(api_manager->f_);
+      env->insert(sym, new Function(name, f));
+    }
+    else if (api_manager->is_macro()) {
+      auto f = std::get<1>(api_manager->f_);
+      env->insert(sym, new Macro(name, api_manager->label_, f));
+    }
+    else if (api_manager->is_proc()) {
+      auto f = std::get<2>(api_manager->f_);
+      env->insert(sym, f);
+    }
   }
 }
 

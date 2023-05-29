@@ -29,6 +29,11 @@ public:
   bool operator==(const Symbol& sym) const;
 
   void print_debug_info();
+  static Symbol for_each;
+  static Symbol map;
+  static Symbol load;
+  static Symbol quasiquote;
+  static Symbol unquote_splicing;
 
 private:
   std::string name_;

@@ -374,7 +374,7 @@ Cell Parser::parse_token(pscm::Parser::Token token, std::size_t start) {
 }
 
 Cell Parser::parse_expr() {
-  Pair *ret = cons(nil, nil);
+  Pair *ret = cons(Cell::nil(), Cell::nil());
   auto p = ret;
   while (!is_eof()) {
     skip_empty();
@@ -559,27 +559,6 @@ Cell Parser::parse_string() {
   }
   Cell ret(new String(s));
   return ret;
-  // while (pos_ < code_.size()) {
-  //   if (code_[pos_] == '"') {
-  //     break;
-  //   }
-  //   if (code_[pos_] == '\\') {
-  //     if (pos_ + 1 < code_.size()) {
-  //       advance();
-  //     }
-  //     else {
-  //       PSCM_THROW_EXCEPTION("Invalid String: " + code_.substr(start));
-  //     }
-  //   }
-  //   s.push_back(code_[pos_]);
-  //   advance();
-  // }
-  // if (pos_ < code_.size() && code_[pos_] == '"') {
-  //   Cell ret(new String(s));
-  //   advance();
-  //   return ret;
-  // }
-  // PSCM_THROW_EXCEPTION("Invalid string: " + code_.substr(start));
 }
 
 void Parser::skip_empty() {

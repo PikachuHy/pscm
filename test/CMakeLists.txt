@@ -4,28 +4,21 @@ function(add_pscm_test name src)
     target_link_libraries(${name} PRIVATE doctest::doctest pscm)
     add_test(NAME ${name} COMMAND ${name})
 endfunction()
+FILE(GLOB tests_files "*_tests.cpp")
+foreach (tests_file ${tests_files})
+    # message(STATUS "tests_file: ${tests_file}")
+    get_filename_component(tests_filename ${tests_file} NAME_WE)
+    # message(STATUS "name: ${tests_filename}")
+    string(LENGTH ${tests_filename} name_len)
+    math(EXPR name_len "${name_len}-1")
+    string(SUBSTRING ${tests_filename} 0 ${name_len} test_case_name)
+    # message(STATUS "test case: ${test_case_name}")
+    add_pscm_test(${test_case_name} ${tests_file})
+endforeach ()
+
 add_pscm_test(sicp_ch1_tests sicp/ch1_tests.cpp)
-add_pscm_test(macro_test macro_tests.cpp)
-add_pscm_test(proc_test proc_tests.cpp)
-add_pscm_test(number_test number_tests.cpp)
-add_pscm_test(keyword_test keyword_tests.cpp)
-add_pscm_test(math_test math_tests.cpp)
-add_pscm_test(parser_test parser_tests.cpp)
-add_pscm_test(cell_test cell_tests.cpp)
-add_pscm_test(callcc_test callcc_tests.cpp)
-add_pscm_test(for_each_test for_each_tests.cpp)
-add_pscm_test(map_test map_tests.cpp)
-add_pscm_test(cond_test cond_tests.cpp)
-add_pscm_test(do_test do_tests.cpp)
-add_pscm_test(list_test list_tests.cpp)
-add_pscm_test(char_test char_tests.cpp)
-add_pscm_test(apply_test apply_tests.cpp)
-add_pscm_test(port_test port_tests.cpp)
-add_pscm_test(let_test let_tests.cpp)
-add_pscm_test(letrec_test letrec_tests.cpp)
-add_pscm_test(append_test append_tests.cpp)
-add_pscm_test(hash_table_test hash_table_tests.cpp)
 add_pscm_test(r4rs_test r4rs/r4rs_tests.cpp)
+add_pscm_test(module_test module/load_path_tests.cpp)
 if (EMSCRIPTEN)
 elseif (WIN32)
 # TODO: handle EOF
@@ -69,5 +62,10 @@ add_test(
     NAME r5rs_load.scm_REGISTER_MACHINE
     COMMAND $<TARGET_FILE:pscm_main> -m REGISTER_MACHINE -s load.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/r5rs
+)
+add_test(
+        NAME module_r5rs_test.scm_DIRECT
+        COMMAND $<TARGET_FILE:pscm_main> -m DIRECT -s r5rs_test.scm
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
 )
 endif()

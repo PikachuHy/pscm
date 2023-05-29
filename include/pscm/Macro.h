@@ -24,6 +24,12 @@ public:
       , f_(f) {
   }
 
+  Macro(std::string name, Label pos, Cell::ScmMacro2 f)
+      : name_(std::move(name))
+      , pos_(pos)
+      , f_(f) {
+  }
+
   Macro(std::string name, Cell::ScmFunc f)
       : name_(std::move(name))
       , pos_(Label::APPLY_MACRO)
@@ -64,7 +70,7 @@ public:
 private:
   std::string name_;
   Label pos_;
-  std::variant<std::monostate, Cell::ScmMacro, Cell::ScmFunc, Procedure *> f_;
+  std::variant<std::monostate, Cell::ScmMacro, Cell::ScmFunc, Procedure *, Cell::ScmMacro2> f_;
 };
 
 } // namespace pscm

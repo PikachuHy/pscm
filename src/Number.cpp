@@ -80,6 +80,9 @@ Number Number::operator/(const Number& num) {
   }
   auto n1 = std::get<1>(data_);
   auto n2 = std::get<1>(num.data_);
+  if (n2 == 0) {
+    PSCM_THROW_EXCEPTION("bad expresion: " + std::to_string(n1) + "/" + std::to_string(n2));
+  }
   auto data = n1 / n2;
   if (data * n2 == n1) {
     return Number(data);

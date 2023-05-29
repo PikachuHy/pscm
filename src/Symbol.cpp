@@ -5,7 +5,11 @@
 #include "pscm/Symbol.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Cell.h"
+#include "pscm/Pair.h"
+#include "pscm/SchemeProxy.h"
+#include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
+#include "pscm/scm_utils.h"
 #include <fstream>
 #include <iostream>
 #include <ostream>
@@ -16,6 +20,11 @@ Symbol call_with_values("call-with-values");
 Symbol values("values");
 Symbol cond_else("else");
 Symbol sym_if("if");
+Symbol Symbol::for_each = Symbol("for-each");
+Symbol Symbol::map = Symbol("map");
+Symbol Symbol::load = Symbol("load");
+Symbol Symbol::quasiquote = Symbol("quasiquote");
+Symbol Symbol::unquote_splicing = Symbol("unquote-splicing");
 
 std::ostream& operator<<(std::ostream& out, const Symbol& sym) {
   auto name = sym.name_;
@@ -72,6 +81,15 @@ Symbol *gensym() {
 
 PSCM_DEFINE_BUILTIN_PROC(Symbol, "gensym") {
   return gensym();
+}
+
+PSCM_DEFINE_BUILTIN_MACRO(Symbol, "defined?", Label::APPLY_IS_DEFINED) {
+  PSCM_ASSERT(args.is_pair());
+  auto val = scm.eval(env, car(args));
+  PSCM_ASSERT(val.is_sym());
+  auto sym = val.to_symbol();
+  auto has_sym = env->contains(sym);
+  return Cell(has_sym);
 }
 
 } // namespace pscm
