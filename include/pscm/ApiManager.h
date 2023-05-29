@@ -1,4 +1,5 @@
 #include "pscm/Cell.h"
+#include <variant>
 #include <vector>
 
 namespace pscm {
