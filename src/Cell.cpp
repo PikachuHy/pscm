@@ -3,6 +3,7 @@
 //
 
 #include "pscm/Cell.h"
+#include "pscm/ApiManager.h"
 #include "pscm/Char.h"
 #include "pscm/Continuation.h"
 #include "pscm/Function.h"
@@ -25,6 +26,17 @@
 
 namespace pscm {
 Cell nil = Cell::nil();
+
+std::ostream& operator<<(std::ostream& out, const SmallObject& smob) {
+  out << '<';
+  out << "smob";
+  out << ' ';
+  out << smob.tag;
+  out << ' ';
+  out << smob.data;
+  out << '>';
+  return out;
+}
 
 Cell::Cell(Number *num) {
   ref_count_++;
@@ -221,7 +233,7 @@ std::string Cell::pretty_string() const {
     while (it.is_pair()) {
       ss << " ";
       if (car(it).is_sym() && car(it).to_symbol()->name() == "unquote") {
-        if (cddr(it).is_nil()) {
+        if (cdr(it).is_pair() && cddr(it).is_nil()) {
           ss << ".";
           ss << " ";
           ss << ",";
@@ -459,6 +471,9 @@ std::ostream& operator<<(std::ostream& out, const Cell& cell) {
   if (cell.tag_ == Cell::Tag::KEYWORD) {
     return out << *cell.to_keyword();
   }
+  if (cell.tag_ == Cell::Tag::SMOB) {
+    return out << *cell.to_smob();
+  }
   SPDLOG_ERROR("TODO: {}", int(cell.tag_));
   //  PSCM_THROW_EXCEPTION("TODO: cell tag ");
   return out << "TODO";
@@ -505,6 +520,9 @@ bool operator==(const Cell& lhs, const Cell& rhs) {
   }
   case Cell::Tag::SYMBOL: {
     return *lhs.to_symbol() == *rhs.to_symbol();
+  }
+  case Cell::Tag::KEYWORD: {
+    return *lhs.to_keyword() == *rhs.to_keyword();
   }
   case Cell::Tag::VECTOR: {
     return *lhs.to_vec() == *rhs.to_vec();
@@ -690,6 +708,10 @@ std::ostream& operator<<(std::ostream& out, const Label& pos) {
     out << "APPLY_LOAD";
     break;
   }
+  case Label::AFTER_APPLY_EVAL: {
+    out << "AFTER_APPLY_EVAL";
+    break;
+  }
   case Label::APPLY_EVAL: {
     out << "APPLY_EVAL";
     break;
@@ -822,6 +844,9 @@ Cell Cell::is_eqv(const Cell& rhs) const {
   else if (tag_ == Tag::STRING) {
     return Cell(to_str()->empty() && rhs.to_str()->empty());
   }
+  else if (tag_ == Tag::KEYWORD) {
+    return Cell(*to_keyword() == *rhs.to_keyword());
+  }
 
   bool eq = (data_ == rhs.data_);
   if (eq) {
@@ -836,11 +861,78 @@ Cell Cell::is_eq(const pscm::Cell& rhs) const {
   return is_eqv(rhs);
 }
 
+HashCodeType Cell::hash_code() const {
+  if (is_none() || is_nil()) {
+    return 0;
+  }
+  if (is_str()) {
+    return to_str()->hash_code();
+  }
+  if (is_bool()) {
+    if (to_bool()) {
+      return 257;
+    }
+    else {
+      return 258;
+    }
+  }
+  if (is_char()) {
+    auto ch = to_char();
+    if (ch->is_eof()) {
+      return 256;
+    }
+    else {
+      return ch->to_int();
+    }
+  }
+  if (is_keyword()) {
+    return to_keyword()->hash_code();
+  }
+  if (is_sym()) {
+    return to_symbol()->hash_code();
+  }
+  PSCM_ASSERT(data_);
+  auto code = (HashCodeType *)data_;
+  return *code;
+}
+
+bool Cell::is_eq(Cell lhs, Cell rhs) {
+  return lhs.is_eq(rhs).to_bool();
+}
+
+bool Cell::is_eqv(Cell lhs, Cell rhs) {
+  return lhs.is_eqv(rhs).to_bool();
+}
+
+bool Cell::is_equal(Cell lhs, Cell rhs) {
+  return lhs == rhs;
+}
+
 std::string SourceLocation::to_string() const {
   auto name = std::string(filename);
   auto pos = name.find_last_of('/');
   name = name.substr(pos + 1);
   return name + ":" + std::to_string(linenum); // + " " + std::string(funcname);
+}
+
+static Cell scm_cell_cmp(Cell args, Cell::ScmCmp cmp_func) {
+  PSCM_ASSERT(args.is_pair());
+  auto obj1 = car(args);
+  auto obj2 = cadr(args);
+  auto eq = cmp_func(obj1, obj2);
+  return Cell(eq);
+}
+
+PSCM_DEFINE_BUILTIN_PROC(Cell, "eq?") {
+  return scm_cell_cmp(args, Cell::is_eq);
+}
+
+PSCM_DEFINE_BUILTIN_PROC(Cell, "eqv?") {
+  return scm_cell_cmp(args, Cell::is_eqv);
+}
+
+PSCM_DEFINE_BUILTIN_PROC(Cell, "equal?") {
+  return scm_cell_cmp(args, Cell::is_equal);
 }
 } // namespace pscm
 

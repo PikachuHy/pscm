@@ -61,6 +61,7 @@ enum class Label {
   AFTER_EVAL_FIRST_EXPR,
   AFTER_EVAL_OTHER_EXPR,
   APPLY_APPLY, // call apply from scheme
+  APPLY_EVAL,  // call eval from scheme
   APPLY_DEFINE,
   APPLY_DEFINE_MACRO,
   APPLY_DEFINE_MODULE,
@@ -79,7 +80,6 @@ enum class Label {
   APPLY_FORCE,
   APPLY_BEGIN,
   APPLY_LOAD,
-  APPLY_EVAL,
   APPLY_CURRENT_MODULE,
   APPLY_USE_MODULES,
   APPLY_RESOLVE_MODULE,
@@ -95,6 +95,8 @@ enum class Label {
   AFTER_EVAL_AND_EXPR,
   AFTER_EVAL_OR_EXPR,
   AFTER_EVAL_CALL_WITH_VALUES_PRODUCER,
+  AFTER_APPLY_EVAL,
+  TODO
 };
 std::string to_string(Label label);
 std::ostream& operator<<(std::ostream& out, const Label& pos);
@@ -106,6 +108,7 @@ public:
       , data(data) {
   }
 
+  friend std::ostream& operator<<(std::ostream& out, const SmallObject& smob);
   long tag;
   void *data;
 };
@@ -117,12 +120,14 @@ public:
   }                                                                                                                    \
   Type *to_##type(SourceLocation loc = {}) const
 class SchemeProxy;
+using HashCodeType = std::uint32_t;
 
 class Cell {
 public:
   typedef Cell (*ScmFunc)(Cell);
   typedef Cell (*ScmMacro)(Scheme&, SymbolTable *, Cell);
   typedef Cell (*ScmMacro2)(SchemeProxy, SymbolTable *, Cell);
+  typedef bool (*ScmCmp)(Cell, Cell);
   using Vec = std::vector<Cell>;
 
   Cell() {
@@ -309,6 +314,11 @@ public:
   [[nodiscard]] Cell is_eqv(const Cell& rhs) const;
   [[nodiscard]] Cell is_eq(const Cell& rhs) const;
 
+  HashCodeType hash_code() const;
+  static bool is_eq(Cell lhs, Cell rhs);
+  static bool is_eqv(Cell lhs, Cell rhs);
+  static bool is_equal(Cell lhs, Cell rhs);
+
 private:
   Cell(Tag tag, void *data)
       : tag_(tag)
@@ -325,6 +335,13 @@ private:
   Tag tag_ = Tag::NONE;
   void *data_ = nullptr;
   friend class Scheme;
+};
+
+// hack: force load code in AList.cpp
+// do not use the class
+class AList {
+public:
+  AList();
 };
 
 extern Cell nil;

@@ -13,6 +13,10 @@ public:
       , env_(env) {
   }
 
+  Cell name() const {
+    return name_;
+  }
+
   SymbolTable *env() const {
     return env_;
   }
@@ -20,7 +24,7 @@ public:
   Cell export_sym_list();
 
   void export_symbol(Symbol *sym);
-  void use_module(Module *m);
+  void use_module(Module *m, bool use_all = false);
   friend std::ostream& operator<<(std::ostream& os, const Module& m);
 
 private:

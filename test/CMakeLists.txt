@@ -68,4 +68,9 @@ add_test(
         COMMAND $<TARGET_FILE:pscm_main> -m DIRECT -s r5rs_test.scm
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
 )
+add_test(
+        NAME module_texmacs_module_DIRECT
+        COMMAND $<TARGET_FILE:pscm_main> -m DIRECT -s init.scm
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
+)
 endif()

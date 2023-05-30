@@ -6,16 +6,22 @@ class HashTable {
 public:
   HashTable(std::size_t capacity = 32)
       : capacity_(capacity) {
+    map_.resize(capacity);
+    std::fill(map_.begin(), map_.end(), nil);
+    size_ = 0;
   }
 
   friend std::ostream& operator<<(std::ostream& os, const HashTable& hash_table);
-  void set(Cell key, Cell value);
-  Cell get_or(Cell key, Cell default_value = Cell::bool_false());
+  Cell set(Cell key, Cell value, Cell::ScmCmp cmp_func = Cell::is_equal);
+  Cell get(Cell key, Cell::ScmCmp cmp_func = Cell::is_equal);
+  Cell remove(Cell key, Cell::ScmCmp cmp_func = Cell::is_equal);
+  void for_each(std::function<void(Cell, Cell)> func);
+  void for_each_handle(std::function<void(Cell)> func);
 
 private:
-  std::size_t size_ = 0;
+  Cell::Vec map_;
+  std::size_t size_;
   std::size_t capacity_;
-  std::unordered_map<Cell, Cell> map_;
 };
 
 } // namespace pscm

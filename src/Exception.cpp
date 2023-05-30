@@ -4,4 +4,15 @@
 
 #include "pscm/Exception.h"
 
-namespace pscm {} // namespace pscm
+#include <iostream>
+
+namespace pscm {
+const char *Exception::what() const noexcept {
+  print_stack_trace();
+  return msg_.c_str();
+}
+
+void Exception::print_stack_trace() const {
+  std::cout << stack_trace_ << std::endl;
+}
+} // namespace pscm

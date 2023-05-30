@@ -72,6 +72,14 @@ Cell Char::from(char ch) {
     static Char tmp("/");
     return &tmp;
   }
+  else if (ch == ':') {
+    static Char tmp(":");
+    return &tmp;
+  }
+  else if (ch == '&') {
+    static Char tmp("&");
+    return &tmp;
+  }
   else if (ch == EOF) {
     std::string s;
     s.resize(1);
@@ -149,6 +157,10 @@ bool Char::is_numeric() const {
 
 bool Char::is_whitespace() const {
   return ch_.size() == 1 && std::isspace(ch_[0]);
+}
+
+bool Char::is_eof() const {
+  return ch_.size() == 1 && ch_[0] == EOF;
 }
 
 Char Char::to_downcase() const {

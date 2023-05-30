@@ -269,6 +269,9 @@ Cell Parser::parse() {
   while (!has_parsed_ && !is_eof()) {
     auto start = pos_;
     auto token = next_token();
+    if (token == Token::NONE) {
+      return Cell::none();
+    }
     ret = parse_token(token, start);
   }
   return ret;
@@ -366,6 +369,7 @@ Cell Parser::parse_token(pscm::Parser::Token token, std::size_t start) {
         }
         std::cout << "^" << std::endl;
       }
+      SPDLOG_ERROR("Unsupported token: {}", int(token));
       PSCM_THROW_EXCEPTION("Unsupported token: " + code_.substr(start, pos_ - start));
     }
     }
@@ -452,6 +456,45 @@ Cell Parser::parse_literal() {
     }
     else if (tok == Token::SYMBOL) {
       auto key = last_symbol_->name();
+      static std::unordered_map<std::string_view, int> literal_map{
+        {"nul",  0},
+        {"soh",  1},
+        {"stx",  2},
+        {"etx",  3},
+        {"eot",  4},
+        {"enq",  5},
+        {"ack",  6},
+        {"bel",  7},
+        { "bs",  8},
+        { "ht",  9},
+        { "lf", 10},
+        { "vt", 11},
+        { "ff", 12},
+        { "cr", 13},
+        { "so", 14},
+        { "si", 15},
+        {"dle", 16},
+        {"dl1", 17},
+        {"dc2", 18},
+        {"dc3", 19},
+        {"dc4", 20},
+        {"nak", 21},
+        {"syn", 22},
+        {"etb", 23},
+        {"can", 24},
+        { "em", 25},
+        {"sub", 26},
+        {"esc", 27},
+        { "fs", 28},
+        { "gs", 29},
+        { "rs", 30},
+        { "us", 31},
+        { "sp", 32},
+      };
+      auto it = literal_map.find(key);
+      if (it != literal_map.end()) {
+        return Char::from(it->second);
+      }
       if (key.size() == 1) {
         return Char::from(key[0]);
       }
@@ -461,7 +504,7 @@ Cell Parser::parse_literal() {
       else if (key == "newline") {
         return Char::from('\n');
       }
-      else if (key == "return") {
+      else if (key == "return" || key == "cr") {
         return Char::from(13);
       }
       else if (key == "ht") {
@@ -642,6 +685,10 @@ Parser::Token Parser::next_token() {
     std::string s;
     s.push_back(ch);
     read_until(s, "()\"'`,;");
+    if (s == "1+" || s == "1-") {
+      last_symbol_ = new Symbol(s, filename_, row, col);
+      return Token::SYMBOL;
+    }
     if (std::isdigit(ch) || (s.size() > 1 && (ch == '-' || ch == '+'))) {
       try {
         auto num = NumberParser(s).parse();

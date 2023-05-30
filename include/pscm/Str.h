@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "Cell.h"
 #include <ostream>
 #include <string>
 
@@ -47,6 +48,8 @@ public:
   [[nodiscard]] String substring(std::int64_t start, std::int64_t end) const;
 
   void fill(char ch);
+
+  HashCodeType hash_code() const;
 
 private:
   std::string data_;

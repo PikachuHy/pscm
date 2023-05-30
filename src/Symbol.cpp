@@ -48,6 +48,14 @@ bool Symbol::operator==(const Symbol& sym) const {
   return name_ == sym.name_;
 }
 
+HashCodeType Symbol::hash_code() const {
+  HashCodeType code;
+  for (char ch : name_) {
+    code = int(ch) + code * 37;
+  }
+  return code;
+}
+
 void Symbol::print_debug_info() {
   if (filename_.empty()) {
     return;

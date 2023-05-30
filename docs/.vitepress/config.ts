@@ -74,6 +74,10 @@ function sidebarGuideZh() {
           link: '/cn/cell'
         },
         {
+          text: 'Equivalence predicates',
+          link: '/cn/eq_eqv_equal'
+        },
+        {
           text: 'Register Machine',
           link: '/cn/register_machine'
         },

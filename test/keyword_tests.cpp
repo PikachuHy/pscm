@@ -36,3 +36,44 @@ TEST_CASE("testing keywords, 0") {
     f(scm);
   }
 }
+
+TEST_CASE("testing keywords, ==") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    auto keyword1 = scm.eval(R"(
+:use
+)");
+    CHECK(keyword1.is_keyword());
+    auto keyword2 = scm.eval(R"(
+:use
+)");
+    CHECK(keyword2.is_keyword());
+    CHECK(keyword1 == keyword2);
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing keywords, eqv?") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(eqv? :check-mark :check-mark)
+)");
+    CHECK(ret == Cell::bool_true());
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}

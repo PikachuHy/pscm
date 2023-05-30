@@ -12,6 +12,17 @@ std::ostream& operator<<(std::ostream& os, const Keyword& keyword) {
   return os;
 }
 
+bool operator==(const Keyword& lhs, const Keyword& rhs) {
+  if (lhs.sym_ == rhs.sym_) {
+    return true;
+  }
+  return *lhs.sym_ == *rhs.sym_;
+}
+
+HashCodeType Keyword::hash_code() const {
+  return sym_->hash_code();
+}
+
 PSCM_DEFINE_BUILTIN_PROC(Keyword, "keyword?") {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
