@@ -126,3 +126,27 @@ TEST_CASE("testing page 43, nested proc") {
     f(scm);
   }
 }
+
+TEST_CASE("testing page 43, nested proc") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(define ((define-property* which) opt decl)
+  `(,which (list ,@opt)))
+)");
+    REQUIRE(ret == Cell::none());
+    ret = scm.eval("(define-property* 'a)");
+    CHECK(ret.is_proc());
+    ret = scm.eval("((define-property* 'a) '(c d) 'e)");
+    auto expect = scm.eval("'(a (list c d))");
+    CHECK(ret == expect);
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}

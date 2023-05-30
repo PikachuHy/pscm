@@ -570,99 +570,6 @@ Cell is_boolean(Cell args) {
   return arg.is_bool() ? Cell::bool_true() : Cell::bool_false();
 }
 
-Cell is_eqv(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto obj1 = car(args);
-  auto obj2 = cadr(args);
-  return obj1.is_eqv(obj2);
-}
-
-Cell is_eq(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto obj1 = car(args);
-  auto obj2 = cadr(args);
-  return obj1.is_eq(obj2);
-}
-
-Cell is_equal(Cell args) {
-  PSCM_ASSERT(args.is_pair());
-  auto obj1 = car(args);
-  auto obj2 = cadr(args);
-  return (obj1 == obj2) ? Cell::bool_true() : Cell::bool_false();
-}
-
-Cell memq(Cell args) {
-  auto obj = car(args);
-  auto list = cadr(args);
-  while (!list.is_nil()) {
-    if (obj.is_eq(car(list)).to_bool()) {
-      return list;
-    }
-    list = cdr(list);
-  }
-  return Cell::bool_false();
-}
-
-Cell memv(Cell args) {
-  auto obj = car(args);
-  auto list = cadr(args);
-  while (!list.is_nil()) {
-    if (obj.is_eqv(car(list)).to_bool()) {
-      return list;
-    }
-    list = cdr(list);
-  }
-  return Cell::bool_false();
-}
-
-Cell member(Cell args) {
-  auto obj = car(args);
-  auto list = cadr(args);
-  while (!list.is_nil()) {
-    if (obj == car(list)) {
-      return list;
-    }
-    list = cdr(list);
-  }
-  return Cell::bool_false();
-}
-
-Cell assq(Cell args) {
-  auto obj = car(args);
-  auto list = cadr(args);
-  while (!list.is_nil()) {
-    if (obj.is_eq(caar(list)).to_bool()) {
-      return car(list);
-    }
-    list = cdr(list);
-  }
-  return Cell::bool_false();
-}
-
-Cell assv(Cell args) {
-  auto obj = car(args);
-  auto list = cadr(args);
-  while (!list.is_nil()) {
-    if (obj.is_eqv(caar(list)).to_bool()) {
-      return car(list);
-    }
-    list = cdr(list);
-  }
-  return Cell::bool_false();
-}
-
-Cell assoc(Cell args) {
-  auto obj = car(args);
-  auto list = cadr(args);
-  while (!list.is_nil()) {
-    if (obj == caar(list)) {
-      return car(list);
-    }
-    list = cdr(list);
-  }
-  return Cell::bool_false();
-}
-
 Cell is_vector(Cell args) {
   PSCM_ASSERT(args.is_pair());
   return Cell(car(args).is_vec());
@@ -1876,7 +1783,7 @@ void Evaluator::run() {
       while (!key.is_sym()) {
         auto proc_name = car(key);
         auto proc_args = cdr(key);
-        auto proc = new Procedure(nullptr, proc_args, val, env);
+        Cell proc = cons(lambda, cons(proc_args, val));
         key = proc_name;
         val = list(proc);
       }
@@ -2004,6 +1911,16 @@ void Evaluator::run() {
     case Label::APPLY_EVAL: {
       PRINT_STEP();
       reg_.expr = car(reg_.unev);
+      SPDLOG_ERROR("expr: {}", reg_.expr);
+      PSCM_PUSH_STACK(cont);
+      reg_.cont = Label::AFTER_APPLY_EVAL;
+      GOTO(Label::EVAL);
+    }
+    case Label::AFTER_APPLY_EVAL: {
+      PRINT_STEP();
+      reg_.expr = reg_.val;
+      SPDLOG_ERROR("expr: {}", reg_.expr);
+      PSCM_POP_STACK(cont);
       GOTO(Label::EVAL);
     }
     case Label::APPLY_CURRENT_MODULE: {

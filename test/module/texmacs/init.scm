@@ -1,0 +1,10 @@
+(set! %load-path (append %load-path '(".")))
+(load "boot.scm")
+(inherit-modules (m))
+(if (not (defined? 'my-identity))
+    (begin
+        (display "my-identity is not defined. something maybe wrong. check your code") (newline)
+        (exit 1)))
+(my-identity 'a)
+(display my-identity) (newline)
+(display "Done!!!") (newline)

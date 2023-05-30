@@ -42,7 +42,7 @@ Symbol *scm_define(SchemeProxy scm, SymbolTable *env, Cell args) {
   while (!key.is_sym()) {
     auto proc_name = car(key);
     auto proc_args = cdr(key);
-    auto proc = new Procedure(nullptr, proc_args, val, env);
+    Cell proc = cons(lambda, cons(proc_args, val));
     key = proc_name;
     val = list(proc);
   }
@@ -149,8 +149,7 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "if", Label::APPLY_IF) {
   auto consequent = cadr(args);
   auto alternate = cddr(args);
   auto pred = scm.eval(env, test);
-  PSCM_ASSERT(pred.is_bool());
-  if (pred.to_bool()) {
+  if (!pred.is_bool() || pred.to_bool()) {
     return consequent;
   }
   else {
@@ -247,6 +246,8 @@ Scheme::Scheme(bool use_register_machine)
   current_module_ = nullptr;
   auto builitin_private_env = new SymbolTable();
   auto env = new SymbolTable();
+  // hack: force load code in AList.cpp
+  AList a;
   ApiManager::install_api(env);
   envs_.push_back(env);
   env->insert(new Symbol("version"), new Function("version", version));
@@ -276,16 +277,6 @@ Scheme::Scheme(bool use_register_machine)
   env->insert(new Symbol("newline"), new Function("newline", newline));
   env->insert(new Symbol("procedure?"), new Function("procedure?", is_procedure));
   env->insert(new Symbol("boolean?"), new Function("boolean?", is_boolean));
-  env->insert(new Symbol("assv"), new Function("assv", assv));
-  env->insert(new Symbol("eqv?"), new Function("eqv?", is_eqv));
-  env->insert(new Symbol("eq?"), new Function("eqv?", is_eq));
-  env->insert(new Symbol("equal?"), new Function("equal?", is_equal));
-  env->insert(new Symbol("memq"), new Function("memq", memq));
-  env->insert(new Symbol("memv"), new Function("memv", memv));
-  env->insert(new Symbol("member"), new Function("member", member));
-  env->insert(new Symbol("assq"), new Function("assq", assq));
-  env->insert(new Symbol("assv"), new Function("assv", assv));
-  env->insert(new Symbol("assoc"), new Function("assoc", assoc));
   env->insert(new Symbol("vector?"), new Function("vector?", is_vector));
   env->insert(new Symbol("make-vector"), new Function("make-vector", make_vector));
   env->insert(new Symbol("vector"), new Function("vector", proc_vector));
@@ -486,7 +477,7 @@ void Scheme::eval_all(const char *code, SourceLocation loc) {
         return;
       }
       if (use_register_machine_) {
-        Evaluator(*this).eval(expr, envs_.back());
+        Evaluator(*this).eval(expr, current_module_->env());
       }
       else {
         eval(expr);
@@ -532,6 +523,7 @@ bool Scheme::load(const char *filename) {
   }
   catch (Exception& ex) {
     SPDLOG_ERROR("load file {} error", filename);
+    ex.print_stack_trace();
     return false;
   }
   return true;
@@ -701,6 +693,7 @@ void Scheme::load_module(const std::string& filename, Cell module_name) {
     }
   }
   catch (Exception& ex) {
+    ex.print_stack_trace();
     SPDLOG_ERROR("load file {} error", filename);
     PSCM_THROW_EXCEPTION("load module error: " + Cell(module_name).to_string());
   }
@@ -722,12 +715,10 @@ PSCM_DEFINE_BUILTIN_PROC(Scheme, "scm-error") {
   return Cell::none();
 }
 
-PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(Scheme, "eval", Label::APPLY_EVAL, "(expr)") {
+PSCM_DEFINE_BUILTIN_MACRO(Scheme, "eval", Label::APPLY_EVAL) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
-  PSCM_ASSERT(arg.is_sym());
-  auto sym = arg.to_symbol();
-  auto expr = env->get(sym);
+  auto expr = arg;
   auto ret = scm.eval(env, expr);
   return ret;
 }

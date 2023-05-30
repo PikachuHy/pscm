@@ -28,6 +28,7 @@ public:
   bool is_alphabetic() const;
   bool is_numeric() const;
   bool is_whitespace() const;
+  bool is_eof() const;
   Char to_downcase() const;
   Char to_upcase() const;
   std::int64_t to_int() const;

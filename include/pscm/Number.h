@@ -73,6 +73,10 @@ public:
   Number() {
   }
 
+  Number(std::uint32_t val) {
+    data_ = val;
+  }
+
   Number(int32_t val) {
     data_ = val;
   }

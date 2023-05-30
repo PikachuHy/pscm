@@ -73,4 +73,13 @@ void SymbolTable::set(Symbol *sym, Cell value, SourceLocation loc) {
 void SymbolTable::use(SymbolTable *env, Symbol *sym) {
   this->map_[sym->name()] = env->map_.at(sym->name());
 }
+
+void SymbolTable::use(const SymbolTable& env) {
+  for (auto [sym, val] : env.map_) {
+    if (this->map_.contains(sym)) {
+      continue;
+    }
+    this->map_[sym] = val;
+  }
+}
 } // namespace pscm

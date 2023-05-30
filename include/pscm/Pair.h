@@ -24,11 +24,13 @@ Cell caaar(Cell c, SourceLocation loc = {});
 Cell cdr(Cell c, SourceLocation loc = {});
 Cell cdar(Cell c, SourceLocation loc = {});
 Cell cadr(Cell c, SourceLocation loc = {});
+Cell cadar(Cell c, SourceLocation loc = {});
 Cell caadr(Cell c, SourceLocation loc = {});
 Cell cdadr(Cell c, SourceLocation loc = {});
 Cell cddr(Cell c, SourceLocation loc = {});
 Cell cdddr(Cell c, SourceLocation loc = {});
 Cell caddr(Cell c, SourceLocation loc = {});
+Cell caddar(Cell c, SourceLocation loc = {});
 Cell cadddr(Cell c, SourceLocation loc = {});
 
 [[nodiscard]] int list_length(Cell expr);

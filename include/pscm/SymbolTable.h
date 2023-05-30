@@ -27,6 +27,7 @@ public:
   }
 
   void use(SymbolTable *env, Symbol *sym);
+  void use(const SymbolTable& env);
 
 private:
   struct Entry {

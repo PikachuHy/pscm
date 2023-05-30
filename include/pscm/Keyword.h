@@ -8,6 +8,8 @@ public:
   }
 
   friend std::ostream& operator<<(std::ostream& os, const Keyword& keyword);
+  friend bool operator==(const Keyword& lhs, const Keyword& rhs);
+  HashCodeType hash_code() const;
 
 private:
   Symbol *sym_;

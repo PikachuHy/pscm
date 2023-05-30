@@ -76,6 +76,14 @@ void String::fill(char ch) {
   std::fill(data_.begin(), data_.end(), ch);
 }
 
+HashCodeType String::hash_code() const {
+  HashCodeType code = 0;
+  for (char ch : data_) {
+    code = int(ch) + code * 37;
+  }
+  return code;
+}
+
 String operator""_str(const char *data, std::size_t len) {
   return String(std::string(data, len));
 }

@@ -57,3 +57,21 @@ TEST_CASE("testing append, 1") {
     f(scm);
   }
 }
+
+TEST_CASE("testing append, ()") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval("(apply append '())");
+    CHECK(ret == nil);
+    ret = scm.eval("(apply append '(()))");
+    CHECK(ret == nil);
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}

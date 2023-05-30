@@ -49,6 +49,10 @@ Cell cadr(Cell c, SourceLocation loc) {
   return car(cdr(c, loc), loc);
 }
 
+Cell cadar(Cell c, SourceLocation loc) {
+  return car(cdr(car(c, loc), loc), loc);
+}
+
 Cell caadr(Cell c, SourceLocation loc) {
   return car(car(cdr(c, loc), loc), loc);
 }
@@ -75,6 +79,10 @@ Cell cdddr(Cell c, SourceLocation loc) {
 
 Cell caddr(Cell c, SourceLocation loc) {
   return car(cdr(cdr(c, loc), loc), loc);
+}
+
+Cell caddar(Cell c, SourceLocation loc) {
+  return car(cdr(cdr(car(c, loc), loc), loc), loc);
 }
 
 Cell cadddr(Cell c, SourceLocation loc) {
@@ -116,6 +124,12 @@ PSCM_DEFINE_BUILTIN_PROC(List, "caar") {
   return caar(arg);
 }
 
+PSCM_DEFINE_BUILTIN_PROC(List, "cdadr") {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  return cdadr(arg);
+}
+
 PSCM_DEFINE_BUILTIN_PROC(List, "cdr") {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
@@ -134,6 +148,12 @@ PSCM_DEFINE_BUILTIN_PROC(List, "cadr") {
   return cadr(arg);
 }
 
+PSCM_DEFINE_BUILTIN_PROC(List, "cadar") {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  return cadar(arg);
+}
+
 PSCM_DEFINE_BUILTIN_PROC(List, "cddr") {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
@@ -144,6 +164,12 @@ PSCM_DEFINE_BUILTIN_PROC(List, "caddr") {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
   return caddr(arg);
+}
+
+PSCM_DEFINE_BUILTIN_PROC(List, "caddar") {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  return caddar(arg);
 }
 
 PSCM_DEFINE_BUILTIN_PROC(List, "list") {
@@ -230,6 +256,9 @@ PSCM_DEFINE_BUILTIN_PROC(List, "append") {
   auto list = car(args);
   if (list.is_nil() || list.is_pair()) {
     if (list.is_nil()) {
+      if (cdr(args).is_nil()) {
+        return nil;
+      }
       return cadr(args);
     }
     auto p = list;
@@ -239,7 +268,13 @@ PSCM_DEFINE_BUILTIN_PROC(List, "append") {
       it = new_pair;
       p = cdr(p);
     }
-    it->second = cadr(args);
+    if (cdr(args).is_nil()) {
+      it->second = nil;
+    }
+    else {
+
+      it->second = cadr(args);
+    }
   }
   else {
     PSCM_THROW_EXCEPTION("Wrong type argument in position 1 (expecting empty list): " + list.to_string());
@@ -433,4 +468,63 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(List, "map", Label::APPLY_MAP, "(proc . l
   return list(quote, ret);
 }
 
+Cell memq(Cell args) {
+  auto obj = car(args);
+  auto list = cadr(args);
+  while (!list.is_nil()) {
+    if (obj.is_eq(car(list)).to_bool()) {
+      return list;
+    }
+    list = cdr(list);
+  }
+  return Cell::bool_false();
+}
+
+Cell memv(Cell args) {
+  auto obj = car(args);
+  auto list = cadr(args);
+  while (!list.is_nil()) {
+    if (obj.is_eqv(car(list)).to_bool()) {
+      return list;
+    }
+    list = cdr(list);
+  }
+  return Cell::bool_false();
+}
+
+Cell member(Cell args) {
+  auto obj = car(args);
+  auto list = cadr(args);
+  while (!list.is_nil()) {
+    if (obj == car(list)) {
+      return list;
+    }
+    list = cdr(list);
+  }
+  return Cell::bool_false();
+}
+
+static Cell scm_mem(Cell args, Cell::ScmCmp cmp_func) {
+  auto obj = car(args);
+  auto list = cadr(args);
+  while (!list.is_nil()) {
+    if (cmp_func(obj, car(list))) {
+      return list;
+    }
+    list = cdr(list);
+  }
+  return Cell::bool_false();
+}
+
+PSCM_DEFINE_BUILTIN_PROC(Pair, "memq") {
+  return scm_mem(args, Cell::is_eq);
+}
+
+PSCM_DEFINE_BUILTIN_PROC(Pair, "memv") {
+  return scm_mem(args, Cell::is_eqv);
+}
+
+PSCM_DEFINE_BUILTIN_PROC(Pair, "member") {
+  return scm_mem(args, Cell::is_equal);
+}
 } // namespace pscm

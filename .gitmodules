@@ -7,3 +7,6 @@
 [submodule "3rd/glob"]
 	path = 3rd/glob
 	url = https://github.com/p-ranav/glob.git
+[submodule "3rd/UniversalStacktrace"]
+	path = 3rd/UniversalStacktrace
+	url = https://github.com/MisterTea/UniversalStacktrace.git

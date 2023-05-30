@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "pscm/Cell.h"
 #include <string>
 #include <string_view>
 
@@ -28,6 +29,7 @@ public:
   friend std::ostream& operator<<(std::ostream& out, const Symbol& sym);
   bool operator==(const Symbol& sym) const;
 
+  HashCodeType hash_code() const;
   void print_debug_info();
   static Symbol for_each;
   static Symbol map;
