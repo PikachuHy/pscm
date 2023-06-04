@@ -4,6 +4,7 @@
 
 #pragma once
 #include "pscm/Cell.h"
+#include <functional>
 #include <unordered_map>
 
 namespace pscm {
