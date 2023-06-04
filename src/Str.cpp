@@ -77,7 +77,7 @@ void String::fill(char ch) {
 }
 
 HashCodeType String::hash_code() const {
-  HashCodeType code;
+  HashCodeType code = 0;
   for (char ch : data_) {
     code = int(ch) + code * 37;
   }

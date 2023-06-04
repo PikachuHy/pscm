@@ -49,7 +49,7 @@ bool Symbol::operator==(const Symbol& sym) const {
 }
 
 HashCodeType Symbol::hash_code() const {
-  HashCodeType code;
+  HashCodeType code = 0;
   for (char ch : name_) {
     code = int(ch) + code * 37;
   }

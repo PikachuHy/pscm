@@ -176,6 +176,7 @@ Cell HashTable::set(Cell key, Cell value, Cell::ScmCmp cmp_func) {
   auto hash_code = key.hash_code();
   auto idx = hash_code % map_.size();
   auto bucket = map_[idx];
+  SPDLOG_ERROR("bucket: {}, idx: {}, key: {}, hash_code: {}", bucket, idx, key, hash_code);
   while (bucket.is_pair()) {
     auto entry = car(bucket);
     if (cmp_func(key, car(entry))) {
@@ -193,6 +194,7 @@ Cell HashTable::get(Cell key, Cell::ScmCmp cmp_func) {
   auto hash_code = key.hash_code();
   auto idx = hash_code % map_.size();
   auto bucket = map_[idx];
+  SPDLOG_ERROR("bucket: {}, idx: {}, key: {}, hash_code: {}", bucket, idx, key, hash_code);
   while (bucket.is_pair()) {
     auto entry = car(bucket);
     if (cmp_func(key, car(entry))) {
