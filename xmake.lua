@@ -8,6 +8,7 @@ target("pscm") do
             filename = "version.h"})
     set_languages("c++20")
     add_includedirs("include")
+    add_includedirs("3rd/UniversalStacktrace/ust")
     add_includedirs("$(buildir)")
     add_packages("spdlog")
     add_files("src/**.cpp")
@@ -22,6 +23,7 @@ for _, filepath in ipairs(os.files("test/**_tests.cpp")) do
         set_languages("c++20")
 
         add_includedirs("include")
+        add_includedirs("3rd/UniversalStacktrace/ust")
         add_files(filepath)
     end
 end
