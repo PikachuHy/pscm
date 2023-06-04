@@ -13,6 +13,8 @@ const char *Exception::what() const noexcept {
 }
 
 void Exception::print_stack_trace() const {
+#ifndef WASM_PLATFORM
   std::cout << stack_trace_ << std::endl;
+#endif
 }
 } // namespace pscm
