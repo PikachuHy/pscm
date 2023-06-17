@@ -3,8 +3,8 @@ load("@build_bazel_rules_android//android:rules.bzl", "android_binary", "android
 
 android_library(
     name = "lib",
-    srcs = ["java/com/example/android/bazel/MainActivity.java"],
-    custom_package = "com.example.android.bazel",
+    srcs = ["java/dev/pscm/android/MainActivity.java"],
+    custom_package = "dev.pscm.android",
     manifest = "LibraryManifest.xml",
     resource_files = glob(["res/**/*"]),
     deps = [
@@ -22,6 +22,6 @@ cc_library(
 android_binary(
     name = "app",
     manifest = "AndroidManifest.xml",
-    manifest_values = {"applicationId": "com.example.android.bazel"},
+    manifest_values = {"applicationId": "dev.pscm.android"},
     deps = [":lib"],
 )
