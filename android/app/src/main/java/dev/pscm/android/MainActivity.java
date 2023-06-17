@@ -5,7 +5,7 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
-
+  private long scm;
   static {
     System.loadLibrary("app");
   }
@@ -18,6 +18,9 @@ public class MainActivity extends AppCompatActivity {
     // Example of a call to a native method
     TextView tv = (TextView)findViewById(R.id.sample_text);
     tv.setText(stringFromJNI());
+    scm = createScheme();
+    String ret = evalSchemeCode(scm, "(version)");
+    tv.setText(ret);
   }
 
   /**
@@ -25,4 +28,6 @@ public class MainActivity extends AppCompatActivity {
    * which is packaged with this application.
    */
   public native String stringFromJNI();
+  public native long createScheme();
+  public native String evalSchemeCode(long scm, String code);
 }

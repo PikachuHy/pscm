@@ -17,6 +17,7 @@ android_library(
 cc_library(
     name = "jni_lib",
     srcs = ["cpp/native-lib.cpp"],
+    deps = ["//:pscm"],
 )
 
 android_binary(
