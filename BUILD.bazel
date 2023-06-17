@@ -137,9 +137,3 @@ cc_test(
     copts = PSCM_TEST_COPTS,
     deps = PSCM_TEST_DEPS,
 )
-
-cc_library(
-    name="demo",
-    srcs = ["demo.cpp"],
-    visibility = ["//visibility:public"],
-)
