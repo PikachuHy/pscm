@@ -24,4 +24,4 @@ jobs:
         run: bazel test \:all
 
       - name: Build ios App
-        run: bazel build bazel build //ios/app:ios-app
+        run: bazel build //ios/app:ios-app
