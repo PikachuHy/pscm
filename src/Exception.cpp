@@ -13,7 +13,7 @@ const char *Exception::what() const noexcept {
 }
 
 void Exception::print_stack_trace() const {
-#if defined(WASM_PLATFORM) || defined(_MSC_VER)
+#if defined(WASM_PLATFORM) || defined(_MSC_VER) || defined(__ANDROID__)
 #else
   std::cout << stack_trace_ << std::endl;
 #endif

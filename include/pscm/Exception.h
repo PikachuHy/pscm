@@ -6,14 +6,14 @@
 #include <cstring>
 #include <exception>
 #include <string>
-#if defined(WASM_PLATFORM) || defined(_MSC_VER)
+#if defined(WASM_PLATFORM) || defined(_MSC_VER) || defined(__ANDROID__)
 #else
 #include <ust.hpp>
 #endif
 namespace pscm {
 class Exception : public std::exception {
 public:
-#if defined(WASM_PLATFORM) || defined(_MSC_VER)
+#if defined(WASM_PLATFORM) || defined(_MSC_VER) || defined(__ANDROID__)
   Exception(std::string msg)
       : msg_(std::move(msg)) {
   }
@@ -28,7 +28,7 @@ public:
 
 private:
   std::string msg_;
-#if defined(WASM_PLATFORM) || defined(_MSC_VER)
+#if defined(WASM_PLATFORM) || defined(_MSC_VER) || defined(__ANDROID__)
 #else
   ust::StackTrace stack_trace_;
 #endif
