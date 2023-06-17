@@ -10,3 +10,6 @@
 [submodule "3rd/UniversalStacktrace"]
 	path = 3rd/UniversalStacktrace
 	url = https://github.com/MisterTea/UniversalStacktrace.git
+[submodule "3rd/cpp-linenoise"]
+	path = 3rd/cpp-linenoise
+	url = https://github.com/yhirose/cpp-linenoise.git
