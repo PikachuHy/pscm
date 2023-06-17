@@ -61,14 +61,67 @@ load("@rules_android_ndk//:rules.bzl", "android_ndk_repository")
 android_ndk_repository(
     name = "androidndk",
 )
+
 register_toolchains("@androidndk//:all")
 
 http_archive(
     name = "spdlog",
+    build_file = "@//:spdlog.bazel",
     sha256 = "33f83c6b86ec0fbbd0eb0f4e980da6767494dc0ad063900bcfae8bc3e9c75f21",
+    strip_prefix = "spdlog-1.11.0",
     urls = [
-        "https://github.com/gabime/spdlog/archive/refs/tags/v1.11.0.zip"
+        "https://github.com/gabime/spdlog/archive/refs/tags/v1.11.0.zip",
     ],
-    strip_prefix="spdlog-1.11.0",
-    build_file="@//:spdlog.bazel"
 )
+
+# rules required for ios-app
+
+http_archive(
+    name = "build_bazel_rules_apple",
+    sha256 = "cd3b62efed8eaf306050817205d5139de3189be422ee009038783c3da0b04483",
+    strip_prefix = "rules_apple-5b7c929ec4f3618a3f558c7ccae64f155f2646b7",
+    url = "https://github.com/bazelbuild/rules_apple/archive/5b7c929ec4f3618a3f558c7ccae64f155f2646b7.tar.gz",
+)
+
+load(
+    "@build_bazel_rules_apple//apple:repositories.bzl",
+    "apple_rules_dependencies",
+)
+
+apple_rules_dependencies()
+
+load(
+    "@build_bazel_rules_swift//swift:repositories.bzl",
+    "swift_rules_dependencies",
+)
+
+swift_rules_dependencies()
+
+load(
+    "@build_bazel_rules_swift//swift:extras.bzl",
+    "swift_rules_extra_dependencies",
+)
+
+swift_rules_extra_dependencies()
+
+load(
+    "@build_bazel_apple_support//lib:repositories.bzl",
+    "apple_support_dependencies",
+)
+
+apple_support_dependencies()
+
+# rules required by ios-app Xcode integration
+
+http_archive(
+    name = "rules_xcodeproj",
+    sha256 = "7967b372bd1777214ce65c87a82ac0630150b7504b443de0315ea52e45758e0c",
+    url = "https://github.com/MobileNativeFoundation/rules_xcodeproj/releases/download/1.3.3/release.tar.gz",
+)
+
+load(
+    "@rules_xcodeproj//xcodeproj:repositories.bzl",
+    "xcodeproj_rules_dependencies",
+)
+
+xcodeproj_rules_dependencies()
