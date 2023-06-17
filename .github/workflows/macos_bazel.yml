@@ -1,4 +1,4 @@
-name: MacOS
+name: MacOS Bazel
 
 on:
   push:
@@ -7,7 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  build_on_macos:
+  build_with_bazel:
     runs-on: macos-12
 
     steps:
@@ -16,6 +16,12 @@ jobs:
       - name: Clone Deps
         run: git submodule update --init
         working-directory: ${{github.workspace}}
+
+      - name: Mount bazel cache
+        uses: actions/cache@v3
+        with:
+          path: "/private/var/tmp/_bazel_runner"
+          key: ${{ github.job }}-bazel-cache
 
       - name: Build
         run: bazel build \:all

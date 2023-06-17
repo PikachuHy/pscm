@@ -57,8 +57,14 @@ jobs:
         run: emcc -v
       - name: Install ninja-build tool
         uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}-${{ matrix.mode}}
+
       - name: Configure CMake
-        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_TOOLCHAIN_FILE=$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCMAKE_CROSSCOMPILING_EMULATOR="$EMSDK_NODE;--experimental-wasm-bulk-memory;--experimental-wasm-threads"
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_TOOLCHAIN_FILE=$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCMAKE_CROSSCOMPILING_EMULATOR="$EMSDK_NODE;--experimental-wasm-bulk-memory;--experimental-wasm-threads" -DUSE_CCACHE=ON
       - name: Build
         run: cmake --build ${{github.workspace}}/build -j --verbose
       - name: Test

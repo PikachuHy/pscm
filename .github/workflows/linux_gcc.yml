@@ -29,8 +29,13 @@ jobs:
       - name: Install ninja-build tool
         uses: seanmiddleditch/gha-setup-ninja@master
 
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}-${{ matrix.mode}}-gcc${{ matrix.gcc_version}}
+
       - name: Configure CMake
-        run: CXX=g++-${{matrix.gcc_version}} CC=gcc-${{matrix.gcc_version}} cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja
+        run: CXX=g++-${{matrix.gcc_version}} CC=gcc-${{matrix.gcc_version}} cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --config ${{matrix.mode}} -j --verbose

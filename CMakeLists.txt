@@ -27,6 +27,18 @@ configure_file(
         ${CMAKE_CURRENT_BINARY_DIR}/generate/pscm/version.h
         @ONLY
 )
+# use ccache
+option(USE_CCACHE "use ccache" OFF)
+if (USE_CCACHE)
+    find_program(CCACHE_FOUND ccache)
+    if (CCACHE_FOUND)
+        set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+        set(CMAKE_C_COMPILER_LAUNCHER ccache)
+        message(STATUS "ccache found")
+    else ()
+        message(WARNING "ccache not found")
+    endif ()
+endif ()
 add_subdirectory(3rd)
 add_library(pscm)
 target_include_directories(pscm PUBLIC include)
