@@ -9,6 +9,7 @@ target("pscm") do
     set_languages("c++20")
     add_includedirs("include")
     add_includedirs("3rd/UniversalStacktrace/ust")
+    add_includedirs("3rd/cpp-linenoise")
     add_includedirs("$(buildir)")
     add_packages("spdlog")
     add_files("src/**.cpp")
