@@ -23,5 +23,5 @@ jobs:
       - name: Test
         run: bazel test \:all
 
-      - name: Build Android App
+      - name: Build ios App
         run: bazel build bazel build //ios/app:ios-app
