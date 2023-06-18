@@ -40,10 +40,12 @@ private:
   friend class Macro;
   std::vector<SymbolTable *> envs_;
   SymbolTable *root_env_;
+  SymbolTable *root_derived_env_;
   Module *current_module_;
   std::vector<Module *> module_list_;
   std::unordered_map<Cell, Module *> module_map_;
   bool use_register_machine_;
+  bool in_repl_ = false;
   friend class SchemeProxy;
 };
 

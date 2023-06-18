@@ -11,8 +11,13 @@ class Symbol;
 
 class SymbolTable {
 public:
-  SymbolTable(SymbolTable *parent = nullptr)
-      : parent_(parent) {
+  SymbolTable(std::string name = {}, SymbolTable *parent = nullptr)
+      : name_(name)
+      , parent_(parent) {
+  }
+
+  const std::string& name() const {
+    return name_;
   }
 
   bool contains(Symbol *sym) const;
@@ -29,12 +34,15 @@ public:
   void use(SymbolTable *env, Symbol *sym);
   void use(const SymbolTable& env);
 
+  void dump(SourceLocation loc = {}) const;
+
 private:
   struct Entry {
     Cell data;
   };
 
   std::unordered_map<std::string_view, Entry *> map_;
+  std::string name_;
   SymbolTable *parent_;
 };
 

@@ -56,19 +56,19 @@ bool Procedure::check_args(Cell args) const {
 }
 
 SymbolTable *Procedure::create_proc_env(Cell args) const {
-  auto proc_env = new SymbolTable(env_);
+  auto proc_env = new SymbolTable("apply proc", env_);
   auto p1 = args_;
   auto p2 = args;
   while (p1.is_pair() && !p1.is_nil() && !car(p1).is_nil()) {
     PSCM_ASSERT(car(p1).is_sym());
-    auto sym = car(p1).to_symbol();
+    auto sym = car(p1).to_sym();
     auto ret = car(p2);
     proc_env->insert(sym, ret);
     p1 = cdr(p1);
     p2 = cdr(p2);
   }
   if (p1.is_sym()) {
-    proc_env->insert(p1.to_symbol(), p2);
+    proc_env->insert(p1.to_sym(), p2);
   }
   return proc_env;
 }

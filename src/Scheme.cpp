@@ -48,7 +48,7 @@ Symbol *scm_define(SchemeProxy scm, SymbolTable *env, Cell args) {
     val = list(proc);
   }
   PSCM_ASSERT(key.is_sym());
-  auto sym = key.to_symbol();
+  auto sym = key.to_sym();
   val = scm.eval(env, car(val));
   if (val.is_proc() && (cadr(args).is_pair() || car(args).is_pair())) {
     auto proc = val.to_proc();
@@ -67,6 +67,8 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "define", Label::APPLY_DEFINE) {
 PSCM_DEFINE_BUILTIN_MACRO(Scheme, "define-public", Label::APPLY_DEFINE) {
   auto sym = scm_define(scm, env, args);
   scm.current_module()->export_symbol(sym);
+  // FIXME: wrong module or wrong env?
+  scm.current_module()->env()->insert(sym, env->get(sym));
   return Cell::none();
 }
 
@@ -74,11 +76,12 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "set!", Label::APPLY_SET) {
   PSCM_ASSERT(args.is_pair());
   auto k = car(args);
   PSCM_ASSERT(k.is_sym());
-  auto sym = k.to_symbol();
+  auto sym = k.to_sym();
   auto v = cadr(args);
   v = scm.eval(env, v);
   bool has_k = env->contains(sym);
   if (!has_k) {
+    SPDLOG_ERROR("Unbound variable: {} from {}", k, k.source_location());
     PSCM_THROW_EXCEPTION("Unbound variable: " + k.to_string());
   }
   env->set(sym, v);
@@ -106,8 +109,8 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "cond", Label::APPLY_COND) {
     auto expr = cdr(clause);
     SPDLOG_INFO("expr: {}", expr);
     if (test.is_sym()) {
-      PSCM_ASSERT(test.to_symbol());
-      auto sym = test.to_symbol();
+      PSCM_ASSERT(test.to_sym());
+      auto sym = test.to_sym();
       if (*sym == cond_else) {
         if (expr.is_nil()) {
           PSCM_THROW_EXCEPTION("Bad cond clause (else) in expression " + args_bak.to_string());
@@ -128,7 +131,7 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "cond", Label::APPLY_COND) {
     SPDLOG_INFO("tmp: {}", tmp);
     auto arrow = car(tmp);
     auto arrow_sym = "=>"_sym;
-    if (arrow.is_sym() && *arrow.to_symbol() == arrow_sym && !env->contains(&arrow_sym)) {
+    if (arrow.is_sym() && *arrow.to_sym() == arrow_sym && !env->contains(&arrow_sym)) {
       auto recipient = cadr(tmp);
       auto f = scm.eval(env, recipient);
       auto f_args = list(quote, list(list(ret)));
@@ -239,14 +242,13 @@ Cell version(Cell) {
 void Scheme::add_func(Symbol *sym, Function *func) {
   PSCM_ASSERT(sym);
   PSCM_ASSERT(func);
-  root_env_->insert(sym, func);
+  root_derived_env_->insert(sym, func);
 }
 
 Scheme::Scheme(bool use_register_machine)
     : use_register_machine_(use_register_machine) {
   current_module_ = nullptr;
-  auto builitin_private_env = new SymbolTable();
-  auto env = new SymbolTable();
+  auto env = new SymbolTable("root");
   // hack: force load code in AList.cpp
   AList a;
   ApiManager::install_api(env);
@@ -412,8 +414,8 @@ Scheme::Scheme(bool use_register_machine)
   root_env_ = env;
   env->insert(new Symbol("map-in-order"), env->get(&Symbol::map));
   env->insert(new Symbol("primitive-load"), env->get(&Symbol::load));
-  auto new_env = new SymbolTable(env);
-  envs_.push_back(new_env);
+  root_derived_env_ = new SymbolTable("root-derived", env);
+  envs_.push_back(root_derived_env_);
   current_module_ = create_module(nil);
   module_list_.push_back(current_module_);
 }
@@ -433,8 +435,8 @@ Cell Scheme::eval(const char *code) {
     if (ret.is_none()) {
       return Cell::none();
     }
-    if (ret.is_sym()) {
-      if (!current_module_->env()->contains(ret.to_symbol())) {
+    if (in_repl_ && ret.is_sym()) {
+      if (!current_module_->env()->contains(ret.to_sym())) {
         std::cout << "ERROR: Unbound variable: " << ret << std::endl;
         std::cout << "ABORT: (unbound-variable)" << std::endl;
         return Cell::none();
@@ -621,7 +623,8 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
       continue;
     }
     else {
-      SPDLOG_ERROR("unsupported {}", proc);
+      SPDLOG_ERROR("unsupported {} from {}", proc, proc.source_location());
+      repl();
       PSCM_THROW_EXCEPTION("unsupported");
     }
   }
@@ -638,11 +641,15 @@ Cell Scheme::eval(Cell expr) {
 Cell Scheme::lookup(SymbolTable *env, Cell expr, SourceLocation loc) {
   PSCM_ASSERT(env);
   PSCM_ASSERT(expr.is_sym());
-  auto sym = expr.to_symbol();
+  auto sym = expr.to_sym();
   PSCM_ASSERT(sym);
   bool has_sym = env->contains(sym);
   if (!has_sym) {
     sym->print_debug_info();
+    SPDLOG_ERROR("env: {} {}", (void *)env, env->name());
+    env->dump();
+    // uncomment for debug
+    // repl();
     PSCM_THROW_EXCEPTION("Unbound variable: "s + std::string(sym->name()));
   }
   auto ret = env->get_or(sym, {}, loc);
@@ -710,11 +717,12 @@ void Scheme::load_module(const std::string& filename, Cell module_name) {
 }
 
 Module *Scheme::create_module(Cell name) {
-  auto env = new SymbolTable(root_env_);
+  auto env = new SymbolTable(name.to_string(), root_derived_env_);
   return new Module(name, env);
 }
 
 void Scheme::repl() {
+  in_repl_ = true;
   const auto path = "history.txt";
 
   // Enable the multi-line mode
@@ -750,6 +758,23 @@ void Scheme::repl() {
     // Save history
     linenoise::SaveHistory(path);
   }
+}
+
+// useful for debug
+PSCM_DEFINE_BUILTIN_MACRO(Scheme, "repl", Label::TODO) {
+  while (true) {
+    std::string line;
+    auto quit = linenoise::Readline("pscm> ", line);
+    if (quit) {
+      break;
+    }
+    auto expr = Parser(line).parse();
+    auto ret = scm.eval(env, expr);
+    if (!ret.is_none()) {
+      std::cout << ret << std::endl;
+    }
+  }
+  return Cell::none();
 }
 
 PSCM_DEFINE_BUILTIN_PROC(Scheme, "select") {
