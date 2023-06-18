@@ -26,6 +26,7 @@
 #include "spdlog/spdlog.h"
 #include <filesystem>
 #include <fstream>
+#include <linenoise.hpp>
 #include <string>
 #include <string_view>
 using namespace std::string_literals;
@@ -432,6 +433,13 @@ Cell Scheme::eval(const char *code) {
     if (ret.is_none()) {
       return Cell::none();
     }
+    if (ret.is_sym()) {
+      if (!current_module_->env()->contains(ret.to_symbol())) {
+        std::cout << "ERROR: Unbound variable: " << ret << std::endl;
+        std::cout << "ABORT: (unbound-variable)" << std::endl;
+        return Cell::none();
+      }
+    }
     if (use_register_machine_) {
       ret = Evaluator(*this).eval(ret, current_module_->env());
     }
@@ -544,7 +552,8 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
   Cell proc;
   Cell args;
   while (true) {
-    SPDLOG_INFO("eval: {}", expr);
+    SPDLOG_INFO("eval: {}", expr.pretty_string());
+    // SPDLOG_INFO("eval: {}", expr);
     if (expr.is_none()) {
       return expr;
     }
@@ -703,6 +712,44 @@ void Scheme::load_module(const std::string& filename, Cell module_name) {
 Module *Scheme::create_module(Cell name) {
   auto env = new SymbolTable(root_env_);
   return new Module(name, env);
+}
+
+void Scheme::repl() {
+  const auto path = "history.txt";
+
+  // Enable the multi-line mode
+  linenoise::SetMultiLine(true);
+
+  // Set max length of the history
+  linenoise::SetHistoryMaxLen(4);
+
+  // Setup completion words every time when a user types
+  linenoise::SetCompletionCallback([](const char *editBuffer, std::vector<std::string>& completions) {
+    if (editBuffer[0] == 'd') {
+      completions.push_back("define");
+      completions.push_back("define-macro");
+    }
+  });
+
+  // Load history
+  linenoise::LoadHistory(path);
+
+  while (true) {
+    std::string line;
+    auto quit = linenoise::Readline("pscm> ", line);
+    if (quit) {
+      break;
+    }
+    auto ret = eval(line.c_str());
+    if (!ret.is_none()) {
+      std::cout << ret << std::endl;
+    }
+    // Add line to history
+    linenoise::AddHistory(line.c_str());
+
+    // Save history
+    linenoise::SaveHistory(path);
+  }
 }
 
 PSCM_DEFINE_BUILTIN_PROC(Scheme, "select") {

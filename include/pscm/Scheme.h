@@ -20,6 +20,7 @@ public:
   Cell eval(Cell expr);
   bool load(const char *filename);
   void add_func(Symbol *sym, Function *func);
+  void repl();
 
 private:
   [[nodiscard]] Cell eval(SymbolTable *env, Cell expr);
