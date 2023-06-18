@@ -1485,11 +1485,7 @@ void Evaluator::run() {
         GOTO(reg_.cont);
       }
       if (reg_.expr.is_sym()) {
-        if (!reg_.env->contains(reg_.expr.to_symbol())) {
-          int a = 0;
-        }
         reg_.val = reg_.env->get(reg_.expr.to_symbol());
-        auto sym = reg_.expr.to_symbol();
         GOTO(reg_.cont);
       }
       if (reg_.expr.is_pair()) {
@@ -1621,7 +1617,7 @@ void Evaluator::run() {
       stack_ = cont->stack_;
       reg_type_stack_ = cont->reg_type_stack_;
       reg_.val = val;
-      reg_.env = new SymbolTable(reg_.env);
+      reg_.env = new SymbolTable("apply cont", reg_.env);
       PSCM_POP_STACK(cont);
       GOTO(reg_.cont);
     }
@@ -1779,7 +1775,6 @@ void Evaluator::run() {
       PRINT_STEP();
       auto key = car(reg_.unev);
       auto val = cdr(reg_.unev);
-      auto env = reg_.env;
       while (!key.is_sym()) {
         auto proc_name = car(key);
         auto proc_args = cdr(key);
@@ -1801,7 +1796,6 @@ void Evaluator::run() {
       auto val = cdr(reg_.unev);
       auto proc_name = car(var_name);
       auto args = cdr(var_name);
-      auto expr = cons(lambda, cons(args, val));
       reg_.val = proc_name;
       PSCM_ASSERT(proc_name.is_sym());
       auto proc_name_sym = proc_name.to_symbol();

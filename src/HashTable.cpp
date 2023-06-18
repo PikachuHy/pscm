@@ -153,7 +153,7 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(HashTable, "hash-fold", Label::TODO, "(pr
   hash_table->for_each([&val, &scm, env, proc](Cell key, Cell value) {
     val = scm.eval(env, list(proc, list(quote, key), list(quote, value), list(quote, val)));
   });
-  return val;
+  return list(quote, val);
 };
 
 PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(HashTable, "hash-for-each-handle", Label::TODO, "(proc table)") {

@@ -50,11 +50,12 @@ Cell::Cell(Char *ch) {
   data_ = ch;
 }
 
-Cell::Cell(String *str) {
-  ref_count_++;
-  tag_ = Tag::STRING;
-  data_ = str;
-}
+// Cell::Cell(String *str, SourceLocation loc)
+//     : loc_(loc) {
+//   ref_count_++;
+//   tag_ = Tag::STRING;
+//   data_ = str;
+// }
 
 Cell::Cell(Symbol *sym) {
   ref_count_++;
@@ -238,11 +239,18 @@ std::string Cell::pretty_string() const {
           ss << " ";
           ss << ",";
           ss << cadr(it).pretty_string();
+          it = Cell::nil();
           break;
         }
       }
       ss << car(it).pretty_string();
       it = cdr(it);
+    }
+    if (!it.is_nil()) {
+      ss << " ";
+      ss << ".";
+      ss << " ";
+      ss << it.pretty_string();
     }
     ss << ')';
     return ss.str();
@@ -278,11 +286,6 @@ Symbol *Cell::to_symbol(SourceLocation loc) const {
 Char *Cell::to_char(SourceLocation loc) const {
   PSCM_ASSERT_WITH_LOC(is_char(), loc);
   return (Char *)(data_);
-}
-
-String *Cell::to_str(SourceLocation loc) const {
-  PSCM_ASSERT_WITH_LOC(is_str(), loc);
-  return (String *)(data_);
 }
 
 Number *Cell::to_number(SourceLocation loc) const {
@@ -341,7 +344,8 @@ HashTable *Cell::to_hash_table(SourceLocation loc) const {
 }
 
 #define PSCM_DEFINE_CELL_TYPE(Type, type, tag)                                                                         \
-  Cell::Cell(Type *t) {                                                                                                \
+  Cell::Cell(Type *t, SourceLocation loc)                                                                              \
+      : loc_(loc) {                                                                                                    \
     ref_count_++;                                                                                                      \
     tag_ = Tag::tag;                                                                                                   \
     data_ = (void *)t;                                                                                                 \
@@ -352,6 +356,7 @@ HashTable *Cell::to_hash_table(SourceLocation loc) const {
   }
 
 PSCM_DEFINE_CELL_TYPE(Keyword, keyword, KEYWORD)
+PSCM_DEFINE_CELL_TYPE(String, str, STRING)
 
 Cell Cell::ex(const char *msg) {
   static Cell ret{ Tag::EXCEPTION, nullptr };

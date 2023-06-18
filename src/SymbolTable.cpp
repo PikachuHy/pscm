@@ -82,4 +82,19 @@ void SymbolTable::use(const SymbolTable& env) {
     this->map_[sym] = val;
   }
 }
+
+void SymbolTable::dump(SourceLocation loc) const {
+  auto p = this;
+  while (p) {
+    std::cout << "[" << loc.to_string() << "]";
+    std::cout << " ";
+    std::cout << (void *)p;
+    std::cout << " ";
+    std::cout << p->map_.size();
+    std::cout << " ";
+    std::cout << p->name_;
+    std::cout << std::endl;
+    p = p->parent_;
+  }
+}
 } // namespace pscm

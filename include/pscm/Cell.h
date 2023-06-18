@@ -9,16 +9,16 @@
 namespace pscm {
 
 struct SourceLocation {
-  constexpr SourceLocation(const char *filename = __builtin_FILE(), const char *funcname = __builtin_FUNCTION(),
-                           unsigned int linenum = __builtin_LINE())
+  constexpr SourceLocation(const char *filename = __builtin_FILE(), unsigned int linenum = __builtin_LINE(),
+                           const char *funcname = __builtin_FUNCTION())
       : filename(filename)
-      , funcname(funcname)
-      , linenum(linenum) {
+      , linenum(linenum)
+      , funcname(funcname) {
   }
 
   const char *filename;
-  const char *funcname;
   unsigned int linenum;
+  const char *funcname;
 
   std::string to_string() const;
 };
@@ -114,7 +114,7 @@ public:
 };
 
 #define PSCM_CELL_TYPE(Type, type, tag)                                                                                \
-  Cell(Type *t);                                                                                                       \
+  Cell(Type *t, SourceLocation loc = {});                                                                              \
   bool is_##type() const {                                                                                             \
     return tag_ == Tag::tag;                                                                                           \
   }                                                                                                                    \
@@ -136,7 +136,7 @@ public:
 
   Cell(Number *num);
   Cell(Char *ch);
-  Cell(String *str);
+  // Cell(String *str, SourceLocation loc = {});
   Cell(Symbol *sym);
   Cell(Pair *pair);
   Cell(Vec *pair);
@@ -236,11 +236,11 @@ public:
 
   Char *to_char(SourceLocation loc = {}) const;
 
-  bool is_str() const {
-    return tag_ == Tag::STRING;
-  }
+  // bool is_str() const {
+  //   return tag_ == Tag::STRING;
+  // }
 
-  String *to_str(SourceLocation loc = {}) const;
+  // String *to_str(SourceLocation loc = {}) const;
 
   bool is_num() const {
     return tag_ == Tag::NUMBER;
@@ -308,6 +308,7 @@ public:
 
   HashTable *to_hash_table(SourceLocation loc = {}) const;
   PSCM_CELL_TYPE(Keyword, keyword, KEYWORD);
+  PSCM_CELL_TYPE(String, str, STRING);
 
   bool is_self_evaluated() const;
 
@@ -318,6 +319,10 @@ public:
   static bool is_eq(Cell lhs, Cell rhs);
   static bool is_eqv(Cell lhs, Cell rhs);
   static bool is_equal(Cell lhs, Cell rhs);
+
+  std::string source_location() const {
+    return loc_.to_string();
+  }
 
 private:
   Cell(Tag tag, void *data)
@@ -334,6 +339,7 @@ private:
   int ref_count_ = 0;
   Tag tag_ = Tag::NONE;
   void *data_ = nullptr;
+  SourceLocation loc_;
   friend class Scheme;
 };
 

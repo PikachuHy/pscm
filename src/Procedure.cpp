@@ -56,7 +56,7 @@ bool Procedure::check_args(Cell args) const {
 }
 
 SymbolTable *Procedure::create_proc_env(Cell args) const {
-  auto proc_env = new SymbolTable(env_);
+  auto proc_env = new SymbolTable("apply proc", env_);
   auto p1 = args_;
   auto p2 = args;
   while (p1.is_pair() && !p1.is_nil() && !car(p1).is_nil()) {

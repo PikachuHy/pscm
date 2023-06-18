@@ -25,14 +25,12 @@ namespace pscm {
 
 class NumberParser {
 public:
-  NumberParser(std::string_view data)
-      : data_(data) {
+  NumberParser(std::string_view data, SourceLocation loc = {})
+      : data_(data)
+      , loc_(loc) {
   }
 
   Number parse() {
-    int64_t val{};
-    int64_t val2{};
-    bool has_point = false;
     while (pos_ < data_.size()) {
       if (data_[pos_] == ' ') {
         pos_++;
@@ -41,7 +39,7 @@ public:
       break;
     }
     if (pos_ < data_.size() && data_[pos_] == 'i') {
-      PSCM_THROW_EXCEPTION("Invalid Number: "s + std::string(data_));
+      PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: "s + std::string(data_));
     }
     if (pos_ < data_.size() && data_[data_.size() - 1] == 'i') {
       return parse_complex();
@@ -49,7 +47,7 @@ public:
     if (data_.find('/') != std::string_view::npos) {
       auto num1_opt = parse_digit();
       if (data_[pos_] != '/') {
-        PSCM_THROW_EXCEPTION("Invalid Number: "s + std::string(data_));
+        PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: "s + std::string(data_));
       }
       pos_++;
       auto num2_opt = parse_digit();
@@ -58,7 +56,7 @@ public:
     auto sign = parse_sign(true).value_or(false);
     auto num_opt = parse_num();
     if (!num_opt.has_value()) {
-      PSCM_THROW_EXCEPTION("Invalid Number: "s + std::string(data_));
+      PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: "s + std::string(data_));
     }
 
     auto num = num_opt.value();
@@ -69,10 +67,10 @@ public:
       if (num.is_float()) {
         return -num.to_float();
       }
-      PSCM_THROW_EXCEPTION("Invalid Number: "s + std::string(data_));
+      PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: "s + std::string(data_));
     }
     if (pos_ != data_.size()) {
-      PSCM_THROW_EXCEPTION("Invalid Number: "s + std::string(data_));
+      PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: "s + std::string(data_));
     }
     return num;
   }
@@ -89,7 +87,7 @@ public:
       if (optional) {
         return std::nullopt;
       }
-      PSCM_THROW_EXCEPTION("Invalid Number: "s + std::string(data_));
+      PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: "s + std::string(data_));
     }
     return ret;
   }
@@ -101,7 +99,7 @@ public:
       if (optional) {
         return std::nullopt;
       }
-      PSCM_THROW_EXCEPTION("Invalid Number: "s + std::string(data_));
+      PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: "s + std::string(data_));
     }
     bool has_point = false;
     std::int64_t point_num = 0;
@@ -111,7 +109,6 @@ public:
       pos_++;
       point_num = parse_digit().value();
     }
-    double val = num.value() * 1.0;
     bool has_e = false;
     std::int64_t e_num = 0;
     if (data_[pos_] == 'e' || data_[pos_] == 'E') {
@@ -153,7 +150,7 @@ public:
     }
     else {
       if (!sign1_opt.has_value()) {
-        PSCM_THROW_EXCEPTION("Invalid Number: "s + std::string(data_));
+        PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: "s + std::string(data_));
       }
       auto num_opt = parse_num(true);
       auto num_tmp = num_opt.value_or(1.0);
@@ -165,7 +162,7 @@ public:
       ret = Complex(0, num);
     }
     if (data_[pos_] != 'i') {
-      PSCM_THROW_EXCEPTION("Invalid Number: "s + std::string(data_));
+      PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: "s + std::string(data_));
     }
     return ret;
   }
@@ -183,7 +180,7 @@ public:
       return std::nullopt;
     }
     else {
-      PSCM_THROW_EXCEPTION("Invalid Number: "s + std::string(data_));
+      PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: "s + std::string(data_));
     }
   }
 
@@ -209,18 +206,17 @@ public:
   double convert_str_to_float(std::string str) {
     SPDLOG_INFO("str: {}", str);
     errno = 0;
-    char *end;
     double x = std::stod(str);
     if (errno == ERANGE) {
       if (!(x != 0 && x > -HUGE_VAL && x < HUGE_VAL)) {
-        PSCM_THROW_EXCEPTION("Invalid Number: "s + std::string(data_));
+        PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: "s + std::string(data_));
       }
       else {
         return x;
       }
     }
     else if (errno) {
-      PSCM_THROW_EXCEPTION("Invalid Number: "s + std::string(data_));
+      PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: "s + std::string(data_));
     }
     else {
       return x;
@@ -230,10 +226,7 @@ public:
 private:
   std::string_view data_;
   std::size_t pos_{};
-  bool has_parsed_ = false;
-  bool negative_ = false;
-  bool is_float = false;
-  bool is_complex = false;
+  SourceLocation loc_;
 };
 
 Parser::Parser(std::string code)
@@ -560,6 +553,8 @@ Cell Parser::parse_literal() {
 }
 
 Cell Parser::parse_string() {
+  auto row = row_;
+  auto col = col_;
   auto start = pos_;
   std::string s;
   while (!is_eof()) {
@@ -600,8 +595,15 @@ Cell Parser::parse_string() {
       s.push_back(next_char());
     }
   }
-  Cell ret(new String(s));
-  return ret;
+  if (is_file_) {
+    Cell ret(new String(s), SourceLocation(std::string(filename_).c_str(), row));
+    return ret;
+  }
+  else {
+
+    Cell ret(new String(s));
+    return ret;
+  }
 }
 
 void Parser::skip_empty() {
@@ -689,9 +691,9 @@ Parser::Token Parser::next_token() {
       last_symbol_ = new Symbol(s, filename_, row, col);
       return Token::SYMBOL;
     }
-    if (std::isdigit(ch) || (s.size() > 1 && (ch == '-' || ch == '+'))) {
+    if (std::isdigit(ch) || (s.size() > 1 && (ch == '-' || ch == '+') && std::isdigit(s[2]))) {
       try {
-        auto num = NumberParser(s).parse();
+        auto num = NumberParser(s, SourceLocation(std::string(filename_).c_str(), row)).parse();
         last_num_ = new Number(num);
         return Token::NUMBER;
       }

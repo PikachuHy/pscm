@@ -31,15 +31,15 @@ ApiManager::ApiManager(Cell::ScmFunc f, std::string name, SourceLocation loc)
 
 ApiManager::ApiManager(Cell::ScmMacro2 f, std::string name, Label label, SourceLocation loc)
     : f_(f)
-    , name_(name)
     , label_(label)
+    , name_(name)
     , loc_(loc) {
   ApiManager::api_list().push_back(this);
 }
 
 ApiManager::ApiManager(Cell::ScmMacro2 f, std::string name, Label label, const char *args, SourceLocation loc)
-    : name_(name)
-    , label_(label)
+    : label_(label)
+    , name_(name)
     , loc_(loc) {
   auto proc_args = Parser(args).parse();
   PSCM_ASSERT(!proc_args.is_none());

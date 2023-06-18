@@ -95,13 +95,39 @@ Number Number::operator/(const Number& num) {
 }
 
 bool Number::operator<(const Number& num) const {
-  PSCM_ASSERT(data_.index() == 1);
-  if (num.data_.index() != 1) {
-    PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
+  if (data_.index() == 1) {
+    if (num.data_.index() == 1) {
+      auto a = std::get<1>(data_);
+      auto b = std::get<1>(num.data_);
+      return a < b;
+    }
+    else if (num.data_.index() == 2) {
+      auto a = std::get<1>(data_);
+      auto b = std::get<2>(num.data_);
+      return a < b;
+    }
+    else {
+      PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + num.to_string());
+    }
   }
-  auto a = std::get<1>(data_);
-  auto b = std::get<1>(num.data_);
-  return a < b;
+  else if (data_.index() == 2) {
+    if (num.data_.index() == 1) {
+      auto a = std::get<2>(data_);
+      auto b = std::get<1>(num.data_);
+      return a < b;
+    }
+    else if (num.data_.index() == 2) {
+      auto a = std::get<2>(data_);
+      auto b = std::get<2>(num.data_);
+      return a < b;
+    }
+    else {
+      PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + num.to_string());
+    }
+  }
+  else {
+    PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + num.to_string());
+  }
 }
 
 bool Number::operator>(const Number& num) const {

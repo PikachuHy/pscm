@@ -5,6 +5,7 @@
 #include <doctest/doctest.h>
 #include <pscm/Number.h>
 #include <pscm/Pair.h>
+#include <pscm/Parser.h>
 #include <pscm/Scheme.h>
 #include <pscm/Str.h>
 #include <pscm/Symbol.h>
@@ -136,6 +137,35 @@ TEST_CASE("testing hash-table, hash-remove") {
     CHECK(ret == Cell::bool_false());
     ret = scm.eval("(hash-fold (lambda (key value seed) (+ 1 seed)) 0 h)");
     CHECK(ret == "2"_num);
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    // Scheme scm(true);
+    // f(scm);
+  }
+}
+
+TEST_CASE("testing hash-table, hash-fold") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    scm.eval(R"(
+(define (ahash-table->list h)
+	(hash-fold acons '() (car h)))
+    )");
+    scm.eval_all(R"(
+      (define h (make-hash-table 31))
+      (hash-set! h 'foo "bar")
+      (hash-set! h 'braz "zonk")
+    )");
+    ret = scm.eval("(ahash-table->list (cons h '()))");
+    auto expected = Parser(R"(
+      ((braz . "zonk") (foo . "bar"))
+    )")
+                        .parse();
+    CHECK(ret == expected);
   };
   {
     Scheme scm;
