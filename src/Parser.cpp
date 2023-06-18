@@ -691,7 +691,7 @@ Parser::Token Parser::next_token() {
       last_symbol_ = new Symbol(s, filename_, row, col);
       return Token::SYMBOL;
     }
-    if (std::isdigit(ch) || (s.size() > 1 && (ch == '-' || ch == '+') && std::isdigit(s[2]))) {
+    if (std::isdigit(ch) || (s.size() > 1 && (ch == '-' || ch == '+') && std::isdigit(s[1]))) {
       try {
         auto num = NumberParser(s, SourceLocation(std::string(filename_).c_str(), row)).parse();
         last_num_ = new Number(num);
