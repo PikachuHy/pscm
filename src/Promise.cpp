@@ -39,7 +39,7 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(Promise, "force", Label::APPLY_FORCE, "(p
   PSCM_ASSERT(args.is_pair());
   Cell promise = car(args);
   PSCM_ASSERT(promise.is_sym());
-  promise = env->get(promise.to_symbol());
+  promise = env->get(promise.to_sym());
   PSCM_ASSERT(promise.is_promise());
   auto p = promise.to_promise();
   Cell ret;

@@ -28,7 +28,7 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(Module, "set-current-module", Label::APPL
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
   PSCM_ASSERT(arg.is_sym());
-  auto m = env->get(arg.to_symbol());
+  auto m = env->get(arg.to_sym());
   PSCM_ASSERT(m.is_module());
   scm.set_current_module(m.to_module());
   return Cell::none();
@@ -39,7 +39,7 @@ std::string check_module(Cell name, const std::vector<std::string>& load_path_ve
   for_each(
       [&path](Cell expr, auto) {
         PSCM_ASSERT(expr.is_sym());
-        auto name = expr.to_symbol()->name();
+        auto name = expr.to_sym()->name();
         path += name;
         path += '/';
       },
@@ -142,8 +142,8 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(Module, "module-use!", Label::TODO, "(mod
   auto arg2 = cadr(args);
   PSCM_ASSERT(arg1.is_sym());
   PSCM_ASSERT(arg2.is_sym());
-  arg1 = env->get(arg1.to_symbol());
-  arg2 = env->get(arg2.to_symbol());
+  arg1 = env->get(arg1.to_sym());
+  arg2 = env->get(arg2.to_sym());
   PSCM_ASSERT(arg1.is_module());
   PSCM_ASSERT(arg2.is_module());
   auto m = arg1.to_module();
@@ -157,7 +157,7 @@ PSCM_DEFINE_BUILTIN_MACRO(Module, "export", Label::APPLY_EXPORT) {
   for_each(
       [&scm](Cell expr, auto) {
         PSCM_ASSERT(expr.is_sym());
-        auto sym = expr.to_symbol();
+        auto sym = expr.to_sym();
         auto m = scm.current_module();
         m->export_symbol(sym);
       },
@@ -195,10 +195,10 @@ void Module::use_module(Module *m, bool use_all) {
   else {
     for (auto sym : m->export_sym_list_) {
       PSCM_ASSERT(sym.is_sym());
-      if (!m->env_->contains(sym.to_symbol())) {
+      if (!m->env_->contains(sym.to_sym())) {
         PSCM_THROW_EXCEPTION(sym.to_string() + " export from module " + m->name_.to_string() + ", but not found");
       }
-      this->env_->use(m->env_, sym.to_symbol());
+      this->env_->use(m->env_, sym.to_sym());
     }
   }
 }
@@ -207,7 +207,7 @@ Cell Module::export_sym_list() {
   auto ret = cons(nil, nil);
   auto it = ret;
   for (auto key : export_sym_list_) {
-    auto new_pair = cons(list(key, env_->get(key.to_symbol())), nil);
+    auto new_pair = cons(list(key, env_->get(key.to_sym())), nil);
     it->second = new_pair;
     it = new_pair;
   }
@@ -221,7 +221,7 @@ PSCM_DEFINE_BUILTIN_PROC(Module, "module-ref") {
   PSCM_ASSERT(module.is_module());
   PSCM_ASSERT(name.is_sym());
   auto m = module.to_module();
-  auto sym = name.to_symbol();
+  auto sym = name.to_sym();
   if (*sym == "%module-public-interface"_sym) {
     auto sym_list = m->export_sym_list();
     return m->export_sym_list();
@@ -235,8 +235,8 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(Module, "module-map", Label::APPLY_APPLY,
   auto arg2 = cadr(args);
   PSCM_ASSERT(arg1.is_sym());
   PSCM_ASSERT(arg2.is_sym());
-  arg1 = env->get(arg1.to_symbol());
-  arg2 = env->get(arg2.to_symbol());
+  arg1 = env->get(arg1.to_sym());
+  arg2 = env->get(arg2.to_sym());
   SPDLOG_INFO("args: {}, {}", arg1.to_string(), arg2.to_string());
   PSCM_ASSERT(arg1.is_proc());
   auto proc = arg1.to_proc();

@@ -38,97 +38,6 @@ std::ostream& operator<<(std::ostream& out, const SmallObject& smob) {
   return out;
 }
 
-Cell::Cell(Number *num) {
-  ref_count_++;
-  tag_ = Tag::NUMBER;
-  data_ = num;
-}
-
-Cell::Cell(Char *ch) {
-  ref_count_++;
-  tag_ = Tag::CHAR;
-  data_ = ch;
-}
-
-// Cell::Cell(String *str, SourceLocation loc)
-//     : loc_(loc) {
-//   ref_count_++;
-//   tag_ = Tag::STRING;
-//   data_ = str;
-// }
-
-Cell::Cell(Symbol *sym) {
-  ref_count_++;
-  tag_ = Tag::SYMBOL;
-  data_ = sym;
-}
-
-Cell::Cell(Pair *pair) {
-  ref_count_++;
-  tag_ = Tag::PAIR;
-  data_ = pair;
-}
-
-Cell::Cell(Vec *vec) {
-  ref_count_++;
-  tag_ = Tag::VECTOR;
-  data_ = vec;
-}
-
-Cell::Cell(Function *f) {
-  ref_count_++;
-  tag_ = Tag::FUNCTION;
-  data_ = (void *)f;
-}
-
-Cell::Cell(const Procedure *proc) {
-  ref_count_++;
-  tag_ = Tag::PROCEDURE;
-  data_ = (void *)proc;
-}
-
-Cell::Cell(Macro *f) {
-  ref_count_++;
-  tag_ = Tag::MACRO;
-  data_ = (void *)f;
-}
-
-Cell::Cell(Promise *p) {
-  ref_count_++;
-  tag_ = Tag::PROMISE;
-  data_ = (void *)p;
-}
-
-Cell::Cell(Continuation *cont) {
-  ref_count_++;
-  tag_ = Tag::CONTINUATION;
-  data_ = (void *)cont;
-}
-
-Cell::Cell(Port *port) {
-  ref_count_++;
-  tag_ = Tag::PORT;
-  data_ = (void *)port;
-}
-
-Cell::Cell(SmallObject *smob) {
-  ref_count_++;
-  tag_ = Tag::SMOB;
-  data_ = (void *)smob;
-}
-
-Cell::Cell(Module *module) {
-  ref_count_++;
-  tag_ = Tag::MODULE;
-  data_ = (void *)module;
-}
-
-Cell::Cell(HashTable *hash_table) {
-  ref_count_++;
-  tag_ = Tag::HASH_TABLE;
-  data_ = (void *)hash_table;
-}
-
 Cell::Cell(bool val) {
   tag_ = Tag::BOOL;
   if (val) {
@@ -161,7 +70,7 @@ std::string Cell::pretty_string() const {
     }
   }
   if (is_sym()) {
-    auto sym = to_symbol();
+    auto sym = to_sym();
     if (sym->name().find(' ') != std::string_view::npos) {
       std::stringstream ss;
       ss << "\e[;34m";
@@ -209,7 +118,7 @@ std::string Cell::pretty_string() const {
       }
     }
     else if (car(*this).is_sym()) {
-      auto sym = car(*this).to_symbol();
+      auto sym = car(*this).to_sym();
       if (sym->name() == "quasiquote") {
         ss << "`";
         ss << cadr(*this).pretty_string();
@@ -233,7 +142,7 @@ std::string Cell::pretty_string() const {
     it = cdr(it);
     while (it.is_pair()) {
       ss << " ";
-      if (car(it).is_sym() && car(it).to_symbol()->name() == "unquote") {
+      if (car(it).is_sym() && car(it).to_sym()->name() == "unquote") {
         if (cdr(it).is_pair() && cddr(it).is_nil()) {
           ss << ".";
           ss << " ";
@@ -257,7 +166,7 @@ std::string Cell::pretty_string() const {
   }
   if (is_num()) {
     std::stringstream ss;
-    ss << *to_number();
+    ss << *to_num();
     return ss.str();
   }
   if (is_str()) {
@@ -268,79 +177,9 @@ std::string Cell::pretty_string() const {
   return ss.str();
 }
 
-Pair *Cell::to_pair(SourceLocation loc) const {
-  PSCM_ASSERT_WITH_LOC(is_pair(), loc);
-  return (Pair *)(data_);
-}
-
-Cell::Vec *Cell::to_vec(SourceLocation loc) const {
-  PSCM_ASSERT_WITH_LOC(is_vec(), loc);
-  return (Vec *)(data_);
-}
-
-Symbol *Cell::to_symbol(SourceLocation loc) const {
-  PSCM_ASSERT_WITH_LOC(is_sym(), loc);
-  return (Symbol *)(data_);
-}
-
-Char *Cell::to_char(SourceLocation loc) const {
-  PSCM_ASSERT_WITH_LOC(is_char(), loc);
-  return (Char *)(data_);
-}
-
-Number *Cell::to_number(SourceLocation loc) const {
-  PSCM_ASSERT_WITH_LOC(is_num(), loc);
-  return (Number *)(data_);
-}
-
 bool Cell::to_bool(SourceLocation loc) const {
   PSCM_ASSERT_WITH_LOC(is_bool(), loc);
   return data_ != nullptr;
-}
-
-Function *Cell::to_func(SourceLocation loc) const {
-  PSCM_ASSERT_WITH_LOC(is_func(), loc);
-  return (Function *)(data_);
-}
-
-Macro *Cell::to_macro(SourceLocation loc) const {
-  PSCM_ASSERT_WITH_LOC(is_macro(), loc);
-  return (Macro *)(data_);
-}
-
-Procedure *Cell::to_proc(SourceLocation loc) const {
-  PSCM_ASSERT_WITH_LOC(is_proc(), loc);
-  return (Procedure *)(data_);
-}
-
-Promise *Cell::to_promise(SourceLocation loc) const {
-  PSCM_ASSERT_WITH_LOC(is_promise(), loc);
-  return (Promise *)(data_);
-}
-
-Continuation *Cell::to_cont(SourceLocation loc) const {
-  PSCM_ASSERT_WITH_LOC(is_cont(), loc);
-  return (Continuation *)(data_);
-}
-
-Port *Cell::to_port(SourceLocation loc) const {
-  PSCM_ASSERT_WITH_LOC(is_port(), loc);
-  return (Port *)(data_);
-}
-
-SmallObject *Cell::to_smob(SourceLocation loc) const {
-  PSCM_ASSERT_WITH_LOC(is_smob(), loc);
-  return (SmallObject *)(data_);
-}
-
-Module *Cell::to_module(SourceLocation loc) const {
-  PSCM_ASSERT_WITH_LOC(is_module(), loc);
-  return (Module *)(data_);
-}
-
-HashTable *Cell::to_hash_table(SourceLocation loc) const {
-  PSCM_ASSERT_WITH_LOC(is_hash_table(), loc);
-  return (HashTable *)(data_);
 }
 
 #define PSCM_DEFINE_CELL_TYPE(Type, type, tag)                                                                         \
@@ -356,7 +195,21 @@ HashTable *Cell::to_hash_table(SourceLocation loc) const {
   }
 
 PSCM_DEFINE_CELL_TYPE(Keyword, keyword, KEYWORD)
+PSCM_DEFINE_CELL_TYPE(Pair, pair, PAIR)
 PSCM_DEFINE_CELL_TYPE(String, str, STRING)
+PSCM_DEFINE_CELL_TYPE(Symbol, sym, SYMBOL)
+PSCM_DEFINE_CELL_TYPE(Char, char, CHAR)
+PSCM_DEFINE_CELL_TYPE(Cell::Vec, vec, VECTOR)
+PSCM_DEFINE_CELL_TYPE(Number, num, NUMBER)
+PSCM_DEFINE_CELL_TYPE(Macro, macro, MACRO)
+PSCM_DEFINE_CELL_TYPE(Procedure, proc, PROCEDURE)
+PSCM_DEFINE_CELL_TYPE(Function, func, FUNCTION)
+PSCM_DEFINE_CELL_TYPE(Promise, promise, PROMISE)
+PSCM_DEFINE_CELL_TYPE(Continuation, cont, CONTINUATION)
+PSCM_DEFINE_CELL_TYPE(Port, port, PORT)
+PSCM_DEFINE_CELL_TYPE(Module, module, MODULE)
+PSCM_DEFINE_CELL_TYPE(SmallObject, smob, SMOB)
+PSCM_DEFINE_CELL_TYPE(HashTable, hash_table, HASH_TABLE)
 
 Cell Cell::ex(const char *msg) {
   static Cell ret{ Tag::EXCEPTION, nullptr };
@@ -378,7 +231,7 @@ std::ostream& operator<<(std::ostream& out, const Cell& cell) {
     return out << "()";
   }
   if (cell.tag_ == Cell::Tag::SYMBOL) {
-    return out << *cell.to_symbol();
+    return out << *cell.to_sym();
   }
   if (cell.tag_ == Cell::Tag::FUNCTION) {
     return out << *cell.to_func();
@@ -387,7 +240,7 @@ std::ostream& operator<<(std::ostream& out, const Cell& cell) {
     return out << *cell.to_macro();
   }
   if (cell.tag_ == Cell::Tag::NUMBER) {
-    return out << *cell.to_number();
+    return out << *cell.to_num();
   }
   if (cell.tag_ == Cell::Tag::CHAR) {
     return out << *cell.to_char();
@@ -509,7 +362,7 @@ bool operator==(const Cell& lhs, const Cell& rhs) {
     return true;
   }
   case Cell::Tag::NUMBER: {
-    return *lhs.to_number() == *rhs.to_number();
+    return *lhs.to_num() == *rhs.to_num();
   }
   case Cell::Tag::PAIR: {
     return *lhs.to_pair() == *rhs.to_pair();
@@ -524,7 +377,7 @@ bool operator==(const Cell& lhs, const Cell& rhs) {
     return lhs.to_bool() == rhs.to_bool();
   }
   case Cell::Tag::SYMBOL: {
-    return *lhs.to_symbol() == *rhs.to_symbol();
+    return *lhs.to_sym() == *rhs.to_sym();
   }
   case Cell::Tag::KEYWORD: {
     return *lhs.to_keyword() == *rhs.to_keyword();
@@ -838,10 +691,10 @@ Cell Cell::is_eqv(const Cell& rhs) const {
     return Cell::bool_false();
   }
   if (tag_ == Tag::SYMBOL) {
-    return Cell(*to_symbol() == *rhs.to_symbol());
+    return Cell(*to_sym() == *rhs.to_sym());
   }
   else if (tag_ == Tag::NUMBER) {
-    return Cell(*to_number() == *rhs.to_number());
+    return Cell(*to_num() == *rhs.to_num());
   }
   else if (tag_ == Tag::CHAR) {
     return Cell(*to_char() == *rhs.to_char());
@@ -894,7 +747,7 @@ HashCodeType Cell::hash_code() const {
     return to_keyword()->hash_code();
   }
   if (is_sym()) {
-    return to_symbol()->hash_code();
+    return to_sym()->hash_code();
   }
   PSCM_ASSERT(data_);
   auto code = (HashCodeType *)data_;

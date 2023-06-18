@@ -92,7 +92,7 @@ Cell add(Cell args) {
   for_each(
       [&ret](Cell expr, auto loc) {
         PSCM_ASSERT(expr.is_num());
-        auto num = expr.to_number();
+        auto num = expr.to_num();
         ret->inplace_add(*num);
       },
       args);
@@ -107,7 +107,7 @@ Cell minus(Cell args) {
   }
   auto first_val = arg;
   PSCM_ASSERT(first_val.is_num());
-  auto first_num = first_val.to_number();
+  auto first_num = first_val.to_num();
   PSCM_ASSERT(first_num);
 
   args = cdr(args);
@@ -121,7 +121,7 @@ Cell minus(Cell args) {
   if (!second_arg.is_nil()) {
     auto val = second_arg;
     PSCM_ASSERT(val.is_num());
-    auto num = val.to_number();
+    auto num = val.to_num();
     PSCM_ASSERT(num);
     auto tmp = *first_num - *num;
     ret = new Number(tmp);
@@ -134,7 +134,7 @@ Cell minus(Cell args) {
   while (!arg.is_nil()) {
     auto val = arg;
     PSCM_ASSERT(val.is_num());
-    auto num = val.to_number();
+    auto num = val.to_num();
     PSCM_ASSERT(num);
     ret->inplace_minus(*num);
     args = cdr(args);
@@ -155,7 +155,7 @@ Cell mul(Cell args) {
   while (!arg.is_nil()) {
     auto val = arg;
     PSCM_ASSERT(val.is_num());
-    auto num = val.to_number();
+    auto num = val.to_num();
     PSCM_ASSERT(num);
     ret->inplace_mul(*num);
     args = cdr(args);
@@ -175,7 +175,7 @@ Cell div(Cell args) {
   }
   auto first_val = arg;
   PSCM_ASSERT(first_val.is_num());
-  auto first_num = first_val.to_number();
+  auto first_num = first_val.to_num();
   PSCM_ASSERT(first_num);
 
   args = cdr(args);
@@ -189,7 +189,7 @@ Cell div(Cell args) {
   if (!second_arg.is_nil()) {
     auto val = second_arg;
     PSCM_ASSERT(val.is_num());
-    auto num = val.to_number();
+    auto num = val.to_num();
     PSCM_ASSERT(num);
     auto tmp = *first_num / *num;
     ret = new Number(tmp);
@@ -202,7 +202,7 @@ Cell div(Cell args) {
   while (!arg.is_nil()) {
     auto val = arg;
     PSCM_ASSERT(val.is_num());
-    auto num = val.to_number();
+    auto num = val.to_num();
     PSCM_ASSERT(num);
     ret->inplace_div(*num);
     args = cdr(args);
@@ -223,7 +223,7 @@ Cell less_than(Cell args) {
   if (!arg.is_num()) {
     PSCM_THROW_EXCEPTION("Wrong type argument in position 1: " + arg.to_string());
   }
-  auto n1 = arg.to_number();
+  auto n1 = arg.to_num();
   args = cdr(args);
   bool ret = true;
   int index = 2;
@@ -232,8 +232,8 @@ Cell less_than(Cell args) {
     if (!arg.is_num()) {
       PSCM_THROW_EXCEPTION("Wrong type argument in position " + std::to_string(index) + ": " + arg.to_string());
     }
-    ret = (*n1 < *arg.to_number());
-    n1 = arg.to_number();
+    ret = (*n1 < *arg.to_num());
+    n1 = arg.to_num();
     args = cdr(args);
     index++;
   }
@@ -254,8 +254,8 @@ Cell less_or_equal_than(Cell args) {
   if (!b.is_num()) {
     PSCM_THROW_EXCEPTION("Wrong type argument in position 2: " + b.to_string());
   }
-  auto n1 = a.to_number();
-  auto n2 = b.to_number();
+  auto n1 = a.to_num();
+  auto n2 = b.to_num();
   PSCM_ASSERT(n1);
   PSCM_ASSERT(n2);
   return (*n1 <= *n2) ? Cell::bool_true() : Cell::bool_false();
@@ -296,8 +296,8 @@ Cell greater_than(Cell args) {
   if (!b.is_num()) {
     PSCM_THROW_EXCEPTION("Wrong type argument in position 2: " + b.to_string());
   }
-  auto n1 = a.to_number();
-  auto n2 = b.to_number();
+  auto n1 = a.to_num();
+  auto n2 = b.to_num();
   PSCM_ASSERT(n1);
   PSCM_ASSERT(n2);
   return (*n1 > *n2) ? Cell::bool_true() : Cell::bool_false();
@@ -317,8 +317,8 @@ Cell greater_or_equal_than(Cell args) {
   if (!b.is_num()) {
     PSCM_THROW_EXCEPTION("Wrong type argument in position 2: " + b.to_string());
   }
-  auto n1 = a.to_number();
-  auto n2 = b.to_number();
+  auto n1 = a.to_num();
+  auto n2 = b.to_num();
   PSCM_ASSERT(n1);
   PSCM_ASSERT(n2);
   return (*n1 >= *n2) ? Cell::bool_true() : Cell::bool_false();
@@ -333,7 +333,7 @@ Cell is_positive(Cell args) {
   if (!arg.is_num()) {
     PSCM_THROW_EXCEPTION("Wrong type argument in position 1: " + arg.to_string());
   }
-  auto num = arg.to_number();
+  auto num = arg.to_num();
   return (*num > "0"_num) ? Cell::bool_true() : Cell::bool_false();
 }
 
@@ -346,7 +346,7 @@ Cell is_negative(Cell args) {
   if (!arg.is_num()) {
     PSCM_THROW_EXCEPTION("Wrong type argument in position 1: " + arg.to_string());
   }
-  auto num = arg.to_number();
+  auto num = arg.to_num();
   return (*num < "0"_num) ? Cell::bool_true() : Cell::bool_false();
 }
 
@@ -359,7 +359,7 @@ Cell is_odd(Cell args) {
   if (!arg.is_num()) {
     PSCM_THROW_EXCEPTION("Wrong type argument in position 1: " + arg.to_string());
   }
-  auto num = arg.to_number();
+  auto num = arg.to_num();
   PSCM_ASSERT(num->is_int());
   auto n = num->to_int();
   return (std::abs(n) % 2 == 1) ? Cell::bool_true() : Cell::bool_false();
@@ -374,7 +374,7 @@ Cell is_even(Cell args) {
   if (!arg.is_num()) {
     PSCM_THROW_EXCEPTION("Wrong type argument in position 1: " + arg.to_string());
   }
-  auto num = arg.to_number();
+  auto num = arg.to_num();
   PSCM_ASSERT(num->is_int());
   auto n = num->to_int();
   return (n % 2 == 0) ? Cell::bool_true() : Cell::bool_false();
@@ -384,14 +384,14 @@ Cell proc_max(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
   PSCM_ASSERT(arg.is_num());
-  auto num = arg.to_number();
+  auto num = arg.to_num();
   PSCM_ASSERT(num->is_int() || num->is_float());
   bool is_int = num->is_int();
   double n = is_int ? num->to_int() : num->to_float();
   for_each(
       [&n, &is_int](auto expr, auto) {
         PSCM_ASSERT(expr.is_num());
-        auto num = expr.to_number();
+        auto num = expr.to_num();
         PSCM_ASSERT(num->is_int() || num->is_float());
         if (!num->is_int()) {
           is_int = false;
@@ -412,14 +412,14 @@ Cell proc_min(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
   PSCM_ASSERT(arg.is_num());
-  auto num = arg.to_number();
+  auto num = arg.to_num();
   PSCM_ASSERT(num->is_int() || num->is_float());
   bool is_int = num->is_int();
   double n = is_int ? num->to_int() : num->to_float();
   for_each(
       [&n, &is_int](auto expr, auto) {
         PSCM_ASSERT(expr.is_num());
-        auto num = expr.to_number();
+        auto num = expr.to_num();
         PSCM_ASSERT(num->is_int() || num->is_float());
         if (!num->is_int()) {
           is_int = false;
@@ -442,8 +442,8 @@ Cell quotient(Cell args) {
   auto arg2 = cadr(args);
   PSCM_ASSERT(arg1.is_num());
   PSCM_ASSERT(arg2.is_num());
-  auto num1 = arg1.to_number();
-  auto num2 = arg2.to_number();
+  auto num1 = arg1.to_num();
+  auto num2 = arg2.to_num();
   PSCM_ASSERT(num1->is_int());
   PSCM_ASSERT(num2->is_int());
   auto n1 = num1->to_int();
@@ -458,8 +458,8 @@ Cell remainder(Cell args) {
   auto arg2 = cadr(args);
   PSCM_ASSERT(arg1.is_num());
   PSCM_ASSERT(arg2.is_num());
-  auto num1 = arg1.to_number();
-  auto num2 = arg2.to_number();
+  auto num1 = arg1.to_num();
+  auto num2 = arg2.to_num();
   PSCM_ASSERT(num1->is_int());
   PSCM_ASSERT(num2->is_int());
   auto n1 = num1->to_int();
@@ -474,8 +474,8 @@ Cell modulo(Cell args) {
   auto arg2 = cadr(args);
   PSCM_ASSERT(arg1.is_num());
   PSCM_ASSERT(arg2.is_num());
-  auto num1 = arg1.to_number();
-  auto num2 = arg2.to_number();
+  auto num1 = arg1.to_num();
+  auto num2 = arg2.to_num();
   PSCM_ASSERT(num1->is_int());
   PSCM_ASSERT(num2->is_int());
   auto n1 = num1->to_int();
@@ -497,8 +497,8 @@ Cell proc_gcd(Cell args) {
   auto arg2 = cadr(args);
   PSCM_ASSERT(arg1.is_num());
   PSCM_ASSERT(arg2.is_num());
-  auto num1 = arg1.to_number();
-  auto num2 = arg2.to_number();
+  auto num1 = arg1.to_num();
+  auto num2 = arg2.to_num();
   PSCM_ASSERT(num1->is_int());
   PSCM_ASSERT(num2->is_int());
   auto n1 = num1->to_int();
@@ -513,8 +513,8 @@ Cell proc_lcm(Cell args) {
   auto arg2 = cadr(args);
   PSCM_ASSERT(arg1.is_num());
   PSCM_ASSERT(arg2.is_num());
-  auto num1 = arg1.to_number();
-  auto num2 = arg2.to_number();
+  auto num1 = arg1.to_num();
+  auto num2 = arg2.to_num();
   PSCM_ASSERT(num1->is_int());
   PSCM_ASSERT(num2->is_int());
   auto n1 = num1->to_int();
@@ -578,7 +578,7 @@ Cell is_vector(Cell args) {
 Cell make_vector(Cell args) {
   auto k = car(args);
   PSCM_ASSERT(k.is_num());
-  auto num = k.to_number();
+  auto num = k.to_num();
   PSCM_ASSERT(num->is_int());
   Cell default_value = Cell::none();
   if (!cdr(args).is_nil()) {
@@ -620,7 +620,7 @@ Cell vector_ref(Cell args) {
   PSCM_ASSERT(arg.is_vec());
   PSCM_ASSERT(k.is_num());
   auto vec = arg.to_vec();
-  auto num = k.to_number();
+  auto num = k.to_num();
   PSCM_ASSERT(num->is_int());
   return vec->at(num->to_int());
 }
@@ -632,7 +632,7 @@ Cell vector_set(Cell args) {
   auto obj = caddr(args);
   PSCM_ASSERT(vec.is_vec());
   PSCM_ASSERT(k.is_num());
-  auto num = k.to_number();
+  auto num = k.to_num();
   PSCM_ASSERT(num->is_int());
   SPDLOG_INFO("vec: {} from {}", vec, (void *)vec.to_vec());
   SPDLOG_INFO("k: {} --> {}", k, obj);
@@ -691,7 +691,7 @@ Cell is_zero(Cell args) {
   if (!arg.is_num()) {
     PSCM_THROW_EXCEPTION("In procedure zero? in expression " + args.to_string());
   }
-  auto num = arg.to_number();
+  auto num = arg.to_num();
   return Cell(num->is_zero());
 }
 
@@ -699,7 +699,7 @@ Cell proc_acos(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto z1 = car(args);
   PSCM_ASSERT(z1.is_num());
-  auto num1 = z1.to_number();
+  auto num1 = z1.to_num();
   PSCM_ASSERT(num1->is_int());
   double v = num1->is_int() ? num1->to_int() : num1->to_float();
   auto ret = std::acos(v);
@@ -712,8 +712,8 @@ Cell expt(Cell args) {
   auto z2 = cadr(args);
   PSCM_ASSERT(z1.is_num());
   PSCM_ASSERT(z2.is_num());
-  auto num1 = z1.to_number();
-  auto num2 = z2.to_number();
+  auto num1 = z1.to_num();
+  auto num2 = z2.to_num();
   PSCM_ASSERT(num1->is_int());
   PSCM_ASSERT(num2->is_int());
   auto n1 = num1->to_int();
@@ -750,7 +750,7 @@ Cell proc_abs(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto x = car(args);
   if (x.is_num()) {
-    auto num = x.to_number();
+    auto num = x.to_num();
     PSCM_ASSERT(num->is_int());
     return new Number(std::abs(num->to_int()));
   }
@@ -761,7 +761,7 @@ Cell proc_sqrt(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto x = car(args);
   if (x.is_num()) {
-    auto num = x.to_number();
+    auto num = x.to_num();
     PSCM_ASSERT(num->is_int());
     auto n = num->to_int();
     n = std::sqrt(n);
@@ -774,7 +774,7 @@ Cell proc_round(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto x = car(args);
   if (x.is_num()) {
-    auto num = x.to_number();
+    auto num = x.to_num();
     if (num->is_int()) {
       return x;
     }
@@ -790,7 +790,7 @@ Cell is_exact(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto x = car(args);
   if (x.is_num()) {
-    auto num = x.to_number();
+    auto num = x.to_num();
     if (num->is_int()) {
       return Cell::bool_true();
     }
@@ -803,7 +803,7 @@ Cell is_inexact(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto x = car(args);
   if (x.is_num()) {
-    auto num = x.to_number();
+    auto num = x.to_num();
     if (num->is_float()) {
       return Cell::bool_true();
     }
@@ -816,7 +816,7 @@ Cell inexact_to_exact(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto x = car(args);
   if (x.is_num()) {
-    auto num = x.to_number();
+    auto num = x.to_num();
     if (num->is_int()) {
       return x;
     }
@@ -838,7 +838,7 @@ Cell symbol_to_string(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
   PSCM_ASSERT(arg.is_sym());
-  auto name = arg.to_symbol()->name();
+  auto name = arg.to_sym()->name();
   return new String(std::string(name));
 }
 
@@ -858,7 +858,7 @@ Cell make_string(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto k = car(args);
   PSCM_ASSERT(k.is_num());
-  auto num = k.to_number();
+  auto num = k.to_num();
   PSCM_ASSERT(num->is_int());
   auto sz = num->to_int();
   char ch = '\0';
@@ -900,7 +900,7 @@ Cell string_ref(Cell args) {
   PSCM_ASSERT(arg.is_str());
   PSCM_ASSERT(k.is_num());
   auto s = arg.to_str()->str();
-  auto num = k.to_number();
+  auto num = k.to_num();
   auto idx = num->to_int();
   return Char::from(s[idx]);
 }
@@ -914,7 +914,7 @@ Cell string_set(Cell args) {
   PSCM_ASSERT(k.is_num());
   PSCM_ASSERT(ch.is_char());
   auto s = arg.to_str();
-  auto num = k.to_number();
+  auto num = k.to_num();
   auto idx = num->to_int();
   s->set(idx, ch.to_char()->to_int());
   return Cell::none();
@@ -1019,8 +1019,8 @@ Cell proc_substring(Cell args) {
   PSCM_ASSERT(start.is_num());
   PSCM_ASSERT(end.is_num());
   auto s = arg.to_str();
-  auto num_start = start.to_number();
-  auto num_end = end.to_number();
+  auto num_start = start.to_num();
+  auto num_end = end.to_num();
   PSCM_ASSERT(num_start->is_int());
   PSCM_ASSERT(num_end->is_int());
   return new String(s->substring(num_start->to_int(), num_end->to_int()));
@@ -1095,7 +1095,7 @@ Cell is_complex(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
   PSCM_ASSERT(arg.is_num());
-  auto num = arg.to_number();
+  auto num = arg.to_num();
   return Cell(num->is_int() || num->is_complex());
 }
 
@@ -1106,7 +1106,7 @@ Cell is_real(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
   PSCM_ASSERT(arg.is_num());
-  auto num = arg.to_number();
+  auto num = arg.to_num();
   return Cell(num->is_int() || num->is_float());
 }
 
@@ -1114,7 +1114,7 @@ Cell is_integer(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
   PSCM_ASSERT(arg.is_num());
-  auto num = arg.to_number();
+  auto num = arg.to_num();
   if (num->is_int()) {
     return Cell::bool_true();
   }
@@ -1138,7 +1138,7 @@ Cell is_rational(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
   PSCM_ASSERT(arg.is_num());
-  auto num = arg.to_number();
+  auto num = arg.to_num();
   if (num->is_int()) {
     return Cell::bool_true();
   }
@@ -1158,11 +1158,11 @@ Cell string_to_number(Cell args) {
       if (args.is_pair()) {
         arg = car(args);
         PSCM_ASSERT(arg.is_num());
-        auto n = arg.to_number();
+        auto n = arg.to_num();
         PSCM_ASSERT(n->is_int());
         auto n2 = n->to_int();
         if (n2 != 10) {
-          n = num.to_number();
+          n = num.to_num();
           PSCM_ASSERT(n->is_int());
           auto val = n->to_int();
           auto new_val = std::strtoll(std::to_string(val).c_str(), nullptr, n2);
@@ -1182,7 +1182,7 @@ Cell number_to_string(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
   PSCM_ASSERT(arg.is_num());
-  auto num = arg.to_number();
+  auto num = arg.to_num();
   PSCM_ASSERT(num->is_int());
   auto n = num->to_int();
   args = cdr(args);
@@ -1191,7 +1191,7 @@ Cell number_to_string(Cell args) {
   }
   arg = car(args);
   PSCM_ASSERT(arg.is_num());
-  num = arg.to_number();
+  num = arg.to_num();
   PSCM_ASSERT(num->is_int());
   auto m = num->to_int();
   if (m < 2 || m > 36) {
@@ -1386,7 +1386,7 @@ Cell integer_to_char(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
   PSCM_ASSERT(arg.is_num());
-  auto num = arg.to_number();
+  auto num = arg.to_num();
   PSCM_ASSERT(num->is_int());
   auto n = num->to_int();
   return Char::from(n);
@@ -1414,7 +1414,7 @@ Cell proc_exit(Cell args) {
   }
   auto arg = car(args);
   PSCM_ASSERT(arg.is_num());
-  auto num = arg.to_number();
+  auto num = arg.to_num();
   PSCM_ASSERT(num->is_int());
   auto status = num->to_int();
   std::exit(status);
@@ -1485,7 +1485,7 @@ void Evaluator::run() {
         GOTO(reg_.cont);
       }
       if (reg_.expr.is_sym()) {
-        reg_.val = reg_.env->get(reg_.expr.to_symbol());
+        reg_.val = reg_.env->get(reg_.expr.to_sym());
         GOTO(reg_.cont);
       }
       if (reg_.expr.is_pair()) {
@@ -1744,8 +1744,8 @@ void Evaluator::run() {
       SPDLOG_INFO("apply {}: {}", proc, args);
       PSCM_ASSERT(proc.is_sym());
       PSCM_ASSERT(args.is_sym());
-      proc = reg_.env->get(proc.to_symbol());
-      args = reg_.env->get(args.to_symbol());
+      proc = reg_.env->get(proc.to_sym());
+      args = reg_.env->get(args.to_sym());
       args = construct_apply_argl(args);
       reg_.cont = Label::AFTER_APPLY_MACRO;
       PSCM_PUSH_STACK(cont);
@@ -1798,7 +1798,7 @@ void Evaluator::run() {
       auto args = cdr(var_name);
       reg_.val = proc_name;
       PSCM_ASSERT(proc_name.is_sym());
-      auto proc_name_sym = proc_name.to_symbol();
+      auto proc_name_sym = proc_name.to_sym();
       auto proc = new Procedure(proc_name_sym, args, val, reg_.env);
       std::string name = std::string(proc_name_sym->name());
       auto macro = new Macro(name, proc);
@@ -1812,8 +1812,8 @@ void Evaluator::run() {
       auto clause = car(reg_.unev);
       auto test = car(clause);
       if (test.is_sym()) {
-        PSCM_ASSERT(test.to_symbol());
-        auto sym = test.to_symbol();
+        PSCM_ASSERT(test.to_sym());
+        auto sym = test.to_sym();
         if (*sym == cond_else) {
           reg_.expr = cadr(clause);
           reg_.cont = Label::AFTER_APPLY_MACRO;
@@ -1892,7 +1892,7 @@ void Evaluator::run() {
       PSCM_ASSERT(args.is_pair());
       auto arg = car(args);
       PSCM_ASSERT(arg.is_sym());
-      auto sym = arg.to_symbol();
+      auto sym = arg.to_sym();
       auto val = env->get(sym);
       PSCM_ASSERT(val.is_str());
       auto s = val.to_str();
@@ -1932,7 +1932,7 @@ void Evaluator::run() {
       PSCM_POP_STACK(expr);
       auto key = reg_.expr;
       PSCM_ASSERT(key.is_sym());
-      auto sym = key.to_symbol();
+      auto sym = key.to_sym();
       reg_.env->insert(sym, val);
       if (val.is_proc() && (cadr(reg_.unev).is_pair() || car(reg_.unev).is_pair())) {
         auto proc = val.to_proc();
@@ -1949,7 +1949,7 @@ void Evaluator::run() {
       PSCM_POP_STACK(val);
       auto var_name = reg_.val;
       PSCM_ASSERT(var_name.is_sym());
-      auto sym = var_name.to_symbol();
+      auto sym = var_name.to_sym();
       SPDLOG_INFO("AFTER set! {} -> {}", var_name, val);
       reg_.env->set(sym, val);
       reg_.val = Cell{};
@@ -1981,8 +1981,8 @@ void Evaluator::run() {
       PRINT_STEP();
       auto proc = car(reg_.unev);
       auto lists = cdr(reg_.unev);
-      proc = reg_.env->get(proc.to_symbol());
-      lists = reg_.env->get(lists.to_symbol());
+      proc = reg_.env->get(proc.to_sym());
+      lists = reg_.env->get(lists.to_sym());
       SPDLOG_INFO("proc: {}", proc);
       SPDLOG_INFO("lists: {}", lists);
       PSCM_ASSERT(proc.is_proc() || proc.is_func());
@@ -2026,8 +2026,8 @@ void Evaluator::run() {
 
       auto proc = car(reg_.unev);
       auto lists = cdr(reg_.unev);
-      reg_.proc = reg_.env->get(proc.to_symbol());
-      reg_.unev = reg_.env->get(lists.to_symbol());
+      reg_.proc = reg_.env->get(proc.to_sym());
+      reg_.unev = reg_.env->get(lists.to_sym());
       auto pos = eval_map_expr(Label::AFTER_EVAL_MAP_FIRST_EXPR);
       GOTO(pos);
     }
@@ -2035,7 +2035,7 @@ void Evaluator::run() {
       PRINT_STEP();
       auto promise = car(reg_.unev);
       PSCM_ASSERT(promise.is_sym());
-      promise = reg_.env->get(promise.to_symbol());
+      promise = reg_.env->get(promise.to_sym());
       PSCM_ASSERT(promise.is_promise());
       auto p = promise.to_promise();
       if (p->ready()) {
@@ -2054,7 +2054,7 @@ void Evaluator::run() {
       PSCM_POP_STACK(unev);
       auto promise = car(reg_.unev);
       PSCM_ASSERT(promise.is_sym());
-      promise = reg_.env->get(promise.to_symbol());
+      promise = reg_.env->get(promise.to_sym());
       PSCM_ASSERT(promise.is_promise());
       auto p = promise.to_promise();
       p->set_result(reg_.val);
@@ -2145,8 +2145,8 @@ void Evaluator::run() {
         auto clause = car(reg_.unev);
         auto test = car(clause);
         if (test.is_sym()) {
-          PSCM_ASSERT(test.to_symbol());
-          auto sym = test.to_symbol();
+          PSCM_ASSERT(test.to_sym());
+          auto sym = test.to_sym();
           if (*sym == cond_else) {
             reg_.expr = cadr(clause);
             reg_.cont = Label::AFTER_APPLY_MACRO;
@@ -2166,7 +2166,7 @@ void Evaluator::run() {
       }
       auto arrow = car(tmp);
       auto arrow_sym = "=>"_sym;
-      if (arrow.is_sym() && *arrow.to_symbol() == arrow_sym && !reg_.env->contains(&arrow_sym)) {
+      if (arrow.is_sym() && *arrow.to_sym() == arrow_sym && !reg_.env->contains(&arrow_sym)) {
         auto recipient = cadr(tmp);
         reg_.expr = cons(recipient, list(list(quote, reg_.val)));
         reg_.cont = Label::AFTER_APPLY_MACRO;

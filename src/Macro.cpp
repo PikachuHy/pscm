@@ -61,7 +61,7 @@ Symbol *scm_define_macro(SchemeProxy scm, SymbolTable *env, Cell args) {
   Procedure *proc;
   Symbol *sym;
   if (first_arg.is_sym()) {
-    sym = first_arg.to_symbol();
+    sym = first_arg.to_sym();
     auto ret = scm.eval(env, cadr(args));
     PSCM_ASSERT(ret.is_proc());
     proc = ret.to_proc();
@@ -71,7 +71,7 @@ Symbol *scm_define_macro(SchemeProxy scm, SymbolTable *env, Cell args) {
     auto proc_args = cdr(first_arg);
     SPDLOG_INFO("{} {}", proc_name, proc_args);
     PSCM_ASSERT(proc_name.is_sym());
-    sym = proc_name.to_symbol();
+    sym = proc_name.to_sym();
     proc = new Procedure(sym, proc_args, cdr(args), env);
   }
   env->insert(sym, new Macro(std::string(sym->name()), proc));

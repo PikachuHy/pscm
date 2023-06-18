@@ -48,7 +48,7 @@ Symbol *scm_define(SchemeProxy scm, SymbolTable *env, Cell args) {
     val = list(proc);
   }
   PSCM_ASSERT(key.is_sym());
-  auto sym = key.to_symbol();
+  auto sym = key.to_sym();
   val = scm.eval(env, car(val));
   if (val.is_proc() && (cadr(args).is_pair() || car(args).is_pair())) {
     auto proc = val.to_proc();
@@ -76,7 +76,7 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "set!", Label::APPLY_SET) {
   PSCM_ASSERT(args.is_pair());
   auto k = car(args);
   PSCM_ASSERT(k.is_sym());
-  auto sym = k.to_symbol();
+  auto sym = k.to_sym();
   auto v = cadr(args);
   v = scm.eval(env, v);
   bool has_k = env->contains(sym);
@@ -109,8 +109,8 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "cond", Label::APPLY_COND) {
     auto expr = cdr(clause);
     SPDLOG_INFO("expr: {}", expr);
     if (test.is_sym()) {
-      PSCM_ASSERT(test.to_symbol());
-      auto sym = test.to_symbol();
+      PSCM_ASSERT(test.to_sym());
+      auto sym = test.to_sym();
       if (*sym == cond_else) {
         if (expr.is_nil()) {
           PSCM_THROW_EXCEPTION("Bad cond clause (else) in expression " + args_bak.to_string());
@@ -131,7 +131,7 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "cond", Label::APPLY_COND) {
     SPDLOG_INFO("tmp: {}", tmp);
     auto arrow = car(tmp);
     auto arrow_sym = "=>"_sym;
-    if (arrow.is_sym() && *arrow.to_symbol() == arrow_sym && !env->contains(&arrow_sym)) {
+    if (arrow.is_sym() && *arrow.to_sym() == arrow_sym && !env->contains(&arrow_sym)) {
       auto recipient = cadr(tmp);
       auto f = scm.eval(env, recipient);
       auto f_args = list(quote, list(list(ret)));
@@ -436,7 +436,7 @@ Cell Scheme::eval(const char *code) {
       return Cell::none();
     }
     if (in_repl_ && ret.is_sym()) {
-      if (!current_module_->env()->contains(ret.to_symbol())) {
+      if (!current_module_->env()->contains(ret.to_sym())) {
         std::cout << "ERROR: Unbound variable: " << ret << std::endl;
         std::cout << "ABORT: (unbound-variable)" << std::endl;
         return Cell::none();
@@ -641,7 +641,7 @@ Cell Scheme::eval(Cell expr) {
 Cell Scheme::lookup(SymbolTable *env, Cell expr, SourceLocation loc) {
   PSCM_ASSERT(env);
   PSCM_ASSERT(expr.is_sym());
-  auto sym = expr.to_symbol();
+  auto sym = expr.to_sym();
   PSCM_ASSERT(sym);
   bool has_sym = env->contains(sym);
   if (!has_sym) {

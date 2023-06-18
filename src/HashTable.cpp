@@ -15,7 +15,7 @@ PSCM_DEFINE_BUILTIN_PROC(HashTable, "make-hash-table") {
   if (args.is_pair()) {
     auto arg = car(args);
     PSCM_ASSERT(arg.is_num());
-    auto num = arg.to_number();
+    auto num = arg.to_num();
     PSCM_ASSERT(num->is_int());
     auto capacity = num->to_int();
     hash_table = new HashTable(capacity);
@@ -144,9 +144,9 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(HashTable, "hash-fold", Label::TODO, "(pr
   PSCM_ASSERT(proc.is_sym());
   PSCM_ASSERT(init.is_sym());
   PSCM_ASSERT(table.is_sym());
-  proc = env->get(proc.to_symbol());
-  init = env->get(init.to_symbol());
-  table = env->get(table.to_symbol());
+  proc = env->get(proc.to_sym());
+  init = env->get(init.to_sym());
+  table = env->get(table.to_sym());
   PSCM_ASSERT(table.is_hash_table());
   auto hash_table = table.to_hash_table();
   auto val = init;
@@ -162,8 +162,8 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(HashTable, "hash-for-each-handle", Label:
   auto table = cadr(args);
   PSCM_ASSERT(proc.is_sym());
   PSCM_ASSERT(table.is_sym());
-  proc = env->get(proc.to_symbol());
-  table = env->get(table.to_symbol());
+  proc = env->get(proc.to_sym());
+  table = env->get(table.to_sym());
   PSCM_ASSERT(table.is_hash_table());
   auto hash_table = table.to_hash_table();
   hash_table->for_each_handle([&scm, env, proc](Cell entry) {
@@ -261,7 +261,7 @@ static Cell scm_hash(Cell args) {
   auto key = car(args);
   auto arg2 = cadr(args);
   PSCM_ASSERT(arg2.is_num());
-  auto num = arg2.to_number();
+  auto num = arg2.to_num();
   PSCM_ASSERT(num->is_int());
   auto hash_code = key.hash_code();
   return new Number(hash_code);

@@ -295,7 +295,7 @@ PSCM_DEFINE_BUILTIN_PROC(List, "list-ref") {
   if (!k.is_num()) {
     PSCM_THROW_EXCEPTION("Wrong type (expecting exact integer): " + k.to_string());
   }
-  auto num = k.to_number();
+  auto num = k.to_num();
   if (!num->is_int()) {
     PSCM_THROW_EXCEPTION("Wrong type (expecting exact integer): " + k.to_string());
   }
@@ -320,7 +320,7 @@ PSCM_DEFINE_BUILTIN_PROC(List, "list-head") {
   if (!k.is_num()) {
     PSCM_THROW_EXCEPTION("Wrong type (expecting exact integer): " + k.to_string());
   }
-  auto num = k.to_number();
+  auto num = k.to_num();
   if (!num->is_int()) {
     PSCM_THROW_EXCEPTION("Wrong type (expecting exact integer): " + k.to_string());
   }
@@ -347,7 +347,7 @@ PSCM_DEFINE_BUILTIN_PROC(List, "list-tail") {
   if (!k.is_num()) {
     PSCM_THROW_EXCEPTION("Wrong type (expecting exact integer): " + k.to_string());
   }
-  auto num = k.to_number();
+  auto num = k.to_num();
   if (!num->is_int()) {
     PSCM_THROW_EXCEPTION("Wrong type (expecting exact integer): " + k.to_string());
   }
@@ -390,8 +390,8 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(List, "for-each", Label::APPLY_FOR_EACH, 
   PSCM_ASSERT(proc.is_sym());
   auto lists = cdr(args);
   PSCM_ASSERT(lists.is_sym());
-  proc = env->get(proc.to_symbol());
-  lists = env->get(lists.to_symbol());
+  proc = env->get(proc.to_sym());
+  lists = env->get(lists.to_sym());
   int len = 0;
   ret = for_each(
       [&len](auto, auto) {
@@ -433,8 +433,8 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(List, "map", Label::APPLY_MAP, "(proc . l
   auto lists = cdr(args);
   SPDLOG_INFO("lists: {}", lists);
   PSCM_ASSERT(lists.is_sym());
-  proc = env->get(proc.to_symbol());
-  lists = env->get(lists.to_symbol());
+  proc = env->get(proc.to_sym());
+  lists = env->get(lists.to_sym());
   int len = 0;
   ret = for_each(
       [&len](auto, auto) {

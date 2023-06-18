@@ -492,7 +492,7 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(Port, "load", Label::APPLY_LOAD, "(filena
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
   PSCM_ASSERT(arg.is_sym());
-  auto sym = arg.to_symbol();
+  auto sym = arg.to_sym();
   auto val = env->get(sym);
   PSCM_ASSERT(val.is_str());
   auto s = val.to_str();

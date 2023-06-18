@@ -134,21 +134,6 @@ public:
     ref_count_++;
   };
 
-  Cell(Number *num);
-  Cell(Char *ch);
-  // Cell(String *str, SourceLocation loc = {});
-  Cell(Symbol *sym);
-  Cell(Pair *pair);
-  Cell(Vec *pair);
-  Cell(Function *f);
-  Cell(Macro *f);
-  Cell(const Procedure *proc);
-  Cell(Promise *p);
-  Cell(Continuation *cont);
-  Cell(Port *port);
-  Cell(SmallObject *smob);
-  Cell(Module *module);
-  Cell(HashTable *hash_table);
   explicit Cell(bool val);
 
   ~Cell() {
@@ -212,103 +197,28 @@ public:
     return tag_ == Tag::NIL;
   }
 
-  bool is_pair() const {
-    return tag_ == Tag::PAIR;
-  }
-
-  Pair *to_pair(SourceLocation loc = {}) const;
-
-  bool is_vec() const {
-    return tag_ == Tag::VECTOR;
-  }
-
-  Vec *to_vec(SourceLocation loc = {}) const;
-
-  bool is_sym() const {
-    return tag_ == Tag::SYMBOL;
-  }
-
-  Symbol *to_symbol(SourceLocation loc = {}) const;
-
-  bool is_char() const {
-    return tag_ == Tag::CHAR;
-  }
-
-  Char *to_char(SourceLocation loc = {}) const;
-
-  // bool is_str() const {
-  //   return tag_ == Tag::STRING;
-  // }
-
-  // String *to_str(SourceLocation loc = {}) const;
-
-  bool is_num() const {
-    return tag_ == Tag::NUMBER;
-  }
-
-  Number *to_number(SourceLocation loc = {}) const;
-
   bool is_bool() const {
     return tag_ == Tag::BOOL;
   }
 
   bool to_bool(SourceLocation loc = {}) const;
 
-  bool is_func() const {
-    return tag_ == Tag::FUNCTION;
-  }
-
-  Function *to_func(SourceLocation loc = {}) const;
-
-  bool is_macro() const {
-    return tag_ == Tag::MACRO;
-  }
-
-  Macro *to_macro(SourceLocation loc = {}) const;
-
-  bool is_proc() const {
-    return tag_ == Tag::PROCEDURE;
-  }
-
-  Procedure *to_proc(SourceLocation loc = {}) const;
-
-  bool is_promise() const {
-    return tag_ == Tag::PROMISE;
-  }
-
-  Promise *to_promise(SourceLocation loc = {}) const;
-
-  bool is_cont() const {
-    return tag_ == Tag::CONTINUATION;
-  }
-
-  Continuation *to_cont(SourceLocation loc = {}) const;
-
-  bool is_port() const {
-    return tag_ == Tag::PORT;
-  }
-
-  Port *to_port(SourceLocation loc = {}) const;
-
-  bool is_smob() const {
-    return tag_ == Tag::SMOB;
-  }
-
-  SmallObject *to_smob(SourceLocation loc = {}) const;
-
-  bool is_module() const {
-    return tag_ == Tag::MODULE;
-  }
-
-  Module *to_module(SourceLocation loc = {}) const;
-
-  bool is_hash_table() const {
-    return tag_ == Tag::HASH_TABLE;
-  }
-
-  HashTable *to_hash_table(SourceLocation loc = {}) const;
   PSCM_CELL_TYPE(Keyword, keyword, KEYWORD);
+  PSCM_CELL_TYPE(Pair, pair, PAIR);
   PSCM_CELL_TYPE(String, str, STRING);
+  PSCM_CELL_TYPE(Symbol, sym, SYMBOL);
+  PSCM_CELL_TYPE(Char, char, CHAR);
+  PSCM_CELL_TYPE(Vec, vec, VECTOR);
+  PSCM_CELL_TYPE(Number, num, NUMBER);
+  PSCM_CELL_TYPE(Macro, macro, MACRO);
+  PSCM_CELL_TYPE(Procedure, proc, PROCEDURE);
+  PSCM_CELL_TYPE(Function, func, FUNCTION);
+  PSCM_CELL_TYPE(Promise, promise, PROMISE);
+  PSCM_CELL_TYPE(Continuation, cont, CONTINUATION);
+  PSCM_CELL_TYPE(Port, port, PORT);
+  PSCM_CELL_TYPE(Module, module, MODULE);
+  PSCM_CELL_TYPE(SmallObject, smob, SMOB);
+  PSCM_CELL_TYPE(HashTable, hash_table, HASH_TABLE);
 
   bool is_self_evaluated() const;
 

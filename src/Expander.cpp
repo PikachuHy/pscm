@@ -70,7 +70,7 @@ Cell expand_named_let(Cell name, Cell bindings, Cell body) {
         auto var = car(expr);
         auto init = cadr(expr);
         PSCM_ASSERT(var.is_sym());
-        auto sym = var.to_symbol();
+        auto sym = var.to_sym();
         return list(new Symbol(std::string(sym->name()) + "="s), init);
       },
       bindings);
@@ -240,7 +240,7 @@ bool QuasiQuotationExpander::is_constant(pscm::Cell expr) {
   if (expr.is_pair()) {
     auto op = car(expr);
     if (op.is_sym()) {
-      auto sym = op.to_symbol();
+      auto sym = op.to_sym();
       auto val = env_->get_or(sym, Cell::none());
       return val == quote;
     }

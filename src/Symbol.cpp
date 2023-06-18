@@ -95,7 +95,7 @@ PSCM_DEFINE_BUILTIN_MACRO(Symbol, "defined?", Label::APPLY_IS_DEFINED) {
   PSCM_ASSERT(args.is_pair());
   auto val = scm.eval(env, car(args));
   PSCM_ASSERT(val.is_sym());
-  auto sym = val.to_symbol();
+  auto sym = val.to_sym();
   auto has_sym = env->contains(sym);
   return Cell(has_sym);
 }
