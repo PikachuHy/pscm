@@ -6,6 +6,7 @@
 #include "pscm/Exception.h"
 #include "pscm/Symbol.h"
 #include "pscm/common_def.h"
+#include <iostream>
 #include <string>
 using namespace std::string_literals;
 
