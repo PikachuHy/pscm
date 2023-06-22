@@ -18,8 +18,8 @@ jobs:
 
       - name: deps
         run: |
-          sudo brew install ghostscript
-          sudo brew install freetype
+          brew install ghostscript
+          brew install freetype
 
       - name: Clone Deps
         run: git submodule update --init
