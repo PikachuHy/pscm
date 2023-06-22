@@ -532,4 +532,8 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(Port, "load", Label::APPLY_LOAD, "(filena
   bool ok = scm.load(std::string(filename).c_str());
   return Cell(ok);
 }
+
+PSCM_DEFINE_BUILTIN_PROC(Port, "force-output") {
+  return Cell::none();
+}
 } // namespace pscm
