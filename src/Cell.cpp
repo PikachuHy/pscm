@@ -71,7 +71,7 @@ std::string Cell::pretty_string() const {
   }
   if (is_sym()) {
     auto sym = to_sym();
-    if (sym->name().find(' ') != std::string_view::npos) {
+    if (sym->name().find(' ') != StringView::npos) {
       std::stringstream ss;
       ss << "\e[;34m";
       ss << *this;
