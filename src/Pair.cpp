@@ -296,6 +296,12 @@ PSCM_DEFINE_BUILTIN_PROC(List, "reverse") {
   return reverse_argl(arg);
 }
 
+PSCM_DEFINE_BUILTIN_PROC(List, "reverse!") {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  return reverse_argl(arg);
+}
+
 PSCM_DEFINE_BUILTIN_PROC(List, "list-ref") {
   PSCM_ASSERT(args.is_pair());
   auto list = car(args);
