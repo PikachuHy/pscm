@@ -80,6 +80,14 @@ Cell Char::from(char ch) {
     static Char tmp("&");
     return &tmp;
   }
+  else if (ch == '<') {
+    static Char tmp("<");
+    return &tmp;
+  }
+  else if (ch == '>') {
+    static Char tmp(">");
+    return &tmp;
+  }
   else if (ch == EOF) {
     std::string s;
     s.resize(1);
