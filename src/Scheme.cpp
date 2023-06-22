@@ -29,7 +29,6 @@
 #include <string>
 #include <string_view>
 using namespace std::string_literals;
-using namespace std::string_view_literals;
 #if __cplusplus <= 201402L
 #include <ghc/filesystem.hpp>
 namespace fs = ghc::filesystem;
