@@ -388,6 +388,7 @@ Scheme::Scheme(bool use_register_machine)
   }
   env->insert(new Symbol("apply"), Procedure::create_apply(env));
   env->insert(new Symbol("call-with-output-string"), Procedure::create_call_with_output_string(env));
+  env->insert(new Symbol("call-with-input-string"), Procedure::create_call_with_input_string(env));
   {
     auto proc_args = cons(new Symbol("producer"), cons(new Symbol("consumer"), nil));
     auto proc = new Procedure(&call_with_values, proc_args, nil, env);

@@ -44,6 +44,7 @@ public:
   SymbolTable *create_proc_env(Cell args) const;
   static Procedure *create_apply(SymbolTable *env);
   static Procedure *create_call_with_output_string(SymbolTable *env);
+  static Procedure *create_call_with_input_string(SymbolTable *env);
 
 private:
   Symbol *name_;

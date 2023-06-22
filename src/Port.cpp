@@ -102,6 +102,11 @@ public:
       : mode_(mode) {
   }
 
+  StringPort(std::string s, std::ios_base::openmode mode)
+      : mode_(mode) {
+    ss_ << s;
+  }
+
   bool is_input_port() const override {
     return mode_ & std::ios::in;
   }
@@ -454,8 +459,17 @@ Cell write(Cell args) {
 }
 
 Cell builtin_create_string_port(Cell args) {
-  auto port = new StringPort(std::ios::out);
-  return Cell(port);
+  if (args.is_nil()) {
+    auto port = new StringPort(std::ios::out);
+    return Cell(port);
+  }
+  else {
+    auto arg = car(args);
+    PSCM_ASSERT(arg.is_str());
+    auto str = arg.to_str();
+    auto port = new StringPort(str->str(), std::ios::in);
+    return Cell(port);
+  }
 }
 
 Cell builtin_string_port_to_string(Cell args) {
@@ -484,6 +498,24 @@ Procedure *Procedure::create_call_with_output_string(SymbolTable *env) {
   Cell body = list(new Symbol("let"), list(list(port_sym, list(func_create))), call_proc, list(func_str, port_sym));
   SPDLOG_DEBUG("call-with-output-string body: {}", body.pretty_string());
   Cell args = list(proc);
+  body = cons(body, nil);
+  return new Procedure(name, args, body, env);
+}
+
+/*
+(let ((port (builtin_create_string_port str)))
+      (apply proc (list port)))
+*/
+Procedure *Procedure::create_call_with_input_string(SymbolTable *env) {
+  auto name = new Symbol("call-with-input-string");
+  auto str = new Symbol("string");
+  auto proc = new Symbol("proc");
+  auto func_create = new Function("builtin_create_string_port", builtin_create_string_port);
+  auto port_sym = new Symbol("port");
+  auto call_proc = list(new Symbol("apply"), proc, list(new Symbol("list"), port_sym));
+  Cell body = list(new Symbol("let"), list(list(port_sym, list(func_create, str))), call_proc);
+  SPDLOG_DEBUG("call-with-input-string body: {}", body.pretty_string());
+  Cell args = list(str, proc);
   body = cons(body, nil);
   return new Procedure(name, args, body, env);
 }
