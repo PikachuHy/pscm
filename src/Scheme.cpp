@@ -74,6 +74,7 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "define-public", Label::APPLY_DEFINE) {
   scm.current_module()->export_symbol(sym);
   // FIXME: wrong module or wrong env?
   scm.current_module()->env()->insert(sym, env->get(sym));
+  scm.vau_hack(sym, env->get(sym));
   return Cell::none();
 }
 
@@ -424,7 +425,8 @@ Scheme::Scheme(bool use_register_machine)
   root_env_ = env;
   env->insert(new Symbol("map-in-order"), env->get(&Symbol::map));
   env->insert(new Symbol("primitive-load"), env->get(&Symbol::load));
-  root_derived_env_ = new SymbolTable("root-derived", env);
+  vau_hack_env_ = new SymbolTable("vau hack", env);
+  root_derived_env_ = new SymbolTable("root-derived", vau_hack_env_);
   envs_.push_back(root_derived_env_);
   current_module_ = create_module(nil);
   module_list_.push_back(current_module_);

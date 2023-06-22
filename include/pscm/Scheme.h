@@ -41,6 +41,7 @@ private:
   std::vector<SymbolTable *> envs_;
   SymbolTable *root_env_;
   SymbolTable *root_derived_env_;
+  SymbolTable *vau_hack_env_;
   Module *current_module_;
   std::vector<Module *> module_list_;
   std::unordered_map<Cell, Module *> module_map_;
