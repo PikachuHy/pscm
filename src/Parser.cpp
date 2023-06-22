@@ -763,6 +763,10 @@ void Parser::read_until(std::string& s, StringView end) {
   char ch;
   while (!is_eof()) {
     ch = peek_char();
+    // FIXME: stringstream .eof()
+    if (ch == EOF) {
+      break;
+    }
     if (std::isspace(ch)) {
       break;
     }

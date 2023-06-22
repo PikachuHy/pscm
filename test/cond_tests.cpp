@@ -96,3 +96,23 @@ TEST_CASE("testing cond, =>") {
     f(scm);
   }
 }
+
+TEST_CASE("testing cond, else multi clause") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(cond
+  ((= 1 2) '())
+  (else 1 2 3))
+)");
+    CHECK(ret == "3"_num);
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    // Scheme scm(true);
+    // f(scm);
+  }
+}

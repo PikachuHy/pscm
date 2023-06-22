@@ -125,3 +125,50 @@ TEST_CASE("testing call-with-output-string") {
     f(scm);
   }
 }
+
+TEST_CASE("testing call-with-input-string") {
+
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(define (string->object s)
+  (call-with-input-string s read))
+)");
+    ret = scm.eval(R"""(
+(string->object "1")
+    )""");
+    CHECK(ret == "1"_num);
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing call-with-input-string, 2") {
+
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval(R"(
+(define (string->object s)
+  (call-with-input-string s read))
+)");
+    ret = scm.eval(R"""(
+(string->object "(a b c)")
+    )""");
+    auto expected = Parser("(a b c)").parse();
+    CHECK(ret == expected);
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}

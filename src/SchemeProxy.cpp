@@ -43,4 +43,7 @@ void SchemeProxy::load_module(const std::string& filename, Cell module_name) {
   scm_.load_module(filename, module_name);
 }
 
+void SchemeProxy::vau_hack(Symbol *sym, Cell value) {
+  scm_.vau_hack_env_->insert(sym, value);
+}
 } // namespace pscm

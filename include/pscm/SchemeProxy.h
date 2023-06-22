@@ -21,6 +21,7 @@ public:
   bool has_module(Cell module_name) const;
   Module *get_module(Cell module_name) const;
   void load_module(const std::string& filename, Cell module_name);
+  void vau_hack(Symbol *sym, Cell value);
 
 private:
   Scheme& scm_;

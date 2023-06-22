@@ -73,3 +73,37 @@ TEST_CASE("testing append, ()") {
     f(scm);
   }
 }
+
+TEST_CASE("testing append, append 3 elements") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval("(append '(1 2) '(3 4) '(5 6))");
+    auto expected = Parser("(1 2 3 4 5 6)").parse();
+    CHECK(ret == expected);
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}
+
+TEST_CASE("testing append, apply append 3 elements") {
+  auto f = [](Scheme& scm) {
+    Cell ret;
+    ret = scm.eval("(apply append '((1 2) (3 4) (5 6)))");
+    auto expected = Parser("(1 2 3 4 5 6)").parse();
+    CHECK(ret == expected);
+  };
+  {
+    Scheme scm;
+    f(scm);
+  }
+  {
+    Scheme scm(true);
+    f(scm);
+  }
+}

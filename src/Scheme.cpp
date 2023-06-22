@@ -73,6 +73,7 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "define-public", Label::APPLY_DEFINE) {
   scm.current_module()->export_symbol(sym);
   // FIXME: wrong module or wrong env?
   scm.current_module()->env()->insert(sym, env->get(sym));
+  scm.vau_hack(sym, env->get(sym));
   return Cell::none();
 }
 
@@ -118,6 +119,10 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "cond", Label::APPLY_COND) {
       if (*sym == cond_else) {
         if (expr.is_nil()) {
           PSCM_THROW_EXCEPTION("Bad cond clause (else) in expression " + args_bak.to_string());
+        }
+        while (expr.is_pair() && cdr(expr).is_pair()) {
+          [[maybe_unused]] auto ret = scm.eval(env, car(expr));
+          expr = cdr(expr);
         }
         return car(expr);
       }
@@ -388,6 +393,7 @@ Scheme::Scheme(bool use_register_machine)
   }
   env->insert(new Symbol("apply"), Procedure::create_apply(env));
   env->insert(new Symbol("call-with-output-string"), Procedure::create_call_with_output_string(env));
+  env->insert(new Symbol("call-with-input-string"), Procedure::create_call_with_input_string(env));
   {
     auto proc_args = cons(new Symbol("producer"), cons(new Symbol("consumer"), nil));
     auto proc = new Procedure(&call_with_values, proc_args, nil, env);
@@ -418,7 +424,8 @@ Scheme::Scheme(bool use_register_machine)
   root_env_ = env;
   env->insert(new Symbol("map-in-order"), env->get(&Symbol::map));
   env->insert(new Symbol("primitive-load"), env->get(&Symbol::load));
-  root_derived_env_ = new SymbolTable("root-derived", env);
+  vau_hack_env_ = new SymbolTable("vau hack", env);
+  root_derived_env_ = new SymbolTable("root-derived", vau_hack_env_);
   envs_.push_back(root_derived_env_);
   current_module_ = create_module(nil);
   module_list_.push_back(current_module_);
@@ -628,7 +635,7 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
     }
     else {
       SPDLOG_ERROR("unsupported {} from {}", proc, proc.source_location());
-      repl();
+      // repl();
       PSCM_THROW_EXCEPTION("unsupported");
     }
   }
@@ -794,8 +801,34 @@ PSCM_DEFINE_BUILTIN_PROC(Scheme, "scm-error") {
 PSCM_DEFINE_BUILTIN_MACRO(Scheme, "eval", Label::APPLY_EVAL) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
-  auto expr = arg;
-  auto ret = scm.eval(env, expr);
-  return ret;
+  if (cdr(args).is_nil()) {
+    auto expr = arg;
+    auto ret = scm.eval(env, expr);
+    return ret;
+  }
+  else {
+    PSCM_THROW_EXCEPTION("wrong-number-of-args");
+    auto env_arg = cadr(args);
+    auto expr = arg;
+    auto ret = scm.eval(env, expr);
+    return ret;
+  }
+}
+
+PSCM_DEFINE_BUILTIN_MACRO(Scheme, "primitive-eval", Label::APPLY_EVAL) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  if (cdr(args).is_nil()) {
+    auto expr = arg;
+    auto ret = scm.eval(env, expr);
+    return ret;
+  }
+  else {
+    PSCM_THROW_EXCEPTION("wrong-number-of-args");
+    auto env_arg = cadr(args);
+    auto expr = arg;
+    auto ret = scm.eval(env, expr);
+    return ret;
+  }
 }
 } // namespace pscm
