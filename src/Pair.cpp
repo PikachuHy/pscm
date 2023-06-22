@@ -253,31 +253,39 @@ PSCM_DEFINE_BUILTIN_PROC(List, "append") {
   }
   auto pair = cons(nil, nil);
   auto it = pair;
-  auto list = car(args);
-  if (list.is_nil() || list.is_pair()) {
-    if (list.is_nil()) {
-      if (cdr(args).is_nil()) {
-        return nil;
+  auto loop_var = args;
+  while (loop_var.is_pair()) {
+    auto list = car(loop_var);
+    if (list.is_nil() || list.is_pair()) {
+      auto p = list;
+      while (p.is_pair()) {
+        auto new_pair = cons(car(p), nil);
+        if (!it->second.is_nil()) {
+          PSCM_THROW_EXCEPTION("Wrong type argument in position 2 (expecting empty list): " + it->second.to_string());
+        }
+        it->second = new_pair;
+        it = new_pair;
+        p = cdr(p);
       }
-      return cadr(args);
-    }
-    auto p = list;
-    while (p.is_pair()) {
-      auto new_pair = cons(car(p), nil);
-      it->second = new_pair;
-      it = new_pair;
-      p = cdr(p);
-    }
-    if (cdr(args).is_nil()) {
-      it->second = nil;
+      if (!p.is_nil()) {
+        if (!it->second.is_nil()) {
+          PSCM_THROW_EXCEPTION("Wrong type argument in position 2 (expecting empty list): " + it->second.to_string());
+        }
+        it->second = p;
+      }
     }
     else {
-
-      it->second = cadr(args);
+      if (cdr(loop_var).is_nil()) {
+        if (!it->second.is_nil()) {
+          PSCM_THROW_EXCEPTION("Wrong type argument in position 2 (expecting empty list): " + it->second.to_string());
+        }
+        it->second = list;
+      }
+      else {
+        PSCM_THROW_EXCEPTION("Wrong type argument in position 1 (expecting empty list): " + list.to_string());
+      }
     }
-  }
-  else {
-    PSCM_THROW_EXCEPTION("Wrong type argument in position 1 (expecting empty list): " + list.to_string());
+    loop_var = cdr(loop_var);
   }
   return pair->second;
 }
