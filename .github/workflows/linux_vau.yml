@@ -1,0 +1,72 @@
+name: MacOS Vau
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build_vau_with_pscm:
+    strategy:
+      matrix:
+        mode: [ Debug ]
+    runs-on: [ macos-12 ]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: deps
+        run: |
+          brew install ghostscript
+          brew install freetype
+
+      - name: Clone Deps
+        run: git submodule update --init
+        working-directory: ${{github.workspace}}
+
+      - name: Clone Vau
+        run: git clone https://github.com/PikachuHy/vau.git -b vau_pscm
+        working-directory: ${{github.workspace}}/..
+
+      - name: Use pscm
+        run: ln -s ${{github.workspace}} pscm
+        working-directory: ${{github.workspace}}/../vau
+
+      - name: Install ninja-build tool
+        uses: seanmiddleditch/gha-setup-ninja@master
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ github.job }}-${{ matrix.mode}}
+
+      - name: Configure CMake
+        run: CXX=clang++ CC=clang cmake -S ${{github.workspace}}/../vau -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --config ${{matrix.mode}} -j --verbose
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: TEXMACS_PATH=${{github.workspace}}/../vau/resources PSCM_LOAD_PATH=${{github.workspace}}/../vau/resources/progs ./Vau
+
+      - name: Check ps file
+        working-directory: ${{github.workspace}}/build
+        run: ls -lha
+
+      - name: Convert to pdf
+        working-directory: ${{github.workspace}}/build
+        run: ps2pdf vau-test.ps
+
+      - name: Check output pdf
+        working-directory: ${{github.workspace}}/build
+        run: |
+          ls -lha
+          ls -la vau-test.pdf2 | cut -d ' ' -f 8
+
+      - name: Check pdf size
+        working-directory: ${{github.workspace}}/build
+        run: bash ${{github.workspace}}/../vau/check.sh
+
+      
