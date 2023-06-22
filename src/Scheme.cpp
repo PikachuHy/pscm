@@ -29,7 +29,7 @@
 #include <string>
 #include <string_view>
 using namespace std::string_literals;
-#ifPSCM_STD_COMPAT
+#if PSCM_STD_COMPAT
 #include <ghc/filesystem.hpp>
 namespace fs = ghc::filesystem;
 #else
