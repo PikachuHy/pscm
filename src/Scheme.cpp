@@ -800,8 +800,34 @@ PSCM_DEFINE_BUILTIN_PROC(Scheme, "scm-error") {
 PSCM_DEFINE_BUILTIN_MACRO(Scheme, "eval", Label::APPLY_EVAL) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
-  auto expr = arg;
-  auto ret = scm.eval(env, expr);
-  return ret;
+  if (cdr(args).is_nil()) {
+    auto expr = arg;
+    auto ret = scm.eval(env, expr);
+    return ret;
+  }
+  else {
+    PSCM_THROW_EXCEPTION("wrong-number-of-args");
+    auto env_arg = cadr(args);
+    auto expr = arg;
+    auto ret = scm.eval(env, expr);
+    return ret;
+  }
+}
+
+PSCM_DEFINE_BUILTIN_MACRO(Scheme, "primitive-eval", Label::APPLY_EVAL) {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  if (cdr(args).is_nil()) {
+    auto expr = arg;
+    auto ret = scm.eval(env, expr);
+    return ret;
+  }
+  else {
+    PSCM_THROW_EXCEPTION("wrong-number-of-args");
+    auto env_arg = cadr(args);
+    auto expr = arg;
+    auto ret = scm.eval(env, expr);
+    return ret;
+  }
 }
 } // namespace pscm
