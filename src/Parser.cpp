@@ -775,8 +775,7 @@ void Parser::read_until(std::string& s, StringView end) {
 }
 
 Number operator""_num(const char *data, std::size_t len) {
-  std::string s(data, len);
-  NumberParser parser(s);
+  NumberParser parser(StringView(data, len));
   return parser.parse();
 }
 } // namespace pscm
