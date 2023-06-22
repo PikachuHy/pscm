@@ -1,7 +1,6 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
-#include <filesystem>
 #include <fstream>
 #include <pscm/Char.h>
 #include <pscm/Number.h>
@@ -17,7 +16,6 @@ using namespace doctest;
 using namespace pscm;
 using namespace std::string_literals;
 using namespace doctest;
-namespace fs = std::filesystem;
 
 TEST_CASE("testing append, 0") {
   auto f = [](Scheme& scm) {
