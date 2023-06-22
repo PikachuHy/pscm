@@ -144,7 +144,7 @@ public:
   [[nodiscard]] bool is_zero() const;
 
 private:
-  std::variant<std::monostate, int64_t, double, Rational, Complex> data_;
+  std::variant<std::monostate, int64_t, double, Rational, Complex> data_{};
 };
 
 Number operator""_num(const char *data, std::size_t len);
