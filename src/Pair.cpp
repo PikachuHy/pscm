@@ -182,7 +182,7 @@ PSCM_DEFINE_BUILTIN_PROC(List, "list?") {
   std::unordered_set<Pair *> p_set;
   auto arg = car(args);
   while (arg.is_pair()) {
-    if (p_set.contains(arg.to_pair())) {
+    if (p_set.find(arg.to_pair()) != p_set.end()) {
       return Cell::bool_false();
     }
     p_set.insert(arg.to_pair());

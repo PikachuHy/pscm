@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "compat.h"
 #include <ostream>
 #include <vector>
 

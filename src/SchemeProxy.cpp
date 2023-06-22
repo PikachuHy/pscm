@@ -24,7 +24,7 @@ bool SchemeProxy::load(const char *filename) {
 
 Module *SchemeProxy::create_module(Cell module_name) {
   PSCM_ASSERT(module_name.is_pair());
-  PSCM_ASSERT(!scm_.module_map_.contains(module_name));
+  PSCM_ASSERT(scm_.module_map_.find(module_name) == scm_.module_map_.end());
   auto m = scm_.create_module(module_name);
   scm_.module_map_[module_name] = m;
   scm_.current_module_ = m;
@@ -32,7 +32,7 @@ Module *SchemeProxy::create_module(Cell module_name) {
 }
 
 bool SchemeProxy::has_module(Cell module_name) const {
-  return scm_.module_map_.contains(module_name);
+  return scm_.module_map_.find(module_name) != scm_.module_map_.end();
 }
 
 Module *SchemeProxy::get_module(Cell module_name) const {

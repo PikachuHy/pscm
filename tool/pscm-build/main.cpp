@@ -1,4 +1,3 @@
-#include <filesystem>
 #include <fstream>
 #include <glob/glob.h>
 #include <iostream>
@@ -12,19 +11,25 @@
 #include <sstream>
 #include <unordered_map>
 #include <unordered_set>
+#if PSCM_STD_COMPAT
+#include <ghc/filesystem.hpp>
+namespace fs = ghc::filesystem;
+#else
+#include <filesystem>
 namespace fs = std::filesystem;
+#endif
 using namespace pscm;
 class CppLibraryRule;
 
 class Artifact {
 public:
-  virtual std::vector<std::string> get(std::string_view key) const = 0;
+  virtual std::vector<std::string> get(StringView key) const = 0;
   ;
 };
 
 class CppLibraryArtifact : public Artifact {
 public:
-  std::vector<std::string> get(std::string_view key) const override {
+  std::vector<std::string> get(StringView key) const override {
     if (key == "defines") {
       return defines_;
     }
@@ -52,7 +57,7 @@ private:
 
 class CppBinaryArtifact : public Artifact {
 public:
-  std::vector<std::string> get(std::string_view key) const override {
+  std::vector<std::string> get(StringView key) const override {
     PSCM_THROW_EXCEPTION("bad key: " + std::string(key));
   }
 
@@ -203,7 +208,7 @@ private:
         args);
   }
 
-  std::string construct_compile_command_line(std::string_view input, std::string_view output,
+  std::string construct_compile_command_line(StringView input, StringView output,
                                              const std::vector<Artifact *>& artifact_list) {
     std::stringstream ss;
     ss << "clang++";
@@ -254,7 +259,7 @@ private:
     return ss.str();
   }
 
-  std::string construct_link_command_line(std::string_view libname, const std::vector<std::string>& object_files,
+  std::string construct_link_command_line(StringView libname, const std::vector<std::string>& object_files,
                                           const std::vector<Artifact *>& artifact_list) {
     std::stringstream ss;
     ss << "llvm-ar";
@@ -401,7 +406,7 @@ private:
         args);
   }
 
-  std::string construct_compile_command_line(std::string_view input, std::string_view output,
+  std::string construct_compile_command_line(StringView input, StringView output,
                                              const std::vector<Artifact *>& artifact_list) {
     std::stringstream ss;
     ss << "clang++";
@@ -493,8 +498,8 @@ public:
 
   void run(const std::string& target) {
     if (target == ":all") {
-      for (auto& [name, rule] : rule_map_) {
-        run_rule(rule);
+      for (auto& entry : rule_map_) {
+        run_rule(entry.second);
       }
     }
     else {
@@ -508,7 +513,7 @@ public:
   }
 
   void run_rule(Rule *rule) {
-    if (artifact_map_.contains(":" + rule->name())) {
+    if (artifact_map_.find(":" + rule->name()) != artifact_map_.end()) {
       return;
     }
     for (const auto& dep : rule->deps()) {
@@ -544,7 +549,7 @@ int main(int argc, char **argv) {
   std::string target = ":all";
   if (argc >= 2) {
     target = argv[1];
-    if (!target.starts_with(":")) {
+    if (target.front() != ':') {
       SPDLOG_ERROR("bad target: " + target);
       return -1;
     }
@@ -567,7 +572,7 @@ int main(int argc, char **argv) {
   ifs.seekg(0, ifs.beg);
   std::string code;
   code.resize(sz);
-  ifs.read(code.data(), sz);
+  ifs.read((char *)code.data(), sz);
   std::unordered_map<std::string, Rule *> rule_map;
   try {
     Parser parser(code, filename);

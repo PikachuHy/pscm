@@ -25,7 +25,7 @@ namespace pscm {
 
 class NumberParser {
 public:
-  NumberParser(std::string_view data, SourceLocation loc = {})
+  NumberParser(StringView data, SourceLocation loc = {})
       : data_(data)
       , loc_(loc) {
   }
@@ -44,7 +44,7 @@ public:
     if (pos_ < data_.size() && data_[data_.size() - 1] == 'i') {
       return parse_complex();
     }
-    if (data_.find('/') != std::string_view::npos) {
+    if (data_.find('/') != StringView::npos) {
       auto num1_opt = parse_digit();
       if (data_[pos_] != '/') {
         PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: "s + std::string(data_));
@@ -111,7 +111,7 @@ public:
     }
     bool has_e = false;
     std::int64_t e_num = 0;
-    if (data_[pos_] == 'e' || data_[pos_] == 'E') {
+    if ((pos_ < data_.size()) && (data_[pos_] == 'e' || data_[pos_] == 'E')) {
       has_e = true;
       pos_++;
       auto sign = parse_sign(true);
@@ -168,6 +168,9 @@ public:
   }
 
   std::optional<bool> parse_sign(bool optional) {
+    if (pos_ >= data_.size()) {
+      return std::nullopt;
+    }
     if (data_[pos_] == '-') {
       pos_++;
       return true;
@@ -224,7 +227,7 @@ public:
   }
 
 private:
-  std::string_view data_;
+  StringView data_;
   std::size_t pos_{};
   SourceLocation loc_;
 };
@@ -233,7 +236,7 @@ Parser::Parser(std::string code)
     : code_(std::move(code)) {
 }
 
-Parser::Parser(std::string code, std::string_view filename)
+Parser::Parser(std::string code, StringView filename)
     : code_(std::move(code))
     , filename_(filename) {
   int start = 0;
@@ -449,7 +452,7 @@ Cell Parser::parse_literal() {
     }
     else if (tok == Token::SYMBOL) {
       auto key = last_symbol_->name();
-      static std::unordered_map<std::string_view, int> literal_map{
+      static std::unordered_map<StringView, int> literal_map{
         {"nul",  0},
         {"soh",  1},
         {"stx",  2},
@@ -756,14 +759,14 @@ char Parser::peek_char() {
   }
 }
 
-void Parser::read_until(std::string& s, std::string_view end) {
+void Parser::read_until(std::string& s, StringView end) {
   char ch;
   while (!is_eof()) {
     ch = peek_char();
     if (std::isspace(ch)) {
       break;
     }
-    if (end.find(ch) != std::string_view::npos) {
+    if (end.find(ch) != StringView::npos) {
       break;
     }
     s.push_back(ch);
@@ -772,7 +775,7 @@ void Parser::read_until(std::string& s, std::string_view end) {
 }
 
 Number operator""_num(const char *data, std::size_t len) {
-  NumberParser parser(std::string_view(data, len));
+  NumberParser parser(StringView(data, len));
   return parser.parse();
 }
 } // namespace pscm
