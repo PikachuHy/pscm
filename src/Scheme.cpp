@@ -635,7 +635,7 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
     }
     else {
       SPDLOG_ERROR("unsupported {} from {}", proc, proc.source_location());
-      repl();
+      // repl();
       PSCM_THROW_EXCEPTION("unsupported");
     }
   }
