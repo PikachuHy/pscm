@@ -35,6 +35,10 @@ see [Development Plan](https://github.com/PikachuHy/pscm/issues/13)
 
 ## Screenshot
 
+- vau
+
+![vau pdf preview](http://cdn.pikachu.net.cn/pscm/vau/vau-test_pdf.png)
+
 - pscm android app
 
 ![pscm android app](http://cdn.pikachu.net.cn/pscm/android.jpg)
