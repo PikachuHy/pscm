@@ -11,15 +11,15 @@ jobs:
     strategy:
       matrix:
         mode: [ Debug ]
-    runs-on: [ ubuntu-22.04 ]
+    runs-on: [ macos-12 ]
 
     steps:
       - uses: actions/checkout@v3
 
       - name: deps
         run: |
-          sudo apt-get -y install ghostscript
-          sudo apt-get -y install libfreetype-dev libsqlite-dev libjpeg-dev
+          sudo brew install ghostscript
+          sudo brew install freetype
 
       - name: Clone Deps
         run: git submodule update --init
