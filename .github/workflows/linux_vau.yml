@@ -49,7 +49,7 @@ jobs:
 
       - name: Test
         working-directory: ${{github.workspace}}/build
-        run: TEXMACS_PATH=${{github.workspace}}/../vau/resource PSCM_LOAD_PATH=${{github.workspace}}/../vau/resource/progs ./Vau
+        run: TEXMACS_PATH=${{github.workspace}}/../vau/resources PSCM_LOAD_PATH=${{github.workspace}}/../vau/resources/progs ./Vau
 
       - name: Check ps file
         working-directory: ${{github.workspace}}/build
