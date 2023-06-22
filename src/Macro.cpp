@@ -88,7 +88,6 @@ PSCM_DEFINE_BUILTIN_MACRO(Macro, "define-public-macro", Label::APPLY_DEFINE_MACR
   scm.current_module()->export_symbol(sym);
   // FIXME: module system
   scm.current_module()->env()->insert(sym, env->get(sym));
-  SPDLOG_ERROR("hack: add macro {} to {}", sym->name(), scm.current_module()->name());
   scm.vau_hack(sym, env->get(sym));
   return Cell::none();
 }
