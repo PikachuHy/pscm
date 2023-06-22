@@ -24,14 +24,19 @@
 #include "pscm/scm_utils.h"
 #include "pscm/version.h"
 #include "spdlog/spdlog.h"
-#include <filesystem>
 #include <fstream>
 #include <linenoise.hpp>
 #include <string>
 #include <string_view>
 using namespace std::string_literals;
 using namespace std::string_view_literals;
+#if __cplusplus <= 201402L
+#include <ghc/filesystem.hpp>
+namespace fs = ghc::filesystem;
+#else
+#include <filesystem>
 namespace fs = std::filesystem;
+#endif
 
 namespace pscm {
 
@@ -517,7 +522,7 @@ bool Scheme::load(const char *filename) {
   ifs.seekg(0, ifs.beg);
   std::string code;
   code.resize(sz);
-  ifs.read(code.data(), sz);
+  ifs.read((char *)code.data(), sz);
   try {
     Parser parser(code, filename);
     Cell expr = parser.next();
@@ -694,7 +699,7 @@ void Scheme::load_module(const std::string& filename, Cell module_name) {
   ifs.seekg(0, ifs.beg);
   std::string code;
   code.resize(sz);
-  ifs.read(code.data(), sz);
+  ifs.read((char *)code.data(), sz);
   try {
     Parser parser(code, filename);
     Cell expr = parser.next();

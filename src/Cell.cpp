@@ -268,7 +268,7 @@ std::ostream& operator<<(std::ostream& out, const Cell& cell) {
       if (p->second.is_pair()) {
         out << " ";
         p = p->second.to_pair();
-        if (p_set.contains(p)) {
+        if (p_set.find(p) != p_set.end()) {
           out << ". ";
           out << "#" << num << "#";
           break;
@@ -281,7 +281,7 @@ std::ostream& operator<<(std::ostream& out, const Cell& cell) {
         out << " . ";
         if (p->second.is_pair()) {
           auto p2 = p->second.to_pair();
-          if (p_set.contains(p2)) {
+          if (p_set.find(p2) != p_set.end()) {
             out << ". ";
             out << "#" << num << "#";
             break;
@@ -421,7 +421,7 @@ bool operator==(const Cell& lhs, const Cell::Vec& rhs) {
   for (int i = 0; i < val->size(); ++i) {
     auto l = val->at(i);
     auto r = rhs.at(i);
-    if (l != r) {
+    if (!(l == r)) {
       return false;
     }
   }

@@ -7,8 +7,13 @@
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
+#if __cplusplus <= 201402L
+#include <ghc/filesystem.hpp>
+namespace fs = ghc::filesystem;
+#else
 #include <filesystem>
 namespace fs = std::filesystem;
+#endif
 
 namespace pscm {
 
@@ -53,7 +58,7 @@ std::string check_module(Cell name, const std::vector<std::string>& load_path_ve
   bool module_found = false;
   for (int i = 0; i < load_path_vec.size(); ++i) {
     auto load_path = load_path_vec.at(i);
-    if (!load_path.ends_with('/')) {
+    if (load_path.back() != '/') {
       load_path += '/';
     }
     fullname = load_path + path;
@@ -180,7 +185,7 @@ std::ostream& operator<<(std::ostream& os, const Module& m) {
 }
 
 void Module::export_symbol(Symbol *sym) {
-  if (export_sym_list_.contains(sym)) {
+  if (export_sym_list_.find(sym) != export_sym_list_.end()) {
     PSCM_THROW_EXCEPTION(Cell(sym).to_string() + "has already exported");
   }
   export_sym_list_.insert(sym);
