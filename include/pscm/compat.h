@@ -1,7 +1,28 @@
 #pragma once
 #if __cplusplus <= 201402L
 #include <mpark/variant.hpp>
+#include <nonstd/string_view.hpp>
+#include <spdlog/spdlog.h>
 #include <tl/optional.hpp>
+
+namespace pscm {
+using StringView = nonstd::string_view;
+
+} // namespace pscm
+
+template <>
+class fmt::formatter<pscm::StringView> {
+public:
+  auto parse(format_parse_context& ctx) {
+    // PSCM_THROW_EXCEPTION("not supported now");
+    auto i = ctx.begin();
+    return i;
+  }
+
+  auto format(const pscm::StringView& s, format_context& ctx) const {
+    return format_to(ctx.out(), "{}", std::string(s));
+  }
+};
 
 namespace std {
 
@@ -66,4 +87,10 @@ inline constexpr const T&& get(const variant<Ts...>&& v) {
 }
 
 } // namespace std
+#else
+#include <string_view>
+
+namespace pscm {
+using StringView = std::string_view;
+}
 #endif

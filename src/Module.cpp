@@ -45,7 +45,7 @@ std::string check_module(Cell name, const std::vector<std::string>& load_path_ve
       [&path](Cell expr, auto) {
         PSCM_ASSERT(expr.is_sym());
         auto name = expr.to_sym()->name();
-        path += name;
+        path += std::string(name);
         path += '/';
       },
       name);

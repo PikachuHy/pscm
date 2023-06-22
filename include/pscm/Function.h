@@ -27,7 +27,7 @@ public:
   Cell call(Cell args, SourceLocation loc = {});
   friend std::ostream& operator<<(std::ostream& out, const Function& func);
 
-  std::string_view name() const {
+  StringView name() const {
     return name_;
   }
 

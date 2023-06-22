@@ -50,6 +50,7 @@ if (USE_CPP_STD_COMPAT)
     target_include_directories(pscm PUBLIC 3rd/variant/include)
     target_include_directories(pscm PUBLIC 3rd/optional/include)
     target_include_directories(pscm PUBLIC 3rd/filesystem/include)
+    target_include_directories(pscm PUBLIC 3rd/string-view-lite/include)
 endif ()
 
 aux_source_directory(src PSCM_SRCS)
