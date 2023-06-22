@@ -11,6 +11,10 @@ public:
   friend bool operator==(const Keyword& lhs, const Keyword& rhs);
   HashCodeType hash_code() const;
 
+  Symbol *sym() const {
+    return sym_;
+  }
+
 private:
   Symbol *sym_;
 };

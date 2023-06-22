@@ -28,4 +28,12 @@ PSCM_DEFINE_BUILTIN_PROC(Keyword, "keyword?") {
   auto arg = car(args);
   return Cell(arg.is_keyword());
 }
+
+PSCM_DEFINE_BUILTIN_PROC(Keyword, "keyword->symbol") {
+  PSCM_ASSERT(args.is_pair());
+  auto arg = car(args);
+  PSCM_ASSERT(arg.is_keyword());
+  auto keyword = arg.to_keyword();
+  return keyword->sym();
+}
 } // namespace pscm
