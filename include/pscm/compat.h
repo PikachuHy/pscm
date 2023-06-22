@@ -13,13 +13,13 @@ using StringView = nonstd::string_view;
 template <>
 class fmt::formatter<pscm::StringView> {
 public:
-  auto parse(format_parse_context& ctx) {
+  auto parse(format_parse_context& ctx) -> format_parse_context::iterator {
     // PSCM_THROW_EXCEPTION("not supported now");
     auto i = ctx.begin();
     return i;
   }
 
-  auto format(const pscm::StringView& s, format_context& ctx) const {
+  auto format(const pscm::StringView& s, format_context& ctx) const -> format_context::iterator {
     return format_to(ctx.out(), "{}", std::string(s));
   }
 };
