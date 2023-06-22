@@ -115,6 +115,10 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "cond", Label::APPLY_COND) {
         if (expr.is_nil()) {
           PSCM_THROW_EXCEPTION("Bad cond clause (else) in expression " + args_bak.to_string());
         }
+        while (expr.is_pair() && cdr(expr).is_pair()) {
+          [[maybe_unused]] auto ret = scm.eval(env, car(expr));
+          expr = cdr(expr);
+        }
         return car(expr);
       }
     }
