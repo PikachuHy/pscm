@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.22)
 project(pscm VERSION 0.2.0 LANGUAGES CXX)
-set(CMAKE_CXX_STANDARD 14)
+if (WIN32)
+    set(CMAKE_CXX_STANDARD 20)
+else ()
+    set(CMAKE_CXX_STANDARD 14)
+endif ()
+
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 option(USE_CPP_STD_COMPAT "use c++14 std library compat" ON)
@@ -50,6 +56,7 @@ if (USE_CPP_STD_COMPAT)
     target_include_directories(pscm PUBLIC 3rd/variant/include)
     target_include_directories(pscm PUBLIC 3rd/optional/include)
     target_include_directories(pscm PUBLIC 3rd/filesystem/include)
+    target_include_directories(pscm PUBLIC 3rd/string-view-lite/include)
 endif ()
 
 aux_source_directory(src PSCM_SRCS)

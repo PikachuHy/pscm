@@ -11,7 +11,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <unordered_set>
-#if __cplusplus <= 201402L
+#if PSCM_STD_COMPAT
 #include <ghc/filesystem.hpp>
 namespace fs = ghc::filesystem;
 #else
@@ -23,13 +23,13 @@ class CppLibraryRule;
 
 class Artifact {
 public:
-  virtual std::vector<std::string> get(std::string_view key) const = 0;
+  virtual std::vector<std::string> get(StringView key) const = 0;
   ;
 };
 
 class CppLibraryArtifact : public Artifact {
 public:
-  std::vector<std::string> get(std::string_view key) const override {
+  std::vector<std::string> get(StringView key) const override {
     if (key == "defines") {
       return defines_;
     }
@@ -57,7 +57,7 @@ private:
 
 class CppBinaryArtifact : public Artifact {
 public:
-  std::vector<std::string> get(std::string_view key) const override {
+  std::vector<std::string> get(StringView key) const override {
     PSCM_THROW_EXCEPTION("bad key: " + std::string(key));
   }
 
@@ -208,7 +208,7 @@ private:
         args);
   }
 
-  std::string construct_compile_command_line(std::string_view input, std::string_view output,
+  std::string construct_compile_command_line(StringView input, StringView output,
                                              const std::vector<Artifact *>& artifact_list) {
     std::stringstream ss;
     ss << "clang++";
@@ -259,7 +259,7 @@ private:
     return ss.str();
   }
 
-  std::string construct_link_command_line(std::string_view libname, const std::vector<std::string>& object_files,
+  std::string construct_link_command_line(StringView libname, const std::vector<std::string>& object_files,
                                           const std::vector<Artifact *>& artifact_list) {
     std::stringstream ss;
     ss << "llvm-ar";
@@ -406,7 +406,7 @@ private:
         args);
   }
 
-  std::string construct_compile_command_line(std::string_view input, std::string_view output,
+  std::string construct_compile_command_line(StringView input, StringView output,
                                              const std::vector<Artifact *>& artifact_list) {
     std::stringstream ss;
     ss << "clang++";

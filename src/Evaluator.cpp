@@ -28,7 +28,7 @@
 #include <ostream>
 #include <sstream>
 #include <unordered_set>
-#if __cplusplus <= 201402L
+#if PSCM_STD_COMPAT
 #include <ghc/filesystem.hpp>
 namespace fs = ghc::filesystem;
 #else

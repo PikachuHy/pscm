@@ -22,3 +22,6 @@
 [submodule "3rd/filesystem"]
 	path = 3rd/filesystem
 	url = https://github.com/gulrak/filesystem.git
+[submodule "3rd/string-view-lite"]
+	path = 3rd/string-view-lite
+	url = https://github.com/martinmoene/string-view-lite.git

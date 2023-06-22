@@ -191,7 +191,7 @@ private:
 
 class FilePort : public Port {
 public:
-  FilePort(std::string_view filename, std::ios_base::openmode mode)
+  FilePort(StringView filename, std::ios_base::openmode mode)
       : filename_(filename)
       , mode_(mode) {
     f_.open(filename_, mode);

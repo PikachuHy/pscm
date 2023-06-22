@@ -41,7 +41,7 @@ private:
     Cell data;
   };
 
-  std::unordered_map<std::string_view, Entry *> map_;
+  std::unordered_map<StringView, Entry *> map_;
   std::string name_;
   SymbolTable *parent_;
 };
