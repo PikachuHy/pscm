@@ -16,7 +16,7 @@ using namespace doctest;
 using namespace pscm;
 using namespace std::string_literals;
 using namespace doctest;
-#if __cplusplus <= 201402L
+#if PSCM_STD_COMPAT
 #include <ghc/filesystem.hpp>
 namespace fs = ghc::filesystem;
 #else

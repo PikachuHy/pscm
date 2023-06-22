@@ -1,5 +1,18 @@
 #pragma once
+#ifdef _MSVC_LANG
+#if _MSVC_LANG <= 201402L
+#define PSCM_STD_COMPAT 1
+#else
+#define PSCM_STD_COMPAT 0
+#endif
+#else
 #if __cplusplus <= 201402L
+#define PSCM_STD_COMPAT 1
+#else
+#define PSCM_STD_COMPAT 0
+#endif
+#endif
+#if PSCM_STD_COMPAT
 #include <mpark/variant.hpp>
 #include <nonstd/string_view.hpp>
 #include <spdlog/spdlog.h>

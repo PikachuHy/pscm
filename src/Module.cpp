@@ -7,7 +7,7 @@
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
-#if __cplusplus <= 201402L
+#if PSCM_STD_COMPAT
 #include <ghc/filesystem.hpp>
 namespace fs = ghc::filesystem;
 #else
