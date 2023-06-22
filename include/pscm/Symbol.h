@@ -5,7 +5,6 @@
 #pragma once
 #include "pscm/Cell.h"
 #include <string>
-#include <string_view>
 
 namespace pscm {
 
@@ -15,14 +14,14 @@ public:
       : name_(std::move(name)) {
   }
 
-  Symbol(std::string name, std::string_view filename, std::size_t row, std::size_t col)
+  Symbol(std::string name, StringView filename, std::size_t row, std::size_t col)
       : name_(std::move(name))
       , filename_(filename)
       , row_(row)
       , col_(col) {
   }
 
-  std::string_view name() const {
+  StringView name() const {
     return name_;
   }
 

@@ -13,7 +13,7 @@ using namespace std::string_literals;
 namespace pscm {
 bool SymbolTable::contains(Symbol *sym) const {
   PSCM_ASSERT(sym);
-  if (map_.contains(sym->name())) {
+  if (map_.find(sym->name()) != map_.end()) {
     return true;
   }
   if (parent_) {
@@ -35,7 +35,7 @@ bool SymbolTable::remove(Symbol *sym) {
 Cell SymbolTable::get(Symbol *sym, SourceLocation loc) const {
   PSCM_ASSERT(sym);
   auto name = sym->name();
-  if (map_.contains(name)) {
+  if (map_.find(name) != map_.end()) {
     return map_.at(name)->data;
   }
   if (parent_) {
@@ -46,7 +46,7 @@ Cell SymbolTable::get(Symbol *sym, SourceLocation loc) const {
 
 Cell SymbolTable::get_or(Symbol *sym, Cell default_value, SourceLocation loc) const {
   PSCM_ASSERT(sym);
-  if (map_.contains(sym->name())) {
+  if (map_.find(sym->name()) != map_.end()) {
     return map_.at(sym->name())->data;
   }
   if (parent_) {
@@ -59,7 +59,7 @@ Cell SymbolTable::get_or(Symbol *sym, Cell default_value, SourceLocation loc) co
 void SymbolTable::set(Symbol *sym, Cell value, SourceLocation loc) {
   PSCM_ASSERT(sym);
   auto name = sym->name();
-  if (map_.contains(name)) {
+  if (map_.find(name) != map_.end()) {
     map_[name]->data = value;
     return;
   }
@@ -76,11 +76,12 @@ void SymbolTable::use(SymbolTable *env, Symbol *sym) {
 }
 
 void SymbolTable::use(const SymbolTable& env) {
-  for (auto [sym, val] : env.map_) {
-    if (this->map_.contains(sym)) {
+  for (auto& entry : env.map_) {
+    auto sym = entry.first;
+    if (this->map_.find(sym) != this->map_.end()) {
       continue;
     }
-    this->map_[sym] = val;
+    this->map_[sym] = entry.second;
   }
 }
 

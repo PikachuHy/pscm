@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "compat.h"
 #include <cstdlib>
 #include <iostream>
 #include <variant>

@@ -13,7 +13,7 @@
 using namespace std::string_literals;
 
 namespace pscm {
-Cell do_case(auto item, Cell clause, auto args) {
+Cell do_case(Cell item, Cell clause, Cell args) {
   if (!clause.is_pair()) {
     PSCM_THROW_EXCEPTION("Bad case clause " + clause.to_string() + " in expression " + args.to_string());
   }

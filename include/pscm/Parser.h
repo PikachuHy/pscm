@@ -15,7 +15,7 @@ class Number;
 class Parser {
 public:
   Parser(std::string code);
-  Parser(std::string code, std::string_view filename);
+  Parser(std::string code, StringView filename);
   Parser(std::istream *in);
   Cell parse();
   Cell next();
@@ -50,7 +50,7 @@ private:
   void advance();
   char next_char();
   char peek_char();
-  void read_until(std::string& s, std::string_view end);
+  void read_until(std::string& s, StringView end);
 
 private:
   std::string code_;
@@ -64,8 +64,8 @@ private:
   bool is_file_ = false;
   std::size_t row_ = 0;
   std::size_t col_ = 0;
-  std::vector<std::string_view> lines_;
-  std::string_view filename_;
+  std::vector<StringView> lines_;
+  StringView filename_;
 };
 
 } // namespace pscm

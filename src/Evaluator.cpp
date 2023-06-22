@@ -23,13 +23,18 @@
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
-#include <filesystem>
 #include <fstream>
 #include <numeric>
 #include <ostream>
 #include <sstream>
 #include <unordered_set>
+#if PSCM_STD_COMPAT
+#include <ghc/filesystem.hpp>
+namespace fs = ghc::filesystem;
+#else
+#include <filesystem>
 namespace fs = std::filesystem;
+#endif
 #define PSCM_PUSH_STACK(reg_name)                                                                                      \
   SPDLOG_DEBUG("push {} stack: {}", #reg_name, stack_.reg_name.size());                                                \
   reg_type_stack_.push_back(reg_##reg_name);                                                                           \
@@ -76,7 +81,7 @@ public:
     return i;
   }
 
-  auto format(const pscm::Label& pos, auto& ctx) const {
+  auto format(const pscm::Label& pos, format_context& ctx) const {
     std::stringstream ss;
     ss << pos;
     return format_to(ctx.out(), "{}", ss.str());
@@ -503,7 +508,7 @@ Cell proc_gcd(Cell args) {
   PSCM_ASSERT(num2->is_int());
   auto n1 = num1->to_int();
   auto n2 = num2->to_int();
-  auto ret = std::gcd(n1, n2);
+  auto ret = std::gcd(std::abs(n1), std::abs(n2));
   return new Number(ret);
 }
 
@@ -519,7 +524,7 @@ Cell proc_lcm(Cell args) {
   PSCM_ASSERT(num2->is_int());
   auto n1 = num1->to_int();
   auto n2 = num2->to_int();
-  auto ret = std::lcm(n1, n2);
+  auto ret = std::lcm(std::abs(n1), std::abs(n2));
   return new Number(ret);
 }
 
@@ -2396,7 +2401,8 @@ bool Evaluator::load(const char *filename, SymbolTable *env) {
   ifs.seekg(0, ifs.beg);
   std::string code;
   code.resize(sz);
-  ifs.read(code.data(), sz);
+  char *data = (char *)code.data();
+  ifs.read(data, sz);
   try {
     Parser parser(code, filename);
     Cell expr = parser.next();

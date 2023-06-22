@@ -22,18 +22,18 @@ cc_library(
         ["include/pscm/*.h"],
     ) + [
         ":include/pscm/version.h",
-    ] + [
-        "3rd/UniversalStacktrace/ust/ust.hpp",
-        "3rd/cpp-linenoise/linenoise.hpp",
     ],
-    copts = ["-std=c++20"],
+    copts = ["-std=c++14"],
     includes = [
-        "3rd/UniversalStacktrace/ust",
-        "3rd/cpp-linenoise",
         "include",
     ],
     visibility = ["//visibility:public"],
-    deps = ["@spdlog"],
+    deps = [
+        "//3rd:cpp-linenoise",
+        "//3rd:std-compat",
+        "//3rd:ust",
+        "@spdlog",
+    ],
 )
 
 cc_binary(

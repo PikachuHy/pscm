@@ -27,7 +27,7 @@ jobs:
         run: bazel build \:all
 
       - name: Test
-        run: bazel test \:all
+        run: bazel test \:all --test_output=errors
 
       - name: Build ios App
         run: bazel build //ios/app:ios-app

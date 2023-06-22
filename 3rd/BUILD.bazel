@@ -1,0 +1,36 @@
+cc_library(
+    name = "std-compat",
+    hdrs = glob([
+        "variant/include/**",
+        "string-view-lite/include/**",
+        "optional/include/**",
+        "filesystem/include/**",
+    ]),
+    includes = [
+        "filesystem/include",
+        "optional/include",
+        "string-view-lite/include",
+        "variant/include",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "ust",
+    hdrs = glob([
+        "UniversalStacktrace/ust/**",
+    ]),
+    includes = [
+        "UniversalStacktrace/ust",
+    ],
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "cpp-linenoise",
+    hdrs = ["cpp-linenoise/linenoise.hpp"],
+    includes = [
+        "cpp-linenoise",
+    ],
+    visibility = ["//visibility:public"],
+)

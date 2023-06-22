@@ -1,7 +1,6 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
-#include <filesystem>
 #include <fstream>
 #include <pscm/Char.h>
 #include <pscm/Number.h>
@@ -17,8 +16,13 @@ using namespace doctest;
 using namespace pscm;
 using namespace std::string_literals;
 using namespace doctest;
+#if PSCM_STD_COMPAT
+#include <ghc/filesystem.hpp>
+namespace fs = ghc::filesystem;
+#else
+#include <filesystem>
 namespace fs = std::filesystem;
-
+#endif
 TEST_CASE("testing call-with-output-file") {
 
   auto f = [](Scheme& scm) {
