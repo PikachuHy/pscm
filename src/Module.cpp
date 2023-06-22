@@ -158,6 +158,9 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(Module, "module-use!", Label::TODO, "(mod
 }
 
 PSCM_DEFINE_BUILTIN_MACRO(Module, "export", Label::APPLY_EXPORT) {
+  if (args.is_nil()) {
+    return Cell::none();
+  }
   PSCM_ASSERT(args.is_pair());
   for_each(
       [&scm](Cell expr, auto) {
