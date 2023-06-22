@@ -198,6 +198,10 @@ public:
     return tag_ == Tag::NIL;
   }
 
+  bool is_ex() const {
+    return tag_ == Tag::EXCEPTION;
+  }
+
   bool is_bool() const {
     return tag_ == Tag::BOOL;
   }
