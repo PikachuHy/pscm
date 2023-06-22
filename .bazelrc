@@ -1,0 +1,9 @@
+# Don't inherit PATH and LD_LIBRARY_PATH.
+build --incompatible_strict_action_env
+
+# Make sure rules_cc uses the correct transition mechanism.
+# build --incompatible_enable_cc_toolchain_resolution
+
+common:android_arm64-v8a --crosstool_top=@androidndk//:toolchain
+common:android_arm64-v8a --cpu=arm64-v8a
+common:android_arm64-v8a --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
