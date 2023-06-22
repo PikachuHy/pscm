@@ -18,7 +18,8 @@ jobs:
 
       - name: deps
         run: |
-          sudo apt install ghostscript
+          sudo apt-get -y install ghostscript
+          sudo apt-get -y install libfreetype-dev libsqlite-dev libjpeg-dev
 
       - name: Clone Deps
         run: git submodule update --init
