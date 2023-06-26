@@ -7,7 +7,7 @@ gen_pscm_version_header(
     git_hash = "unknown",
     header_file = "include/pscm/version.h",
     version_major = "0",
-    version_minor = "1",
+    version_minor = "3",
     version_patch = "0",
 )
 

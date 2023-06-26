@@ -1,6 +1,6 @@
 add_requires("spdlog")
 add_requires("doctest")
-set_version("0.2.0")
+set_version("0.3.0")
 target("pscm") do
     set_kind("static")
     add_configfiles(

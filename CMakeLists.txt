@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(pscm VERSION 0.2.0 LANGUAGES CXX)
+project(pscm VERSION 0.3.0 LANGUAGES CXX)
 if (WIN32)
     set(CMAKE_CXX_STANDARD 20)
 else ()
