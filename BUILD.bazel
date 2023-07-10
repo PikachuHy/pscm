@@ -1,5 +1,6 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("version.bzl", "gen_pscm_version_header")
+load("test.bzl", "collect_pscm_tests")
 
 gen_pscm_version_header(
     name = "pscm-version-header",
@@ -43,104 +44,4 @@ cc_binary(
     deps = [":pscm"],
 )
 
-PSCM_TEST_COPTS = [
-    "-I",
-    "3rd/doctest",
-    "-std=c++20",
-]
-
-PSCM_TEST_DEPS = [
-    ":pscm",
-    "//3rd/doctest/doctest:doctest",
-]
-
-cc_test(
-    name = "apply_test",
-    srcs = ["test/apply_tests.cpp"],
-    copts = PSCM_TEST_COPTS,
-    deps = PSCM_TEST_DEPS,
-)
-
-cc_test(
-    name = "cond_test",
-    srcs = ["test/cond_tests.cpp"],
-    copts = PSCM_TEST_COPTS,
-    deps = PSCM_TEST_DEPS,
-)
-
-cc_test(
-    name = "map_test",
-    srcs = ["test/map_tests.cpp"],
-    copts = PSCM_TEST_COPTS,
-    deps = PSCM_TEST_DEPS,
-)
-
-cc_test(
-    name = "do_test",
-    srcs = ["test/do_tests.cpp"],
-    copts = PSCM_TEST_COPTS,
-    deps = PSCM_TEST_DEPS,
-)
-
-cc_test(
-    name = "number_test",
-    srcs = ["test/number_tests.cpp"],
-    copts = PSCM_TEST_COPTS,
-    deps = PSCM_TEST_DEPS,
-)
-
-cc_test(
-    name = "callcc_test",
-    srcs = ["test/callcc_tests.cpp"],
-    copts = PSCM_TEST_COPTS,
-    deps = PSCM_TEST_DEPS,
-)
-
-cc_test(
-    name = "for_each_test",
-    srcs = ["test/for_each_tests.cpp"],
-    copts = PSCM_TEST_COPTS,
-    deps = PSCM_TEST_DEPS,
-)
-
-cc_test(
-    name = "parser_test",
-    srcs = ["test/parser_tests.cpp"],
-    copts = PSCM_TEST_COPTS,
-    deps = PSCM_TEST_DEPS,
-)
-
-cc_test(
-    name = "cell_test",
-    srcs = ["test/cell_tests.cpp"],
-    copts = PSCM_TEST_COPTS,
-    deps = PSCM_TEST_DEPS,
-)
-
-cc_test(
-    name = "list_test",
-    srcs = ["test/list_tests.cpp"],
-    copts = PSCM_TEST_COPTS,
-    deps = PSCM_TEST_DEPS,
-)
-
-cc_test(
-    name = "port_test",
-    srcs = ["test/port_tests.cpp"],
-    copts = PSCM_TEST_COPTS,
-    deps = PSCM_TEST_DEPS,
-)
-
-cc_test(
-    name = "r4rs_test",
-    srcs = glob(["test/r4rs/*.cpp"]),
-    copts = PSCM_TEST_COPTS,
-    deps = PSCM_TEST_DEPS,
-)
-
-cc_test(
-    name = "sicp_test",
-    srcs = glob(["test/sicp/*.cpp"]),
-    copts = PSCM_TEST_COPTS,
-    deps = PSCM_TEST_DEPS,
-)
+collect_pscm_tests()
