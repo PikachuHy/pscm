@@ -32,5 +32,16 @@ jobs:
       - name: Build ios App
         run: bazel build //ios/app:ios-app
 
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ios-pscm
+          path: |
+            bazel-bin/ios/app/ios-app.runfiles/dev_pscm/ios/app/ios-app.ipa
+
       - name: Build wasm
         run: bazel build //wasm:pscm-wasm
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: macos-pscm-wasm
+          path: bazel-bin/wasm/
