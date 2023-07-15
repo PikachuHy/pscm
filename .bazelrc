@@ -1,2 +1,3 @@
 build --incompatible_strict_action_env
 build --subcommands --verbose_failures
+build --workspace_status_command "python3 workspace_status.py"

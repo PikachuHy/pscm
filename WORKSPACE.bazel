@@ -144,3 +144,19 @@ emsdk_emscripten_deps(emscripten_version = "3.1.35")
 load("@emsdk//:toolchains.bzl", "register_emscripten_toolchains")
 
 register_emscripten_toolchains()
+
+http_archive(
+    name = "rules_nodejs",
+    sha256 = "a833b08fc846e27a73ac2b7062e4f48cace0e72a072c6c3fa756847dc44246dd",
+    strip_prefix = "rules_nodejs-6.0.0/",
+    url = "https://github.com/bazelbuild/rules_nodejs/releases/download/v6.0.0/rules_nodejs-v6.0.0.tar.gz",
+)
+
+load("@rules_nodejs//nodejs:repositories.bzl", "nodejs_register_toolchains", "rules_nodejs_dependencies")
+
+rules_nodejs_dependencies()
+
+nodejs_register_toolchains(
+    name = "nodejs",
+    node_version = "20.4.0",
+)

@@ -244,7 +244,8 @@ Cell unquote = new Macro("unquote", Label::APPLY_QUOTE);
 Cell apply = new Macro("builtin_apply", Label::APPLY_APPLY);
 
 Cell version(Cell) {
-  static String ver(std::string() + PSCM_VERSION + " (" + GIT_BRANCH + "@" + GIT_HASH + ")");
+  static String ver(std::string() + std::string(VersionInfo::PSCM_VERSION) + " (" +
+                    std::string(VersionInfo::GIT_BRANCH) + "@" + std::string(VersionInfo::GIT_HASH) + ")");
   return &ver;
 }
 

@@ -1,12 +1,18 @@
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
-load("version.bzl", "gen_pscm_version_header")
+load("version.bzl", "gen_pscm_version_info")
 load("test.bzl", "collect_pscm_tests")
 
-gen_pscm_version_header(
-    name = "pscm-version-header",
-    git_branch = "unknown",
-    git_hash = "unknown",
-    header_file = "include/pscm/version.h",
+py_binary(
+    name = "gen_cpp",
+    srcs = ["gen_cpp.py"],
+)
+
+gen_pscm_version_info(
+    name = "pscm-version-info",
+    branch_variable_name = "GIT_BRANCH",
+    commit_variable_name = "GIT_COMMIT_HASH",
+    dirty_variable_name = "GIT_DIRTY",
+    source_file = "src/version.cpp",
     version_major = "0",
     version_minor = "3",
     version_patch = "0",
@@ -18,12 +24,12 @@ cc_library(
         [
             "src/*.cpp",
         ],
-    ),
+    ) + [
+        ":src/version.cpp",
+    ],
     hdrs = glob(
         ["include/pscm/*.h"],
-    ) + [
-        ":include/pscm/version.h",
-    ],
+    ),
     copts = select({
         # disable error: result of comparison of constant -1 with expression of type 'char' is always false
         "@platforms//cpu:wasm32": [

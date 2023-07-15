@@ -1,0 +1,9 @@
+#include "pscm/version.h"
+namespace pscm {
+const char* VersionInfo::GIT_BRANCH = "@GIT_BRANCH@";
+const char* VersionInfo::GIT_HASH = "@GIT_HASH@";
+const char* VersionInfo::PSCM_VERSION = "@pscm_VERSION@";
+const int VersionInfo::PSCM_VERSION_MAJOR = @pscm_VERSION_MAJOR@;
+const int VersionInfo::PSCM_VERSION_MINOR = @pscm_VERSION_MINOR@;
+const int VersionInfo::PSCM_VERSION_PATCH = @pscm_VERSION_PATCH@;
+}

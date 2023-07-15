@@ -29,9 +29,14 @@ execute_process(
 )
 message(STATUS "GIT_BRANCH: ${GIT_BRANCH}")
 message(STATUS "GIT_HASH: ${GIT_HASH}")
+#configure_file(
+#        ${CMAKE_CURRENT_SOURCE_DIR}/include/pscm/version.h.in
+#        ${CMAKE_CURRENT_BINARY_DIR}/generate/pscm/version.h
+#        @ONLY
+#)
 configure_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/pscm/version.h.in
-        ${CMAKE_CURRENT_BINARY_DIR}/generate/pscm/version.h
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/version.cpp.in
+        ${CMAKE_CURRENT_BINARY_DIR}/generate/src/version.cpp
         @ONLY
 )
 # use ccache
@@ -61,6 +66,9 @@ endif ()
 
 aux_source_directory(src PSCM_SRCS)
 target_sources(pscm PRIVATE ${PSCM_SRCS})
+target_sources(pscm PRIVATE
+        ${CMAKE_CURRENT_BINARY_DIR}/generate/src/version.cpp
+)
 target_link_libraries(pscm PUBLIC spdlog::spdlog)
 if (EMSCRIPTEN)
     target_compile_definitions(pscm PUBLIC WASM_PLATFORM)
