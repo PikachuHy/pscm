@@ -1,0 +1,17 @@
+load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
+
+cc_binary(
+    name = "pscm",
+    srcs = ["pscm.cpp"],
+    copts = ["-std=c++20"],
+    deps = ["//:pscm"],
+)
+
+wasm_cc_binary(
+    name = "pscm-wasm",
+    cc_target = ":pscm",
+    outputs = [
+        "pscm.js",
+        "pscm.wasm",
+    ],
+)

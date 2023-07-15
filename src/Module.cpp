@@ -247,7 +247,7 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(Module, "module-map", Label::APPLY_APPLY,
   arg2 = env->get(arg2.to_sym());
   SPDLOG_INFO("args: {}, {}", arg1.to_string(), arg2.to_string());
   PSCM_ASSERT(arg1.is_proc());
-  auto proc = arg1.to_proc();
+  // auto proc = arg1.to_proc();
   auto ret = cons(nil, nil);
   auto it = ret;
   while (arg2.is_pair()) {

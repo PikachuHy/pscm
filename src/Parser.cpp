@@ -102,12 +102,11 @@ public:
       PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: "s + std::string(data_));
     }
     bool has_point = false;
-    std::int64_t point_num = 0;
     if (pos_ < data_.size() && data_[pos_] == '.') {
       has_point = true;
       has_point = true;
       pos_++;
-      point_num = parse_digit().value();
+      parse_digit().value();
     }
     bool has_e = false;
     std::int64_t e_num = 0;
@@ -557,8 +556,8 @@ Cell Parser::parse_literal() {
 
 Cell Parser::parse_string() {
   auto row = row_;
-  auto col = col_;
-  auto start = pos_;
+  // auto col = col_;
+  // auto start = pos_;
   std::string s;
   while (!is_eof()) {
     if (peek_char() == '"') {

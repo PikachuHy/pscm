@@ -24,10 +24,35 @@ cc_library(
     ) + [
         ":include/pscm/version.h",
     ],
-    copts = ["-std=c++14"],
+    copts = select({
+        # disable error: result of comparison of constant -1 with expression of type 'char' is always false
+        "@platforms//cpu:wasm32": [
+            "-Wno-tautological-constant-out-of-range-compare",
+            "-std=c++20",
+        ],
+        "//conditions:default": ["-std=c++14"],
+    }),
+    defines = select({
+        "@platforms//cpu:wasm32": ["WASM_PLATFORM"],
+        "//conditions:default": [],
+    }),
+    features = select({
+        # only wasm need add exceptions explict
+        "@platforms//cpu:wasm32": [
+            "exceptions",
+        ],
+        "//conditions:default": [],
+    }),
     includes = [
         "include",
     ],
+    linkopts = select({
+        "@platforms//cpu:wasm32": [
+            "-sEXPORTED_RUNTIME_METHODS=ccall,cwrap",
+            "-sSTACK_SIZE=6553600",
+        ],
+        "//conditions:default": [],
+    }),
     visibility = ["//visibility:public"],
     deps = [
         "//3rd:cpp-linenoise",

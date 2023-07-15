@@ -31,3 +31,6 @@ jobs:
 
       - name: Build ios App
         run: bazel build //ios/app:ios-app
+
+      - name: Build wasm
+        run: bazel build //wasm:pscm-wasm
