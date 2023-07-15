@@ -2,10 +2,11 @@
 name: Deploy static content to Pages
 
 on:
-  # Runs on pushes targeting the default branch
-  push:
-    branches: [ "master" ]
-
+  workflow_run:
+    workflows: [ "Linux Bazel" ]
+    branches: [ master ]
+    types:
+      - completed
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
@@ -19,9 +20,6 @@ permissions:
 concurrency:
   group: "pages"
   cancel-in-progress: true
-env:
-  EM_VERSION: 3.1.33
-  EM_CACHE_FOLDER: 'emsdk-cache'
 jobs:
   # Single deploy job since we're just deploying
   deploy:
@@ -35,41 +33,33 @@ jobs:
         run: sudo apt-get install doxygen graphviz
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Clone Deps
-        run: git submodule update --init
-        working-directory: ${{github.workspace}}
+
       - name: Setup Pages
         uses: actions/configure-pages@v3
-      - name: Setup cache
-        id: cache-system-libraries
-        uses: actions/cache@v3
+      - name: Download artifact
+        id: download-artifact
+        uses: dawidd6/action-download-artifact@v2
         with:
-          path: ${{env.EM_CACHE_FOLDER}}
-          key: emsdk-${{env.EM_VERSION}}-${{ runner.os }}
-
-      - name: Setup emsdk
-        uses: PikachuHy/setup-emsdk@master
-        with:
-          version: ${{env.EM_VERSION}}
-          actions-cache-folder: ${{env.EM_CACHE_FOLDER}}
-
-      - name: Verify emsdk
-        run: emcc -v
-      - name: Install ninja-build tool
-        uses: seanmiddleditch/gha-setup-ninja@master
-
-      - name: ccache
-        uses: hendrikmuhs/ccache-action@v1.2
-        with:
-          key: ${{ github.job }}-${{ matrix.mode}}
-
-      - name: Configure CMake
-        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release -G Ninja -DCMAKE_TOOLCHAIN_FILE=$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DCMAKE_CROSSCOMPILING_EMULATOR="$EMSDK_NODE;--experimental-wasm-bulk-memory;--experimental-wasm-threads" -DUSE_CCACHE=ON
-      - name: Build
-        run: cmake --build ${{github.workspace}}/build -j --verbose
-      - name: Test
-        working-directory: ${{github.workspace}}/build/test
-        run: ctest -C ${{matrix.mode}} --output-on-failure
+          # Optional, GitHub token, a Personal Access Token with `public_repo` scope if needed
+          # Required, if the artifact is from a different repo
+          # Required, if the repo is private a Personal Access Token with `repo` scope is needed or GitHub token in a job where the permissions `action` scope set to `read`
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          # Optional, workflow file name or ID
+          # If not specified, will be inferred from run_id (if run_id is specified), or will be the current workflow
+          workflow: linux_bazel.yml
+          # Optional, the status or conclusion of a completed workflow to search for
+          # Can be one of a workflow conclusion:
+          #   "failure", "success", "neutral", "cancelled", "skipped", "timed_out", "action_required"
+          # Or a workflow status:
+          #   "completed", "in_progress", "queued"
+          # Use the empty string ("") to ignore status or conclusion in the search
+          workflow_conclusion: success
+          branch: master
+          event: push
+          name: linux-pscm-wasm
+          repo: ${{ github.repository }}
+      - name: Check linux-pscm-wasm
+        run: ls -lha
       - name: Yarn Install
         run: yarn install
         working-directory: ${{github.workspace}}
@@ -78,8 +68,8 @@ jobs:
         working-directory: ${{github.workspace}}
       - name: Copy wasm files
         run: |
-          cp build/wasm/pscm.js docs/public
-          cp build/wasm/pscm.wasm docs/public
+          cp pscm.js docs/public
+          cp pscm.wasm docs/public
           cp wasm/demo.html docs/public
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1

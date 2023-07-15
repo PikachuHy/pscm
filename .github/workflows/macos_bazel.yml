@@ -20,8 +20,11 @@ jobs:
       - name: Mount bazel cache
         uses: actions/cache@v3
         with:
-          path: "/private/var/tmp/_bazel_runner"
-          key: ${{ github.job }}-bazel-cache
+          path: |
+            /private/var/tmp/_bazel_runner/
+          key: ${{ runner.os }}-bazel-${{ hashFiles('.bazelversion', '.bazelrc', 'WORKSPACE', 'WORKSPACE.bazel', 'MODULE.bazel') }}
+          restore-keys: |
+            ${{ runner.os }}-bazel-
 
       - name: Build
         run: bazel build \:all
@@ -32,16 +35,18 @@ jobs:
       - name: Build ios App
         run: bazel build //ios/app:ios-app
 
-      - uses: actions/upload-artifact@v3
+      - name: Upload ios ipa
+        uses: actions/upload-artifact@v3
         with:
           name: ios-pscm
           path: |
             bazel-bin/ios/app/ios-app.runfiles/dev_pscm/ios/app/ios-app.ipa
 
       - name: Build wasm
-        run: bazel build //wasm:pscm-wasm
+        run: bazel build //wasm:pscm-wasm -c opt
 
-      - uses: actions/upload-artifact@v3
+      - name: Upload macOS wasm
+        uses: actions/upload-artifact@v3
         with:
           name: macos-pscm-wasm
           path: bazel-bin/wasm/
