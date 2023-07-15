@@ -1,14 +1,12 @@
 load("@rules_cc//cc:defs.bzl", "cc_test")
 
 PSCM_TEST_COPTS = [
-    "-I",
-    "3rd/doctest",
     "-std=c++20",
 ]
 
 PSCM_TEST_DEPS = [
     ":pscm",
-    "//3rd/doctest/doctest:doctest",
+    "@doctest//doctest",
 ]
 MODE = struct(
     DIRECT = "DIRECT",

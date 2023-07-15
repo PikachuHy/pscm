@@ -3,7 +3,7 @@
 //
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include <doctest/doctest.h>
+#include "doctest/doctest.h"
 #include <fstream>
 #include <pscm/Char.h>
 #include <pscm/Number.h>

@@ -1,0 +1,6 @@
+cc_library(
+    name = "ust",
+    hdrs = ["ust/ust.hpp"],
+    visibility = ["//visibility:public"],
+    includes = ["."],
+)

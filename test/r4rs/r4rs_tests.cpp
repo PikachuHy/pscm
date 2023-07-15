@@ -2,7 +2,7 @@
 // Created by PikachuHy on 2023/3/25.
 //
 #define DOCTEST_CONFIG_IMPLEMENT
-#include <doctest/doctest.h>
+#include "doctest/doctest.h"
 #include <pscm/Number.h>
 #include <pscm/Pair.h>
 #include <pscm/Parser.h>

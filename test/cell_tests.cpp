@@ -2,7 +2,7 @@
 // Created by PikachuHy on 2023/3/4.
 //
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
-#include <doctest/doctest.h>
+#include "doctest/doctest.h"
 #include <pscm/Cell.h>
 #include <pscm/Number.h>
 #include <pscm/Pair.h>

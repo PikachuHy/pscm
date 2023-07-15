@@ -36,7 +36,7 @@ cc_library(
             "-Wno-tautological-constant-out-of-range-compare",
             "-std=c++20",
         ],
-        "//conditions:default": ["-std=c++14"],
+        "//conditions:default": ["-std=c++20"],
     }),
     defines = select({
         "@platforms//cpu:wasm32": ["WASM_PLATFORM"],
@@ -61,10 +61,14 @@ cc_library(
     }),
     visibility = ["//visibility:public"],
     deps = [
-        "//3rd:cpp-linenoise",
-        "//3rd:std-compat",
-        "//3rd:ust",
+        "@cpp-linenoise",
         "@spdlog",
+        "@ust",
+        # compat c++14
+        # "@filesystem",
+        # "@optional",
+        # "@string-view-lite",
+        # "@variant",
     ],
 )
 

@@ -13,10 +13,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Clone Deps
-        run: git submodule update --init
-        working-directory: ${{github.workspace}}
-
       - name: Mount bazel cache
         uses: actions/cache@v3
         with:
@@ -33,7 +29,9 @@ jobs:
         run: bazel test \:all --test_output=errors
 
       - name: Build ios App
-        run: bazel build //ios/app:ios-app
+        # build with c++20
+        # workaround from https://github.com/bazelbuild/bazel/issues/12716#issuecomment-1113754835
+        run: bazel build //ios/app:ios-app "--per_file_copt=.*\.mm\$@-std=c++20" "--per_file_copt=.*\.cpp\$@-std=c++20"
 
       - name: Upload ios ipa
         uses: actions/upload-artifact@v3

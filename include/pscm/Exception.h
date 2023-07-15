@@ -8,7 +8,7 @@
 #include <string>
 #if defined(WASM_PLATFORM) || defined(_MSC_VER) || defined(__ANDROID__)
 #else
-#include <ust.hpp>
+#include <ust/ust.hpp>
 #endif
 namespace pscm {
 class Exception : public std::exception {

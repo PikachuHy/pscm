@@ -1,0 +1,6 @@
+cc_library(
+    name = "filesystem",
+    hdrs = glob(["include/ghc/*.hpp"]),
+    visibility = ["//visibility:public"],
+    includes = ["include"],
+)

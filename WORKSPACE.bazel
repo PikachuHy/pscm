@@ -1,6 +1,56 @@
 workspace(name = "dev_pscm")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
+
+new_git_repository(
+    name = "cpp-linenoise",
+    build_file = "@dev_pscm//3rd:cpp-linenoise.bazel",
+    commit = "4cd89adfbc07cedada1aa32be12991828919d91b",
+    remote = "https://github.com/yhirose/cpp-linenoise.git",
+)
+
+new_git_repository(
+    name = "ust",
+    build_file = "@dev_pscm//3rd:ust.bazel",
+    commit = "28f5230d75e677ce8e4e140b2f3e0b8550195c85",
+    remote = "https://github.com/MisterTea/UniversalStacktrace.git",
+)
+
+new_git_repository(
+    name = "string-view-lite",
+    build_file = "@dev_pscm//3rd:string-view-lite.bazel",
+    commit = "5b1d95fe2c0ee18e654876487898b9a423a954db",
+    remote = "https://github.com/martinmoene/string-view-lite.git",
+)
+
+new_git_repository(
+    name = "variant",
+    build_file = "@dev_pscm//3rd:variant.bazel",
+    commit = "23cb94f027d4ef33bf48133acc2695c7e5c6f1e7",
+    remote = "https://github.com/mpark/variant.git",
+)
+
+new_git_repository(
+    name = "optional",
+    build_file = "@dev_pscm//3rd:optional.bazel",
+    commit = "3a1209de8370bf5fe16362934956144b49591565",
+    remote = "https://github.com/TartanLlama/optional.git",
+)
+
+new_git_repository(
+    name = "filesystem",
+    build_file = "@dev_pscm//3rd:filesystem.bazel",
+    commit = "72a76d774e4c7c605141fd6d11c33cc211209ed9",
+    remote = "https://github.com/gulrak/filesystem.git",
+)
+
+http_archive(
+    name = "doctest",
+    sha256 = "6745e17682d6e2be1ea31ec8bf1814a3d7cb17d61d120e5f2ee5a075926634ad",
+    strip_prefix = "doctest-2.4.11",
+    url = "https://github.com/doctest/doctest/archive/refs/tags/v2.4.11.zip",
+)
 
 ## rules_jvm_external
 

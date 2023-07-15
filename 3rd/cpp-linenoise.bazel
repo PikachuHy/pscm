@@ -1,0 +1,6 @@
+cc_library(
+    name = "cpp-linenoise",
+    hdrs = ["linenoise.hpp"],
+    visibility = ["//visibility:public"],
+    includes = ["."],
+)
