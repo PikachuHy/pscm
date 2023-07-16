@@ -7,9 +7,12 @@
 #include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
+#include "pscm/logger/Logger.h"
 #include "pscm/scm_utils.h"
+#include <spdlog/fmt/fmt.h>
 #include <tuple>
 #include <vector>
+PSCM_INLINE_LOG_DECLARE("pscm.core.ApiManager");
 
 namespace pscm {
 std::vector<ApiManager *>& ApiManager::api_list() {
@@ -54,16 +57,16 @@ ApiManager::ApiManager(Cell::ScmMacro2 f, std::string name, Label label, const c
 }
 
 void ApiManager::install_api(SymbolTable *env) {
-  SPDLOG_INFO("api count: {}", ApiManager::api_list().size());
+  PSCM_TRACE("api count: {}", ApiManager::api_list().size());
   for (const auto& api_manager : ApiManager::api_list()) {
     auto name = api_manager->name_;
     auto loc = api_manager->loc_;
     auto sym = new Symbol(name);
     if (env->contains(sym)) {
-      SPDLOG_ERROR("replication api defined in: {}", loc.to_string());
+      PSCM_ERROR("replication api defined in: {}", loc.to_string());
       PSCM_THROW_EXCEPTION("replication api install, previous is " + env->get(sym).to_string());
     }
-    SPDLOG_INFO("insert {} from {}", name, loc.to_string());
+    PSCM_TRACE("insert {} from {}", name, loc.to_string());
     if (api_manager->is_func()) {
       auto f = std::get<0>(api_manager->f_);
       env->insert(sym, new Function(name, f));

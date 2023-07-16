@@ -3,8 +3,11 @@
 #include "pscm/Pair.h"
 #include "pscm/Symbol.h"
 #include "pscm/common_def.h"
+#include <spdlog/fmt/fmt.h>
 
 namespace pscm {
+PSCM_INLINE_LOG_DECLARE("pscm.core.Keyword");
+
 std::ostream& operator<<(std::ostream& os, const Keyword& keyword) {
   PSCM_ASSERT(keyword.sym_);
   os << '#';

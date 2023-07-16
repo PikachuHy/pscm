@@ -5,6 +5,7 @@
 #include "pscm/scm_utils.h"
 
 namespace pscm {
+PSCM_INLINE_LOG_DECLARE("pscm.core.SchemeProxy");
 
 Module *SchemeProxy::current_module() const {
   return scm_.current_module();

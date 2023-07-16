@@ -7,10 +7,13 @@
 #include "pscm/Symbol.h"
 #include "pscm/common_def.h"
 #include <iostream>
+#include <spdlog/fmt/fmt.h>
 #include <string>
 using namespace std::string_literals;
 
 namespace pscm {
+PSCM_INLINE_LOG_DECLARE("pscm.core.SymbolTable");
+
 bool SymbolTable::contains(Symbol *sym) const {
   PSCM_ASSERT(sym);
   if (map_.find(sym->name()) != map_.end()) {

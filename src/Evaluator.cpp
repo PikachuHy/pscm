@@ -35,19 +35,22 @@ namespace fs = ghc::filesystem;
 #include <filesystem>
 namespace fs = std::filesystem;
 #endif
+
+#include <spdlog/fmt/fmt.h>
+PSCM_INLINE_LOG_DECLARE("pscm.core.Evaluator");
 #define PSCM_PUSH_STACK(reg_name)                                                                                      \
-  SPDLOG_DEBUG("push {} stack: {}", #reg_name, stack_.reg_name.size());                                                \
+  PSCM_DEBUG("push {} stack: {}", #reg_name, stack_.reg_name.size());                                                  \
   reg_type_stack_.push_back(reg_##reg_name);                                                                           \
   stack_.reg_name.push_back(reg_.reg_name)
 
 #define PSCM_POP_STACK(reg_name)                                                                                       \
-  SPDLOG_DEBUG("pop {} stack: {}", #reg_name, stack_.reg_name.size());                                                 \
+  PSCM_DEBUG("pop {} stack: {}", #reg_name, stack_.reg_name.size());                                                   \
   PSCM_ASSERT(!reg_type_stack_.empty());                                                                               \
   if (reg_type_stack_.back() != reg_##reg_name) {                                                                      \
     std::stringstream ss1, ss2, ss3, ss4;                                                                              \
     ss1 << reg_##reg_name;                                                                                             \
     ss2 << reg_type_stack_.back();                                                                                     \
-    SPDLOG_ERROR("reg stack error, expect '{}' but got '{}'", ss1.str(), ss2.str());                                   \
+    PSCM_ERROR("reg stack error, expect '{}' but got '{}'", ss1.str(), ss2.str());                                     \
     for (int i = 0; i < reg_type_stack_.size(); i++) {                                                                 \
       ss3 << reg_type_stack_[reg_type_stack_.size() - i - 1];                                                          \
       ss3 << ", ";                                                                                                     \
@@ -56,8 +59,8 @@ namespace fs = std::filesystem;
       ss4 << stack_.reg_name[stack_.reg_name.size() - i - 1];                                                          \
       ss4 << ", ";                                                                                                     \
     }                                                                                                                  \
-    SPDLOG_INFO("reg stack: {}", ss3.str());                                                                           \
-    SPDLOG_INFO("{} reg stack: {}", #reg_name, ss4.str());                                                             \
+    PSCM_DEBUG("reg stack: {}", ss3.str());                                                                            \
+    PSCM_DEBUG("{} reg stack: {}", #reg_name, ss4.str());                                                              \
     PSCM_ASSERT(reg_type_stack_.back() == reg_##reg_name);                                                             \
   }                                                                                                                    \
   reg_type_stack_.pop_back();                                                                                          \
@@ -67,10 +70,10 @@ namespace fs = std::filesystem;
 
 #define GOTO(label)                                                                                                    \
   pos_ = label;                                                                                                        \
-  SPDLOG_INFO("GOTO label: {}", pos_);                                                                                 \
+  PSCM_TRACE("GOTO label: {}", pos_);                                                                                  \
   break
 
-#define PRINT_STEP() SPDLOG_INFO("[step: {}] label: {}", step_, pos_)
+#define PRINT_STEP() PSCM_TRACE("[step: {}] label: {}", step_, pos_)
 
 template <>
 class fmt::formatter<pscm::Label> {
@@ -220,7 +223,7 @@ Cell div(Cell args) {
 }
 
 Cell less_than(Cell args) {
-  SPDLOG_INFO("args: {}", args);
+  PSCM_DEBUG("args: {}", args);
   if (args.is_nil()) {
     return Cell(true);
   }
@@ -593,12 +596,12 @@ Cell make_vector(Cell args) {
   v->resize(num->to_int());
   std::fill(v->begin(), v->end(), default_value);
   auto vec = Cell(v);
-  SPDLOG_INFO("vec: {} from {}", vec, (void *)v);
+  PSCM_DEBUG("vec: {} from {}", vec, (void *)v);
   return vec;
 }
 
 Cell proc_vector(Cell args) {
-  SPDLOG_INFO("args: {}", args);
+  PSCM_DEBUG("args: {}", args);
   auto vec = new Cell::Vec();
   for_each(
       [vec](Cell expr, auto loc) {
@@ -606,7 +609,7 @@ Cell proc_vector(Cell args) {
       },
       args);
   auto ret = Cell(vec);
-  SPDLOG_INFO("ret: {}", ret);
+  PSCM_DEBUG("ret: {}", ret);
   return ret;
 }
 
@@ -639,15 +642,15 @@ Cell vector_set(Cell args) {
   PSCM_ASSERT(k.is_num());
   auto num = k.to_num();
   PSCM_ASSERT(num->is_int());
-  SPDLOG_INFO("vec: {} from {}", vec, (void *)vec.to_vec());
-  SPDLOG_INFO("k: {} --> {}", k, obj);
+  PSCM_DEBUG("vec: {} from {}", vec, (void *)vec.to_vec());
+  PSCM_DEBUG("k: {} --> {}", k, obj);
   auto index = num->to_int();
   auto& v = *vec.to_vec();
   if (index >= v.size()) {
     PSCM_THROW_EXCEPTION("Value out of range: " + k.to_string());
   }
   v[index] = obj;
-  SPDLOG_INFO("vec: {} from {}", vec, (void *)vec.to_vec());
+  PSCM_DEBUG("vec: {} from {}", vec, (void *)vec.to_vec());
   return Cell::none();
 }
 
@@ -1465,7 +1468,7 @@ Cell Evaluator::eval(Cell expr, SymbolTable *env) {
   reg_ = Register{ .expr = expr, .env = env, .cont = Label::DONE };
   pos_ = Label::EVAL;
   run();
-  SPDLOG_INFO("eval ret: {}", reg_.val);
+  PSCM_DEBUG("eval ret: {}", reg_.val);
   return reg_.val;
 }
 
@@ -1484,7 +1487,7 @@ void Evaluator::run() {
     }
     case Label::EVAL: {
       PRINT_STEP();
-      SPDLOG_INFO("eval expr: {}", reg_.expr.pretty_string());
+      PSCM_DEBUG("eval expr: {}", reg_.expr.pretty_string());
       if (reg_.expr.is_none() || reg_.expr.is_self_evaluated()) {
         reg_.val = reg_.expr;
         GOTO(reg_.cont);
@@ -1496,12 +1499,12 @@ void Evaluator::run() {
       if (reg_.expr.is_pair()) {
         GOTO(Label::APPLY);
       }
-      SPDLOG_ERROR("unsupported expr: {}", reg_.expr);
+      PSCM_ERROR("unsupported expr: {}", reg_.expr);
       PSCM_THROW_EXCEPTION("unsupported expr");
     }
     case Label::APPLY: {
       PRINT_STEP();
-      SPDLOG_INFO("apply: {}", reg_.expr);
+      PSCM_DEBUG("apply: {}", reg_.expr);
       // restore after_apply
       PSCM_PUSH_STACK(env);
       PSCM_PUSH_STACK(unev);
@@ -1540,20 +1543,20 @@ void Evaluator::run() {
     }
     case Label::APPLY_FUNC: {
       PRINT_STEP();
-      SPDLOG_INFO("apply {} with args: {}", reg_.proc, reg_.argl);
+      PSCM_DEBUG("apply {} with args: {}", reg_.proc, reg_.argl);
       PSCM_ASSERT(reg_.proc.is_func());
       auto f = reg_.proc.to_func();
       auto args = reg_.argl;
-      SPDLOG_INFO("func args: {}", args);
+      PSCM_DEBUG("func args: {}", args);
       reg_.val = f->call(args);
-      SPDLOG_INFO("func ret: {}", reg_.val);
+      PSCM_DEBUG("func ret: {}", reg_.val);
       PSCM_POP_STACK(argl);
       PSCM_POP_STACK(cont);
       GOTO(reg_.cont);
     }
     case Label::APPLY_PROC: {
       PRINT_STEP();
-      SPDLOG_INFO("apply {} with args: {}", reg_.proc, reg_.argl);
+      PSCM_DEBUG("apply {} with args: {}", reg_.proc, reg_.argl);
       PSCM_ASSERT(reg_.proc.is_proc());
       auto proc = reg_.proc.to_proc();
       PSCM_ASSERT(proc);
@@ -1578,7 +1581,7 @@ void Evaluator::run() {
         else if (proc->name_ == &call_with_values) {
           // special handle for call-with-values
           PSCM_ASSERT(args.is_pair());
-          SPDLOG_INFO("call-with-values args: {}", args);
+          PSCM_DEBUG("call-with-values args: {}", args);
           reg_.expr = cons(car(args), nil);
           reg_.unev = cdr(args);
           reg_.cont = Label::AFTER_EVAL_CALL_WITH_VALUES_PRODUCER;
@@ -1587,7 +1590,7 @@ void Evaluator::run() {
         else if (proc->name_ == &values) {
           // special handle for values
           PSCM_ASSERT(args.is_pair());
-          SPDLOG_INFO("values args: {}", args);
+          PSCM_DEBUG("values args: {}", args);
           reg_.val = args;
           GOTO(Label::AFTER_APPLY_PROC);
         }
@@ -1606,7 +1609,7 @@ void Evaluator::run() {
     }
     case Label::APPLY_CONT: {
       PRINT_STEP();
-      SPDLOG_INFO("apply {} with args: {}", reg_.proc, reg_.argl);
+      PSCM_DEBUG("apply {} with args: {}", reg_.proc, reg_.argl);
       PSCM_ASSERT(reg_.proc.is_cont());
       auto cont = reg_.proc.to_cont();
       auto args = reg_.argl;
@@ -1614,7 +1617,7 @@ void Evaluator::run() {
         PSCM_THROW_EXCEPTION("Invalid arguments of Continuation: " + reg_.proc.to_string());
       }
       auto val = car(args);
-      SPDLOG_INFO("val: {}", val);
+      PSCM_DEBUG("val: {}", val);
       if (!cdr(args).is_nil()) {
         PSCM_THROW_EXCEPTION("Invalid arguments of Continuation: " + reg_.proc.to_string());
       }
@@ -1649,7 +1652,7 @@ void Evaluator::run() {
       }
       else {
         PSCM_PUSH_STACK(argl);
-        SPDLOG_INFO("push argl: {}", reg_.argl);
+        PSCM_DEBUG("push argl: {}", reg_.argl);
         reg_.expr = car(reg_.unev);
         reg_.unev = cdr(reg_.unev);
         reg_.cont = Label::AFTER_EVAL_OTHER_ARG;
@@ -1659,15 +1662,15 @@ void Evaluator::run() {
     case Label::AFTER_EVAL_OTHER_ARG: {
       PRINT_STEP();
       PSCM_POP_STACK(argl);
-      SPDLOG_INFO("pop argl: {}", reg_.argl);
+      PSCM_DEBUG("pop argl: {}", reg_.argl);
       reg_.argl = cons(reg_.val, reg_.argl);
-      SPDLOG_INFO("argl: {}", reg_.argl);
+      PSCM_DEBUG("argl: {}", reg_.argl);
       if (reg_.unev.is_nil()) {
         GOTO(Label::AFTER_EVAL_ARGS);
       }
       else {
         PSCM_PUSH_STACK(argl);
-        SPDLOG_INFO("push argl: {}", reg_.argl);
+        PSCM_DEBUG("push argl: {}", reg_.argl);
         reg_.expr = car(reg_.unev);
         reg_.unev = cdr(reg_.unev);
         reg_.cont = Label::AFTER_EVAL_OTHER_ARG;
@@ -1721,7 +1724,7 @@ void Evaluator::run() {
     case Label::AFTER_APPLY_FUNC: {
       PRINT_STEP();
       PSCM_POP_STACK(argl);
-      SPDLOG_INFO("pop argl: {}", reg_.argl);
+      PSCM_DEBUG("pop argl: {}", reg_.argl);
       pos_ = Label::AFTER_APPLY;
       break;
     }
@@ -1746,7 +1749,7 @@ void Evaluator::run() {
       PRINT_STEP();
       auto proc = car(reg_.unev);
       auto args = cdr(reg_.unev);
-      SPDLOG_INFO("apply {}: {}", proc, args);
+      PSCM_DEBUG("apply {}: {}", proc, args);
       PSCM_ASSERT(proc.is_sym());
       PSCM_ASSERT(args.is_sym());
       proc = reg_.env->get(proc.to_sym());
@@ -1910,7 +1913,7 @@ void Evaluator::run() {
     case Label::APPLY_EVAL: {
       PRINT_STEP();
       reg_.expr = car(reg_.unev);
-      SPDLOG_ERROR("expr: {}", reg_.expr);
+      PSCM_ERROR("expr: {}", reg_.expr);
       PSCM_PUSH_STACK(cont);
       reg_.cont = Label::AFTER_APPLY_EVAL;
       GOTO(Label::EVAL);
@@ -1918,7 +1921,7 @@ void Evaluator::run() {
     case Label::AFTER_APPLY_EVAL: {
       PRINT_STEP();
       reg_.expr = reg_.val;
-      SPDLOG_ERROR("expr: {}", reg_.expr);
+      PSCM_ERROR("expr: {}", reg_.expr);
       PSCM_POP_STACK(cont);
       GOTO(Label::EVAL);
     }
@@ -1955,7 +1958,7 @@ void Evaluator::run() {
       auto var_name = reg_.val;
       PSCM_ASSERT(var_name.is_sym());
       auto sym = var_name.to_sym();
-      SPDLOG_INFO("AFTER set! {} -> {}", var_name, val);
+      PSCM_DEBUG("AFTER set! {} -> {}", var_name, val);
       reg_.env->set(sym, val);
       reg_.val = Cell{};
       PSCM_POP_STACK(cont);
@@ -1988,8 +1991,8 @@ void Evaluator::run() {
       auto lists = cdr(reg_.unev);
       proc = reg_.env->get(proc.to_sym());
       lists = reg_.env->get(lists.to_sym());
-      SPDLOG_INFO("proc: {}", proc);
-      SPDLOG_INFO("lists: {}", lists);
+      PSCM_DEBUG("proc: {}", proc);
+      PSCM_DEBUG("lists: {}", lists);
       PSCM_ASSERT(proc.is_proc() || proc.is_func());
       PSCM_ASSERT(lists.is_pair());
       auto len = list_length(lists);
@@ -2155,7 +2158,7 @@ void Evaluator::run() {
           if (*sym == cond_else) {
             reg_.expr = cadr(clause);
             reg_.cont = Label::AFTER_APPLY_MACRO;
-            SPDLOG_INFO("cond expr: {}", reg_.expr);
+            PSCM_DEBUG("cond expr: {}", reg_.expr);
             GOTO(Label::EVAL);
           }
         }
@@ -2241,21 +2244,21 @@ void Evaluator::run() {
     case Label::AFTER_EVAL_CALL_WITH_VALUES_PRODUCER: {
       PRINT_STEP();
       auto consumer = car(reg_.unev);
-      SPDLOG_INFO("consumer: {}", consumer);
-      SPDLOG_INFO("consumer args: {}", reg_.val);
+      PSCM_DEBUG("consumer: {}", consumer);
+      PSCM_DEBUG("consumer args: {}", reg_.val);
       // FIXME
       // hack
       if (reg_.val.is_num()) {
         reg_.val = cons(reg_.val, nil);
       }
       auto expr = list(new Symbol("apply"), consumer, list(quote, reg_.val));
-      SPDLOG_INFO("expr: {}", expr);
+      PSCM_DEBUG("expr: {}", expr);
       reg_.expr = expr;
       reg_.cont = Label::AFTER_APPLY_PROC;
       GOTO(Label::EVAL);
     }
     default: {
-      SPDLOG_ERROR("Unsupported pos: {}", pos_);
+      PSCM_ERROR("Unsupported pos: {}", pos_);
       PSCM_THROW_EXCEPTION("Unsupported pos: " + to_string(pos_));
     }
     }
@@ -2265,8 +2268,8 @@ void Evaluator::run() {
 Label Evaluator::eval_map_expr(Label default_pos) {
   auto proc = reg_.proc;
   auto lists = reg_.unev;
-  SPDLOG_INFO("proc: {}", proc);
-  SPDLOG_INFO("lists: {}", lists);
+  PSCM_DEBUG("proc: {}", proc);
+  PSCM_DEBUG("lists: {}", lists);
   PSCM_ASSERT(proc.is_proc() || proc.is_func());
   PSCM_ASSERT(lists.is_pair());
   auto len = list_length(lists);
@@ -2387,13 +2390,13 @@ std::string Evaluator::Stack::to_string() const {
 bool Evaluator::load(const char *filename, SymbolTable *env) {
   std::cout << "load: " << filename << std::endl;
   if (!fs::exists(filename)) {
-    SPDLOG_ERROR("file not found: {}", filename);
+    PSCM_ERROR("file not found: {}", filename);
     return false;
   }
   std::fstream ifs;
   ifs.open(filename, std::ios::in);
   if (!ifs.is_open()) {
-    SPDLOG_ERROR("load file {} error", filename);
+    PSCM_ERROR("load file {} error", filename);
     return false;
   }
   ifs.seekg(0, ifs.end);
@@ -2413,7 +2416,7 @@ bool Evaluator::load(const char *filename, SymbolTable *env) {
     }
   }
   catch (Exception& ex) {
-    SPDLOG_ERROR("load file {} error", filename);
+    PSCM_ERROR("load file {} error", filename);
     return false;
   }
   return true;

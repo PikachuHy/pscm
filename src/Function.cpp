@@ -9,6 +9,7 @@
 #include <ostream>
 
 namespace pscm {
+PSCM_INLINE_LOG_DECLARE("pscm.core.Function");
 Cell Function::call(Cell args, SourceLocation loc) {
   PSCM_ASSERT(f_.index() == 1 || f_.index() == 2);
   if (f_.index() == 1) {

@@ -9,6 +9,7 @@
 #include <iostream>
 
 namespace pscm {
+PSCM_INLINE_LOG_DECLARE("pscm.core.String");
 void String::display(Port& port) const {
   for (auto ch : data_) {
     port.write_char(ch);

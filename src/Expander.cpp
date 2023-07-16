@@ -3,14 +3,17 @@
 //
 
 #include "pscm/Expander.h"
+#include "pscm/Logger.h"
 #include "pscm/Pair.h"
 #include "pscm/Scheme.h"
 #include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
+#include <spdlog/fmt/fmt.h>
 #include <string>
 using namespace std::string_literals;
+PSCM_INLINE_LOG_DECLARE("pscm.core.Expander");
 
 namespace pscm {
 Cell do_case(Cell item, Cell clause, Cell args) {
@@ -63,8 +66,8 @@ Cell expand_case(Cell args) {
 Cell expand_named_let(Cell name, Cell bindings, Cell body) {
   auto var = map(car, bindings);
   auto arg = map(cadr, bindings);
-  SPDLOG_DEBUG("var: {}", var);
-  SPDLOG_DEBUG("arg: {}", arg);
+  PSCM_DEBUG("var: {}", var);
+  PSCM_DEBUG("arg: {}", arg);
   auto new_bindings = map(
       [](Cell expr, auto loc) {
         auto var = car(expr);
@@ -74,16 +77,16 @@ Cell expand_named_let(Cell name, Cell bindings, Cell body) {
         return list(new Symbol(std::string(sym->name()) + "="s), init);
       },
       bindings);
-  SPDLOG_DEBUG("new-bindings: {}", new_bindings);
+  PSCM_DEBUG("new-bindings: {}", new_bindings);
   Cell let_init = cons(list(name, Cell::bool_false()), new_bindings);
   auto l2 = new Symbol("lambda");
   auto let_body = list(new Symbol("set!"), name, cons(l2, cons(map(car, bindings), body)));
   Cell let_body2 = cons(name, map(car, new_bindings));
-  SPDLOG_DEBUG("let init: {}", let_init);
-  SPDLOG_DEBUG("let body: {}", let_body);
-  SPDLOG_DEBUG("let body2: {}", let_body2);
+  PSCM_DEBUG("let init: {}", let_init);
+  PSCM_DEBUG("let body: {}", let_body);
+  PSCM_DEBUG("let body2: {}", let_body2);
   auto full_let = list(let_init, let_body, let_body2);
-  SPDLOG_DEBUG("let: {}", full_let);
+  PSCM_DEBUG("let: {}", full_let);
   return expand_let(full_let);
 }
 
@@ -103,7 +106,7 @@ Cell expand_let(Cell args) {
 
   auto a = cons(lambda, cons(var, body));
   Cell b = cons(a, arg);
-  SPDLOG_DEBUG("let -> {}", b.pretty_string());
+  PSCM_DEBUG("let -> {}", b.pretty_string());
   return b;
 }
 
@@ -149,10 +152,10 @@ Cell expand_letrec(Cell args) {
       },
       vars, vals);
 
-  SPDLOG_DEBUG("vars: {}", vars.pretty_string());
-  SPDLOG_DEBUG("vals: {}", vals.pretty_string());
-  SPDLOG_DEBUG("let_var: {}", let_var.pretty_string());
-  SPDLOG_DEBUG("update_let_var: {}", update_let_var.pretty_string());
+  PSCM_DEBUG("vars: {}", vars.pretty_string());
+  PSCM_DEBUG("vals: {}", vals.pretty_string());
+  PSCM_DEBUG("let_var: {}", let_var.pretty_string());
+  PSCM_DEBUG("update_let_var: {}", update_let_var.pretty_string());
   auto p = update_let_var;
   if (update_let_var.is_nil()) {
     update_let_var = cons(nil, body);
@@ -170,9 +173,9 @@ Cell expand_letrec(Cell args) {
     }
   }
 
-  //  SPDLOG_DEBUG("cons(update_let_var, body): {}", Cell(cons(update_let_var, body)));
+  //  PSCM_DEBUG("cons(update_let_var, body): {}", Cell(cons(update_let_var, body)));
   Cell expr = cons(let_var, update_let_var);
-  SPDLOG_DEBUG("{}", expr.pretty_string());
+  PSCM_DEBUG("{}", expr.pretty_string());
   return expand_let(expr);
 }
 
@@ -197,12 +200,12 @@ Cell expand_do(Cell args) {
   auto test = car(test_and_expr);
   auto expr = cdr(test_and_expr);
 
-  SPDLOG_DEBUG("var: {}", variables);
-  SPDLOG_DEBUG("init: {}", inits);
-  SPDLOG_DEBUG("step: {}", steps);
-  SPDLOG_DEBUG("test: {}", test);
-  SPDLOG_DEBUG("expr: {}", expr);
-  SPDLOG_DEBUG("body: {}", body);
+  PSCM_DEBUG("var: {}", variables);
+  PSCM_DEBUG("init: {}", inits);
+  PSCM_DEBUG("step: {}", steps);
+  PSCM_DEBUG("test: {}", test);
+  PSCM_DEBUG("expr: {}", expr);
+  PSCM_DEBUG("body: {}", body);
   Cell loop = gensym();
   {
 
@@ -228,11 +231,11 @@ Cell expand_do(Cell args) {
     if_clause = cons(new Symbol("begin"), expr);
   }
   auto proc_body = list(&sym_if, test, if_clause, else_clause);
-  SPDLOG_DEBUG("proc body: {}", proc_body);
+  PSCM_DEBUG("proc body: {}", proc_body);
   auto proc_def = list(lambda, variables, proc_body);
   auto var_def = list(loop, proc_def);
   auto letrec_args = list(list(var_def), cons(loop, inits));
-  SPDLOG_DEBUG("letrec: {}", letrec_args);
+  PSCM_DEBUG("letrec: {}", letrec_args);
   return expand_letrec(letrec_args);
 }
 
@@ -302,7 +305,7 @@ Cell QuasiQuotationExpander::combine_skeletons(pscm::Cell left, pscm::Cell right
 }
 
 Cell QuasiQuotationExpander::expand(pscm::Cell expr) {
-  SPDLOG_DEBUG("`entry: {}", expr.pretty_string());
+  PSCM_DEBUG("`entry: {}", expr.pretty_string());
   return expand(expr, 0);
 }
 
@@ -318,15 +321,15 @@ Cell QuasiQuotationExpander::convert_vector_to_list(const Cell::Vec& vec) {
 }
 
 Cell QuasiQuotationExpander::expand(pscm::Cell expr, int nesting) {
-  SPDLOG_DEBUG("expand: {}, nesting: {}", expr.pretty_string(), nesting);
+  PSCM_DEBUG("expand: {}, nesting: {}", expr.pretty_string(), nesting);
   if (expr.is_vec()) {
-    SPDLOG_DEBUG("expr: {}", expr);
+    PSCM_DEBUG("expr: {}", expr);
     auto l = convert_vector_to_list(*expr.to_vec());
-    SPDLOG_DEBUG("l: {}", l);
+    PSCM_DEBUG("l: {}", l);
     auto new_expr = expand(l, nesting);
-    SPDLOG_DEBUG("new_expr: {}", new_expr);
+    PSCM_DEBUG("new_expr: {}", new_expr);
     auto ret = list(new Symbol("apply"), new Symbol("vector"), new_expr);
-    SPDLOG_DEBUG("expand ret: {}", ret);
+    PSCM_DEBUG("expand ret: {}", ret);
     return ret;
   }
   else if (!expr.is_pair()) {
@@ -343,7 +346,7 @@ Cell QuasiQuotationExpander::expand(pscm::Cell expr, int nesting) {
     }
     else {
       auto new_right = expand(cdr(expr), nesting - 1);
-      SPDLOG_DEBUG("new right: {}", new_right);
+      PSCM_DEBUG("new right: {}", new_right);
       static Symbol sym_unquote("unquote");
       return combine_skeletons(list(quote, &sym_unquote), new_right, expr);
     }
@@ -357,7 +360,7 @@ Cell QuasiQuotationExpander::expand(pscm::Cell expr, int nesting) {
     if (nesting == 0) {
       auto new_expr = expand(cdr(expr), nesting);
       auto ret = list(new Symbol("append"), cadr(car(expr)), new_expr);
-      SPDLOG_DEBUG(",@: {}", ret);
+      PSCM_DEBUG(",@: {}", ret);
       return ret;
     }
     else {

@@ -14,6 +14,7 @@
 #include "pscm/scm_utils.h"
 
 namespace pscm {
+PSCM_INLINE_LOG_DECLARE("pscm.core.Procedure");
 std::ostream& operator<<(std::ostream& out, const Procedure& proc) {
   out << "#";
   out << "<procedure ";

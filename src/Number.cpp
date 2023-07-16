@@ -6,11 +6,14 @@
 #include "pscm/Exception.h"
 #include "pscm/common_def.h"
 #include <numeric>
+#include <spdlog/fmt/fmt.h>
 #include <sstream>
 #include <string_view>
 using namespace std::string_literals;
 
 namespace pscm {
+PSCM_INLINE_LOG_DECLARE("pscm.core.Number");
+
 std::ostream& operator<<(std::ostream& out, const Number& num) {
   if (num.data_.index() == 1) {
     return out << std::get<1>(num.data_);

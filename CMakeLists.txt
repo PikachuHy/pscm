@@ -68,6 +68,9 @@ aux_source_directory(src PSCM_SRCS)
 target_sources(pscm PRIVATE ${PSCM_SRCS})
 target_sources(pscm PRIVATE
         ${CMAKE_CURRENT_BINARY_DIR}/generate/src/version.cpp
+        src/logger/Logger.cpp
+        src/logger/Appender.cpp
+        src/misc/SourceLocation.cpp
 )
 target_link_libraries(pscm PUBLIC spdlog::spdlog)
 if (EMSCRIPTEN)

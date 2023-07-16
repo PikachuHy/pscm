@@ -10,12 +10,15 @@
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
+#include <spdlog/fmt/fmt.h>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 using namespace std::string_literals;
 
 namespace pscm {
+
+PSCM_INLINE_LOG_DECLARE("pscm.core.Parser");
 
 Cell car(Cell c, SourceLocation loc) {
   if (!c.is_pair()) {
@@ -445,7 +448,7 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(List, "map", Label::APPLY_MAP, "(proc . l
   auto proc = car(args);
   PSCM_ASSERT(proc.is_sym());
   auto lists = cdr(args);
-  SPDLOG_INFO("lists: {}", lists);
+  PSCM_INFO("lists: {}", lists);
   PSCM_ASSERT(lists.is_sym());
   proc = env->get(proc.to_sym());
   lists = env->get(lists.to_sym());

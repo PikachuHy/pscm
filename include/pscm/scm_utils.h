@@ -4,12 +4,13 @@
 
 #pragma once
 #include "pscm/Cell.h"
+#include "pscm/Logger.h"
 #include "pscm/Number.h"
 #include "pscm/Pair.h"
 #include "pscm/Symbol.h"
 #include "pscm/common_def.h"
 #include <concepts>
-#include <spdlog/spdlog.h>
+#include <spdlog/fmt/fmt.h>
 
 namespace pscm {
 inline Cell list(Cell t) {
@@ -64,6 +65,7 @@ Cell for_each(Func f, Cell list1, Cell list2, SourceLocation loc = {}) {
     list1 = cdr(list1);
     list2 = cdr(list2);
   }
+  PSCM_INLINE_LOG_DECLARE("pscm.core.for_each");
   PSCM_ASSERT(list1.is_nil() && list2.is_nil());
   return Cell::none();
 }
@@ -98,6 +100,7 @@ Cell map(Func f, Cell list1, Cell list2, SourceLocation loc = {}) {
     list1 = cdr(list1);
     list2 = cdr(list2);
   }
+  PSCM_INLINE_LOG_DECLARE("pscm.core.map");
   PSCM_ASSERT(list1.is_nil() && list2.is_nil());
   return ret->second;
 }
