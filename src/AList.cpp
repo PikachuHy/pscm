@@ -6,12 +6,15 @@
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
+#include <spdlog/fmt/fmt.h>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 using namespace std::string_literals;
 
 namespace pscm {
+PSCM_INLINE_LOG_DECLARE("pscm.core.AList");
+
 AList::AList() {
 }
 

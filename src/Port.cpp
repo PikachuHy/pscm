@@ -19,6 +19,8 @@
 #include <variant>
 
 namespace pscm {
+PSCM_INLINE_LOG_DECLARE("pscm.core.Port");
+
 class StandardPort : public Port {
 public:
   StandardPort(bool is_input)
@@ -496,7 +498,7 @@ Procedure *Procedure::create_call_with_output_string(SymbolTable *env) {
   auto port_sym = new Symbol("port");
   auto call_proc = list(new Symbol("apply"), proc, list(new Symbol("list"), port_sym));
   Cell body = list(new Symbol("let"), list(list(port_sym, list(func_create))), call_proc, list(func_str, port_sym));
-  SPDLOG_DEBUG("call-with-output-string body: {}", body.pretty_string());
+  PSCM_DEBUG("call-with-output-string body: {}", body.pretty_string());
   Cell args = list(proc);
   body = cons(body, nil);
   return new Procedure(name, args, body, env);
@@ -514,7 +516,7 @@ Procedure *Procedure::create_call_with_input_string(SymbolTable *env) {
   auto port_sym = new Symbol("port");
   auto call_proc = list(new Symbol("apply"), proc, list(new Symbol("list"), port_sym));
   Cell body = list(new Symbol("let"), list(list(port_sym, list(func_create, str))), call_proc);
-  SPDLOG_DEBUG("call-with-input-string body: {}", body.pretty_string());
+  PSCM_DEBUG("call-with-input-string body: {}", body.pretty_string());
   Cell args = list(str, proc);
   body = cons(body, nil);
   return new Procedure(name, args, body, env);

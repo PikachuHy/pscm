@@ -1,6 +1,7 @@
 #include <fstream>
 #include <glob/glob.h>
 #include <iostream>
+#include <pscm/Logger.h>
 #include <pscm/Parser.h>
 #include <pscm/Scheme.h>
 #include <pscm/Str.h>
@@ -19,6 +20,7 @@ namespace fs = ghc::filesystem;
 namespace fs = std::filesystem;
 #endif
 using namespace pscm;
+PSCM_INLINE_LOG_DECLARE("pscm.build");
 class CppLibraryRule;
 
 class Artifact {

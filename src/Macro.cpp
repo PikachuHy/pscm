@@ -13,6 +13,8 @@
 #include "pscm/scm_utils.h"
 
 namespace pscm {
+PSCM_INLINE_LOG_DECLARE("pscm.core.Macro");
+
 Cell Macro::call(Scheme& scm, SymbolTable *env, Cell args) {
   if (f_.index() == 1) {
     auto f = std::get<1>(f_);
@@ -26,7 +28,7 @@ Cell Macro::call(Scheme& scm, SymbolTable *env, Cell args) {
     auto proc = std::get<3>(f_);
     auto ret = scm.call_proc(env, proc, args);
     ret = scm.eval(env, ret);
-    SPDLOG_DEBUG("expand result: {}", ret);
+    PSCM_DEBUG("expand result: {}", ret);
     return ret;
   }
   else {
@@ -69,7 +71,7 @@ Symbol *scm_define_macro(SchemeProxy scm, SymbolTable *env, Cell args) {
   else {
     auto proc_name = car(first_arg);
     auto proc_args = cdr(first_arg);
-    SPDLOG_INFO("{} {}", proc_name, proc_args);
+    PSCM_INFO("{} {}", proc_name, proc_args);
     PSCM_ASSERT(proc_name.is_sym());
     sym = proc_name.to_sym();
     proc = new Procedure(sym, proc_args, cdr(args), env);

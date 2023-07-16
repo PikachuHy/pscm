@@ -19,13 +19,16 @@
 #include "pscm/Str.h"
 #include "pscm/Symbol.h"
 #include "pscm/common_def.h"
+#include "pscm/logger/Logger.h"
 #include <cassert>
 #include <cstring>
+#include <spdlog/fmt/fmt.h>
 #include <sstream>
 #include <unordered_set>
 
 namespace pscm {
 Cell nil = Cell::nil();
+PSCM_INLINE_LOG_DECLARE("pscm.core.Cell");
 
 std::ostream& operator<<(std::ostream& out, const SmallObject& smob) {
   out << '<';
@@ -332,7 +335,7 @@ std::ostream& operator<<(std::ostream& out, const Cell& cell) {
   if (cell.tag_ == Cell::Tag::SMOB) {
     return out << *cell.to_smob();
   }
-  SPDLOG_ERROR("TODO: {}", int(cell.tag_));
+  PSCM_ERROR("TODO: {}", int(cell.tag_));
   //  PSCM_THROW_EXCEPTION("TODO: cell tag ");
   return out << "TODO";
 }
@@ -667,7 +670,7 @@ std::ostream& operator<<(std::ostream& out, const Label& pos) {
     break;
   }
   default: {
-    SPDLOG_ERROR("pos: {}", int(pos));
+    PSCM_ERROR("pos: {}", int(pos));
     PSCM_THROW_EXCEPTION("TODO: pos to_string " + std::to_string(int(pos)));
   }
   }
@@ -764,13 +767,6 @@ bool Cell::is_eqv(Cell lhs, Cell rhs) {
 
 bool Cell::is_equal(Cell lhs, Cell rhs) {
   return lhs == rhs;
-}
-
-std::string SourceLocation::to_string() const {
-  auto name = std::string(filename);
-  auto pos = name.find_last_of('/');
-  name = name.substr(pos + 1);
-  return name + ":" + std::to_string(linenum); // + " " + std::string(funcname);
 }
 
 static Cell scm_cell_cmp(Cell args, Cell::ScmCmp cmp_func) {

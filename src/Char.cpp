@@ -6,10 +6,12 @@
 #include "pscm/Port.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
+#include <spdlog/fmt/fmt.h>
 #include <string>
 using namespace std::string_literals;
 
 namespace pscm {
+PSCM_INLINE_LOG_DECLARE("pscm.core.Char");
 static Char ch_at("@");
 static Char ch_star("*");
 static Char ch_space(" ");

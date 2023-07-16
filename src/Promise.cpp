@@ -7,6 +7,7 @@
 #include "pscm/scm_utils.h"
 
 namespace pscm {
+PSCM_INLINE_LOG_DECLARE("pscm.core.Promise");
 std::ostream& operator<<(std::ostream& out, const Promise& promise) {
   out << "#";
   out << "<";

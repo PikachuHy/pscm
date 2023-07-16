@@ -9,6 +9,7 @@
 #include "pscm/Expander.h"
 #include "pscm/Function.h"
 #include "pscm/HashTable.h"
+#include "pscm/Logger.h"
 #include "pscm/Macro.h"
 #include "pscm/Module.h"
 #include "pscm/Number.h"
@@ -37,10 +38,14 @@ namespace fs = ghc::filesystem;
 namespace fs = std::filesystem;
 #endif
 
+#include "pscm/logger/Appender.h"
+#include "pscm/logger/Logger.h"
+PSCM_INLINE_LOG_DECLARE("pscm.core.Scheme");
+
 namespace pscm {
 
 Symbol *scm_define(SchemeProxy scm, SymbolTable *env, Cell args) {
-  SPDLOG_INFO("args: {}", args);
+  PSCM_DEBUG("args: {}", args);
   PSCM_ASSERT(args.is_pair());
   auto key = car(args);
   auto val = cdr(args);
@@ -86,7 +91,7 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "set!", Label::APPLY_SET) {
   v = scm.eval(env, v);
   bool has_k = env->contains(sym);
   if (!has_k) {
-    SPDLOG_ERROR("Unbound variable: {} from {}", k, k.source_location());
+    PSCM_ERROR("Unbound variable: {} from {}", k, k.source_location());
     PSCM_THROW_EXCEPTION("Unbound variable: " + k.to_string());
   }
   env->set(sym, v);
@@ -104,15 +109,15 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "cond", Label::APPLY_COND) {
   }
   while (!args.is_nil()) {
     auto clause = car(args);
-    SPDLOG_INFO("clause: {}", clause);
+    PSCM_DEBUG("clause: {}", clause);
     args = cdr(args);
     if (clause.is_nil()) {
       PSCM_THROW_EXCEPTION("Bad cond clause " + clause.to_string() + " in expression " + args.to_string());
     }
     auto test = car(clause);
-    SPDLOG_INFO("test: {}", test);
+    PSCM_DEBUG("test: {}", test);
     auto expr = cdr(clause);
-    SPDLOG_INFO("expr: {}", expr);
+    PSCM_DEBUG("expr: {}", expr);
     if (test.is_sym()) {
       PSCM_ASSERT(test.to_sym());
       auto sym = test.to_sym();
@@ -137,7 +142,7 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "cond", Label::APPLY_COND) {
       return Cell::bool_true();
     }
     auto tmp = cdr(clause);
-    SPDLOG_INFO("tmp: {}", tmp);
+    PSCM_DEBUG("tmp: {}", tmp);
     auto arrow = car(tmp);
     auto arrow_sym = "=>"_sym;
     if (arrow.is_sym() && *arrow.to_sym() == arrow_sym && !env->contains(&arrow_sym)) {
@@ -257,6 +262,10 @@ void Scheme::add_func(Symbol *sym, Function *func) {
 
 Scheme::Scheme(bool use_register_machine)
     : use_register_machine_(use_register_machine) {
+  // add default ConsoleAppender
+  if (pscm::logger::Logger::root_logger()->appender_set().empty()) {
+    pscm::logger::Logger::root_logger()->add_appender(new pscm::logger::ConsoleAppender());
+  }
   current_module_ = nullptr;
   auto env = new SymbolTable("root");
   // hack: force load code in AList.cpp
@@ -463,7 +472,7 @@ Cell Scheme::eval(const char *code) {
     return ret;
   }
   catch (Exception& ex) {
-    SPDLOG_ERROR("eval {} error: {}", code, ex.what());
+    PSCM_ERROR("eval {} error: {}", code, ex.what());
     return Cell::ex(ex.what());
   }
 }
@@ -484,7 +493,7 @@ Cell Scheme::eval_internal(SymbolTable *env, const char *code) {
     return ret;
   }
   catch (Exception& ex) {
-    SPDLOG_ERROR("eval {} error: {}", code, ex.what());
+    PSCM_ERROR("eval {} error: {}", code, ex.what());
     return Cell::ex(ex.what());
   }
 }
@@ -507,7 +516,7 @@ void Scheme::eval_all(const char *code, SourceLocation loc) {
     }
   }
   catch (Exception& ex) {
-    SPDLOG_ERROR("eval {} error: {}", code, ex.what());
+    PSCM_ERROR("eval {} error: {}", code, ex.what());
     PSCM_THROW_EXCEPTION(loc.to_string() + ", EVAL_ALL Error: " + std::string(code));
   }
 }
@@ -515,13 +524,13 @@ void Scheme::eval_all(const char *code, SourceLocation loc) {
 bool Scheme::load(const char *filename) {
   std::cout << "load: " << filename << std::endl;
   if (!fs::exists(filename)) {
-    SPDLOG_ERROR("file not found: {}", filename);
+    PSCM_ERROR("file not found: {}", filename);
     return false;
   }
   std::fstream ifs;
   ifs.open(filename, std::ios::in);
   if (!ifs.is_open()) {
-    SPDLOG_ERROR("load file {} error", filename);
+    PSCM_ERROR("load file {} error", filename);
     return false;
   }
   ifs.seekg(0, ifs.end);
@@ -544,7 +553,7 @@ bool Scheme::load(const char *filename) {
     }
   }
   catch (Exception& ex) {
-    SPDLOG_ERROR("load file {} error", filename);
+    PSCM_ERROR("load file {} error", filename);
     ex.print_stack_trace();
     return false;
   }
@@ -566,8 +575,8 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
   Cell proc;
   Cell args;
   while (true) {
-    SPDLOG_INFO("eval: {}", expr.pretty_string());
-    // SPDLOG_INFO("eval: {}", expr);
+    PSCM_TRACE("eval: {}", expr.pretty_string());
+    // PSCM_INFO("eval: {}", expr);
     if (expr.is_none()) {
       return expr;
     }
@@ -580,12 +589,12 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
     proc = eval(env, car(expr));
     args = cdr(expr);
     if (proc.is_func()) {
-      SPDLOG_INFO("proc {} args: {}", proc, args.pretty_string());
+      PSCM_DEBUG("proc {} args: {}", proc, args.pretty_string());
       PSCM_ASSERT(args.is_pair() || args.is_nil());
       auto f = proc.to_func();
       auto func_args = eval_args(env, args);
       auto ret = f->call(func_args);
-      SPDLOG_INFO("proc {} ret: {}", expr.pretty_string(), ret.pretty_string());
+      PSCM_DEBUG("proc {} ret: {}", expr.pretty_string(), ret.pretty_string());
       return ret;
     }
     else if (proc.is_macro()) {
@@ -599,8 +608,8 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
         auto op_args = cdr(args);
         op = eval(env, op);
         op_args = eval(env, op_args);
-        SPDLOG_INFO("op: {}", op);
-        SPDLOG_INFO("args: {}", op_args);
+        PSCM_DEBUG("op: {}", op);
+        PSCM_DEBUG("args: {}", op_args);
         args = construct_apply_argl(op_args);
         // TODO:
         if (op.is_func()) {
@@ -609,7 +618,7 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
         else if (op.is_proc()) {
           expr = call_proc(env, op.to_proc(), args);
           // expr = cons(op, car(op_args));
-          SPDLOG_INFO("new expr: {}", expr);
+          PSCM_DEBUG("new expr: {}", expr);
           continue;
         }
         PSCM_THROW_EXCEPTION("unsupported now: " + op.to_string());
@@ -621,9 +630,9 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
         expr = f->call(args);
       }
       else {
-        SPDLOG_INFO("call macro: {}", proc);
+        PSCM_TRACE("call macro: {}", proc);
         expr = f->call(*this, env, args);
-        SPDLOG_INFO("expand result pretty: {}", expr.pretty_string());
+        PSCM_DEBUG("expand result pretty: {}", expr.pretty_string());
       }
       continue;
     }
@@ -635,7 +644,7 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
       continue;
     }
     else {
-      SPDLOG_ERROR("unsupported {} from {}", proc, proc.source_location());
+      PSCM_ERROR("unsupported {} from {}", proc, proc.source_location());
       // repl();
       PSCM_THROW_EXCEPTION("unsupported");
     }
@@ -658,7 +667,7 @@ Cell Scheme::lookup(SymbolTable *env, Cell expr, SourceLocation loc) {
   bool has_sym = env->contains(sym);
   if (!has_sym) {
     sym->print_debug_info();
-    SPDLOG_ERROR("env: {} {}", (void *)env, env->name());
+    PSCM_ERROR("env: {} {}", (void *)env, env->name());
     env->dump();
     // uncomment for debug
     // repl();
@@ -675,7 +684,7 @@ Cell Scheme::call_proc(SymbolTable *& env, Procedure *proc, Cell args, SourceLoc
   }
   env = proc->create_proc_env(args);
   auto body = proc->body();
-  SPDLOG_INFO("body: {}", body);
+  PSCM_DEBUG("body: {}", body);
   while (body.is_pair() && cdr(body).is_pair()) {
     [[maybe_unused]] auto ret = eval(env, car(body));
     body = cdr(body);
@@ -692,13 +701,13 @@ void Scheme::load_module(const std::string& filename, Cell module_name) {
   auto old_module = current_module_;
   std::cout << "load: " << filename << std::endl;
   if (!fs::exists(filename)) {
-    SPDLOG_ERROR("file not found: {}", filename);
+    PSCM_ERROR("file not found: {}", filename);
     PSCM_THROW_EXCEPTION("load module error: " + Cell(module_name).to_string());
   }
   std::fstream ifs;
   ifs.open(filename, std::ios::in);
   if (!ifs.is_open()) {
-    SPDLOG_ERROR("load file {} error", filename);
+    PSCM_ERROR("load file {} error", filename);
     PSCM_THROW_EXCEPTION("load module error: " + Cell(module_name).to_string());
   }
   ifs.seekg(0, ifs.end);
@@ -722,7 +731,7 @@ void Scheme::load_module(const std::string& filename, Cell module_name) {
   }
   catch (Exception& ex) {
     ex.print_stack_trace();
-    SPDLOG_ERROR("load file {} error", filename);
+    PSCM_ERROR("load file {} error", filename);
     PSCM_THROW_EXCEPTION("load module error: " + Cell(module_name).to_string());
   }
   current_module_ = old_module;
@@ -795,7 +804,7 @@ PSCM_DEFINE_BUILTIN_PROC(Scheme, "select") {
 }
 
 PSCM_DEFINE_BUILTIN_PROC(Scheme, "scm-error") {
-  SPDLOG_ERROR("scm-error: {}", args);
+  PSCM_ERROR("scm-error: {}", args);
   return Cell::none();
 }
 

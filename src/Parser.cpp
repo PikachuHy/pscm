@@ -19,9 +19,12 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <unordered_map>
 using namespace std::string_literals;
 
 namespace pscm {
+
+PSCM_INLINE_LOG_DECLARE("pscm.core.Parser");
 
 class NumberParser {
 public:
@@ -206,7 +209,7 @@ public:
   }
 
   double convert_str_to_float(std::string str) {
-    SPDLOG_INFO("str: {}", str);
+    PSCM_INFO("str: {}", str);
     errno = 0;
     double x = std::stod(str);
     if (errno == ERANGE) {
@@ -364,7 +367,7 @@ Cell Parser::parse_token(pscm::Parser::Token token, std::size_t start) {
         }
         std::cout << "^" << std::endl;
       }
-      SPDLOG_ERROR("Unsupported token: {}", int(token));
+      PSCM_ERROR("Unsupported token: {}", int(token));
       PSCM_THROW_EXCEPTION("Unsupported token: " + code_.substr(start, pos_ - start));
     }
     }

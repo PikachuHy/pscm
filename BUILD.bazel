@@ -19,6 +19,26 @@ gen_pscm_version_info(
 )
 
 cc_library(
+    name = "pscm.misc",
+    srcs = glob(["src/misc/*.cpp"]),
+    hdrs = glob(["include/pscm/misc/*.h"]),
+    copts = ["-std=c++20"],
+    strip_include_prefix = "include",
+)
+
+cc_library(
+    name = "pscm.logger",
+    srcs = glob(["src/logger/*.cpp"]),
+    hdrs = glob(["include/pscm/logger/*.h"]),
+    copts = ["-std=c++20"],
+    strip_include_prefix = "include",
+    deps = [
+        ":pscm.misc",
+        "@spdlog",
+    ],
+)
+
+cc_library(
     name = "pscm",
     srcs = glob(
         [
@@ -61,8 +81,8 @@ cc_library(
     }),
     visibility = ["//visibility:public"],
     deps = [
+        ":pscm.logger",
         "@cpp-linenoise",
-        "@spdlog",
         "@ust",
         # compat c++14
         # "@filesystem",

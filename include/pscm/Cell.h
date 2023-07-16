@@ -4,26 +4,11 @@
 
 #pragma once
 #include "compat.h"
+#include "pscm/misc/SourceLocation.h"
 #include <ostream>
 #include <vector>
 
 namespace pscm {
-
-struct SourceLocation {
-  constexpr SourceLocation(const char *filename = __builtin_FILE(), unsigned int linenum = __builtin_LINE(),
-                           const char *funcname = __builtin_FUNCTION())
-      : filename(filename)
-      , linenum(linenum)
-      , funcname(funcname) {
-  }
-
-  const char *filename;
-  unsigned int linenum;
-  const char *funcname;
-
-  std::string to_string() const;
-};
-
 class Scheme;
 class Number;
 class Char;

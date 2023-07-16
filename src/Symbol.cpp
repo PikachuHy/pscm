@@ -15,6 +15,7 @@
 #include <ostream>
 
 namespace pscm {
+PSCM_INLINE_LOG_DECLARE("pscm.core.Symbol");
 Symbol callcc("call-with-current-continuation");
 Symbol call_with_values("call-with-values");
 Symbol values("values");
@@ -64,7 +65,7 @@ void Symbol::print_debug_info() {
   std::fstream in;
   in.open(filename_);
   if (!in.is_open()) {
-    SPDLOG_ERROR("open file error: {}", filename_);
+    PSCM_ERROR("open file error: {}", filename_);
   }
   std::string line;
   for (size_t i = 0; i < row_; i++) {

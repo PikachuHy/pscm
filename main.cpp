@@ -3,7 +3,6 @@
 //
 #include <iostream>
 #include <pscm/Scheme.h>
-#include <spdlog/spdlog.h>
 #include <string>
 using namespace std::string_literals;
 using namespace pscm;
@@ -24,7 +23,6 @@ please report bugs to https://github.com/PikachuHy/pscm/issues
 }
 
 int main(int argc, char **argv) {
-  spdlog::set_level(spdlog::level::err);
   Scheme scm;
   auto version = scm.eval("(version)");
   std::cout << "Welcome to PikachuHy's Scheme" << std::endl;

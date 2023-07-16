@@ -6,8 +6,10 @@
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
+#include <spdlog/fmt/fmt.h>
 
 namespace pscm {
+PSCM_INLINE_LOG_DECLARE("pscm.core.HashTable");
 
 PSCM_DEFINE_BUILTIN_PROC(HashTable, "make-hash-table") {
 

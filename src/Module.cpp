@@ -14,8 +14,11 @@ namespace fs = ghc::filesystem;
 #include <filesystem>
 namespace fs = std::filesystem;
 #endif
+#include <spdlog/fmt/fmt.h>
 
 namespace pscm {
+
+PSCM_INLINE_LOG_DECLARE("pscm.core.Module");
 
 PSCM_DEFINE_BUILTIN_PROC(Module, "module-name") {
   PSCM_ASSERT(args.is_pair());
@@ -68,7 +71,7 @@ std::string check_module(Cell name, const std::vector<std::string>& load_path_ve
     }
   }
   if (!module_found) {
-    SPDLOG_ERROR("file not exist: {}", fullname);
+    PSCM_ERROR("file not exist: {}", fullname);
     PSCM_THROW_EXCEPTION("module not found: " + name.to_string());
   }
   return fullname;
@@ -91,7 +94,7 @@ std::vector<std::string> get_load_path(SymbolTable *env) {
   std::string env_load_path;
   if (c_env_load_path) {
     env_load_path = c_env_load_path;
-    SPDLOG_INFO("PSCM_LOAD_PATH: {}", env_load_path);
+    PSCM_INFO("PSCM_LOAD_PATH: {}", env_load_path);
     load_path_vec.push_back(env_load_path);
   }
   return load_path_vec;
@@ -101,11 +104,11 @@ PSCM_DEFINE_BUILTIN_MACRO(Module, "resolve-module", Label::APPLY_RESOLVE_MODULE)
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
   auto name = scm.eval(env, arg);
-  SPDLOG_INFO("module name: {}", name);
+  PSCM_INFO("module name: {}", name);
   PSCM_ASSERT(name.is_pair());
   auto load_path_vec = get_load_path(env);
   auto path = check_module(name, load_path_vec);
-  SPDLOG_INFO("resolve module: {} from {}", name, path);
+  PSCM_INFO("resolve module: {} from {}", name, path);
   if (!scm.has_module(name)) {
     scm.load_module(path, name);
     if (!scm.has_module(name)) {
@@ -124,7 +127,7 @@ PSCM_DEFINE_BUILTIN_MACRO(Module, "use-modules", Label::APPLY_USE_MODULES) {
         PSCM_ASSERT(expr.is_pair());
         // TODO: use module
         auto path = check_module(expr, load_path_vec);
-        SPDLOG_INFO("use module: {} from {}", expr, path);
+        PSCM_INFO("use module: {} from {}", expr, path);
         if (!scm.has_module(expr)) {
           scm.load_module(path, expr);
           if (!scm.has_module(expr)) {
@@ -192,7 +195,7 @@ void Module::export_symbol(Symbol *sym) {
     PSCM_THROW_EXCEPTION(Cell(sym).to_string() + "has already exported");
   }
   export_sym_list_.insert(sym);
-  SPDLOG_INFO("export symbol: {}", sym->name());
+  PSCM_INFO("export symbol: {}", sym->name());
 }
 
 void Module::use_module(Module *m, bool use_all) {
@@ -245,7 +248,7 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(Module, "module-map", Label::APPLY_APPLY,
   PSCM_ASSERT(arg2.is_sym());
   arg1 = env->get(arg1.to_sym());
   arg2 = env->get(arg2.to_sym());
-  SPDLOG_INFO("args: {}, {}", arg1.to_string(), arg2.to_string());
+  PSCM_INFO("args: {}, {}", arg1.to_string(), arg2.to_string());
   PSCM_ASSERT(arg1.is_proc());
   // auto proc = arg1.to_proc();
   auto ret = cons(nil, nil);
