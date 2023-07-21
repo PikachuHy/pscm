@@ -1,7 +1,13 @@
 //
 // Created by PikachuHy on 2023/2/23.
 //
-
+#ifdef PSCM_USE_CXX20_MODULES
+#include "pscm/Logger.h"
+#include "pscm/common_def.h"
+import pscm;
+import std;
+import fmt;
+#else
 #include "pscm/Cell.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Char.h"
@@ -25,7 +31,7 @@
 #include <spdlog/fmt/fmt.h>
 #include <sstream>
 #include <unordered_set>
-
+#endif
 namespace pscm {
 Cell nil = Cell::nil();
 PSCM_INLINE_LOG_DECLARE("pscm.core.Cell");
@@ -180,19 +186,19 @@ std::string Cell::pretty_string() const {
   return ss.str();
 }
 
-bool Cell::to_bool(SourceLocation loc) const {
+bool Cell::to_bool(SourceLocation loc PSCM_CXX20_MODULES_DEFAULT_ARG_COMPAT) const {
   PSCM_ASSERT_WITH_LOC(is_bool(), loc);
   return data_ != nullptr;
 }
 
 #define PSCM_DEFINE_CELL_TYPE(Type, type, tag)                                                                         \
-  Cell::Cell(Type *t, SourceLocation loc)                                                                              \
+  Cell::Cell(Type *t, SourceLocation loc PSCM_CXX20_MODULES_DEFAULT_ARG_COMPAT)                                        \
       : loc_(loc) {                                                                                                    \
     ref_count_++;                                                                                                      \
     tag_ = Tag::tag;                                                                                                   \
     data_ = (void *)t;                                                                                                 \
   }                                                                                                                    \
-  Type *Cell::to_##type(SourceLocation loc) const {                                                                    \
+  Type *Cell::to_##type(SourceLocation loc PSCM_CXX20_MODULES_DEFAULT_ARG_COMPAT) const {                              \
     PSCM_ASSERT_WITH_LOC(is_##type(), loc);                                                                            \
     return (Type *)(data_);                                                                                            \
   }

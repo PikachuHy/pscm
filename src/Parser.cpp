@@ -1,7 +1,13 @@
 //
 // Created by PikachuHy on 2023/2/23.
 //
-
+#ifdef PSCM_USE_CXX20_MODULES
+#include "pscm/Logger.h"
+#include "pscm/common_def.h"
+import pscm;
+import std;
+import fmt;
+#else
 #include "pscm/Parser.h"
 #include "pscm/Char.h"
 #include "pscm/Exception.h"
@@ -20,6 +26,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#endif
 using namespace std::string_literals;
 
 namespace pscm {

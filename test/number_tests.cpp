@@ -3,7 +3,11 @@
 //
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest/doctest.h"
+#ifdef PSCM_USE_CXX20_MODULES
+import pscm;
+#else
 #include <pscm/Number.h>
+#endif
 using namespace doctest;
 using namespace pscm;
 #if defined(__APPLE__) && defined(PSCM_STD_COMPAT)

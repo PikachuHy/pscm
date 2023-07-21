@@ -20,8 +20,24 @@ jobs:
         run: git submodule update --init
         working-directory: ${{github.workspace}}
 
-      - name: Install ninja-build tool
-        uses: seanmiddleditch/gha-setup-ninja@master
+      - name: Update Homebrew
+        run: |
+          brew update --preinstall
+          cat "$(brew --repository)/Library/Taps/homebrew/homebrew-core/Formula/llvm.rb" >> .github/brew-formulae
+          cat "$(brew --repository)/Library/Taps/homebrew/homebrew-core/Formula/ninja.rb" >> .github/brew-formulae
+      - name: Configure Homebrew cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            /usr/local/Cellar
+          key: brew-${{ hashFiles('.github/brew-formulae') }}
+          restore-keys: brew-
+
+      - name: Install LLVM
+        run: brew install llvm
+
+      - name: Install Ninja
+        run: brew install ninja
 
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
@@ -36,4 +52,14 @@ jobs:
 
       - name: Test
         working-directory: ${{github.workspace}}/build/test
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
+
+      - name: Configure CMake with C++20 Modules
+        run: CXX=/usr/local/opt/llvm/bin/clang++ CC=/usr/local/opt/llvm/bin/clang cmake -B ${{github.workspace}}/build2 -DCMAKE_BUILD_TYPE=${{matrix.mode}} -DCMAKE_MAKE_PROGRAM=/usr/local/bin/ninja -G Ninja -DUSE_CCACHE=ON -DPSCM_USE_CXX20_MODULES=ON
+
+      - name: Build with C++20 Modules
+        run: cmake --build ${{github.workspace}}/build2 --config ${{matrix.mode}} --verbose -j
+
+      - name: Test with C++20 Modules
+        working-directory: ${{github.workspace}}/build2/test
         run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure

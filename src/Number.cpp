@@ -1,7 +1,13 @@
 //
 // Created by PikachuHy on 2023/2/23.
 //
-
+#ifdef PSCM_USE_CXX20_MODULES
+#include "pscm/Logger.h"
+#include "pscm/common_def.h"
+import pscm;
+import std;
+import fmt;
+#else
 #include "pscm/Number.h"
 #include "pscm/Exception.h"
 #include "pscm/common_def.h"
@@ -9,6 +15,7 @@
 #include <spdlog/fmt/fmt.h>
 #include <sstream>
 #include <string_view>
+#endif
 using namespace std::string_literals;
 
 namespace pscm {

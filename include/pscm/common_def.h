@@ -55,3 +55,9 @@
 
 #define PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(module, name, label, args)                                              \
   Cell PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER_INNER(PSCM_CONCAT2(_##module##__macro__, __COUNTER__), name, label, args)
+
+#ifdef PSCM_USE_CXX20_MODULES
+#define PSCM_CXX20_MODULES_DEFAULT_ARG_COMPAT = {}
+#else
+#define PSCM_CXX20_MODULES_DEFAULT_ARG_COMPAT
+#endif

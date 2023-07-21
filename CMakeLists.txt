@@ -1,9 +1,21 @@
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.26)
 project(pscm VERSION 0.3.0 LANGUAGES CXX)
+option(PSCM_USE_CXX20_MODULES "enable c++20 modules" OFF)
 if (WIN32)
     set(CMAKE_CXX_STANDARD 20)
 else ()
-    set(CMAKE_CXX_STANDARD 14)
+    if (PSCM_USE_CXX20_MODULES)
+        if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+            set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
+            include(cxx_modules_rules_clang.cmake)
+            set(CMAKE_CXX_STANDARD 20)
+            set(CMAKE_CXX_EXTENSIONS OFF)
+        else ()
+            message(FATAL_ERROR "${CMAKE_CXX_COMPILER_ID} not support C++20 Modules now")
+        endif ()
+    else ()
+        set(CMAKE_CXX_STANDARD 14)
+    endif ()
 endif ()
 
 
@@ -64,7 +76,8 @@ if (USE_CPP_STD_COMPAT)
     target_include_directories(pscm PUBLIC 3rd/string-view-lite/include)
 endif ()
 
-aux_source_directory(src PSCM_SRCS)
+file(GLOB PSCM_SRCS "src/*.cpp")
+message(STATUS "PSCM_SRCS: ${PSCM_SRCS}")
 target_sources(pscm PRIVATE ${PSCM_SRCS})
 target_sources(pscm PRIVATE
         ${CMAKE_CURRENT_BINARY_DIR}/generate/src/version.cpp
@@ -72,6 +85,19 @@ target_sources(pscm PRIVATE
         src/logger/Appender.cpp
         src/misc/SourceLocation.cpp
 )
+if (PSCM_USE_CXX20_MODULES)
+    target_compile_definitions(pscm PUBLIC PSCM_USE_CXX20_MODULES)
+    target_sources(pscm PUBLIC
+            FILE_SET cxx_modules TYPE CXX_MODULES FILES
+            src/logger/logger.cppm
+            src/misc/misc.cppm
+            src/pscm.cppm
+            src/compat.cppm
+            3rd/std.cppm
+            3rd/fmt.cppm
+            3rd/linenoise.cppm
+    )
+endif ()
 target_link_libraries(pscm PUBLIC spdlog::spdlog)
 if (EMSCRIPTEN)
     target_compile_definitions(pscm PUBLIC WASM_PLATFORM)

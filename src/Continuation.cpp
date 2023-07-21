@@ -1,9 +1,15 @@
 //
 // Created by PikachuHy on 2023/3/12.
 //
-
+#ifdef PSCM_USE_CXX20_MODULES
+#include "pscm/Logger.h"
+#include "pscm/common_def.h"
+import pscm;
+import std;
+import fmt;
+#else
 #include "pscm/Continuation.h"
-
+#endif
 namespace pscm {
 std::ostream& operator<<(std::ostream& out, const Continuation& cont) {
   out << "#<continuation ";

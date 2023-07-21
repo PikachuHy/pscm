@@ -1,3 +1,10 @@
+#ifdef PSCM_USE_CXX20_MODULES
+#include "pscm/Logger.h"
+#include "pscm/common_def.h"
+import pscm;
+import std;
+import fmt;
+#else
 #include "pscm/Port.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Cell.h"
@@ -17,7 +24,7 @@
 #include <iostream>
 #include <sstream>
 #include <variant>
-
+#endif
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Port");
 

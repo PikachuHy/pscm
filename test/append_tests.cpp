@@ -1,6 +1,9 @@
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest/doctest.h"
+#ifdef PSCM_USE_CXX20_MODULES
+import pscm;
+#else
 #include <fstream>
 #include <pscm/Char.h>
 #include <pscm/Number.h>
@@ -12,6 +15,7 @@
 #include <pscm/scm_utils.h>
 #include <sstream>
 #include <string>
+#endif
 using namespace doctest;
 using namespace pscm;
 using namespace std::string_literals;

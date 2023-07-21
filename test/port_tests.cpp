@@ -12,10 +12,9 @@
 #include <pscm/scm_utils.h>
 #include <sstream>
 #include <string>
-using namespace doctest;
-using namespace pscm;
-using namespace std::string_literals;
-using namespace doctest;
+#ifdef PSCM_USE_CXX20_MODULES
+import pscm;
+#else
 #if PSCM_STD_COMPAT
 #include <ghc/filesystem.hpp>
 namespace fs = ghc::filesystem;
@@ -23,6 +22,12 @@ namespace fs = ghc::filesystem;
 #include <filesystem>
 namespace fs = std::filesystem;
 #endif
+#endif
+using namespace doctest;
+using namespace pscm;
+using namespace std::string_literals;
+using namespace doctest;
+
 TEST_CASE("testing call-with-output-file") {
 
   auto f = [](Scheme& scm) {

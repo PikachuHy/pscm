@@ -1,7 +1,13 @@
 //
 // Created by PikachuHy on 2023/3/4.
 //
-
+#ifdef PSCM_USE_CXX20_MODULES
+#include "pscm/Logger.h"
+#include "pscm/common_def.h"
+import pscm;
+import std;
+import fmt;
+#else
 #include "pscm/Macro.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Module.h"
@@ -11,7 +17,7 @@
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
-
+#endif
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Macro");
 

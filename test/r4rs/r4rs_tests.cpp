@@ -3,6 +3,9 @@
 //
 #define DOCTEST_CONFIG_IMPLEMENT
 #include "doctest/doctest.h"
+#ifdef PSCM_USE_CXX20_MODULES
+import pscm;
+#else
 #include <pscm/Number.h>
 #include <pscm/Pair.h>
 #include <pscm/Parser.h>
@@ -10,6 +13,7 @@
 #include <pscm/Str.h>
 #include <pscm/Symbol.h>
 #include <pscm/scm_utils.h>
+#endif
 using namespace pscm;
 using namespace doctest;
 
