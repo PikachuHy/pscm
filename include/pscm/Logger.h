@@ -1,9 +1,9 @@
 #pragma once
 #include "pscm/logger/Logger.h"
-#define PSCM_LOGGER_LOG(logger_, level, format_, ...)                                                              \
+#define PSCM_LOGGER_LOG(logger_, level, format_, ...)                                                                  \
   {                                                                                                                    \
     if (logger_->is_level_enabled(level)) {                                                                            \
-      logger_->log(level, fmt::format(format_, ##__VA_ARGS__));                                                               \
+      logger_->log(level, fmt::format(format_, ##__VA_ARGS__));                                                        \
     }                                                                                                                  \
   }
 
