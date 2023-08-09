@@ -23,7 +23,7 @@ public:
       break;
     case pscm::logger::Logger::Level::FATAL:
       return format_to(ctx.out(), "{}{}{}{}", on_red, white, "FATAL", reset, reset);
-    case pscm::logger::Logger::Level::ERROR:
+    case pscm::logger::Logger::Level::ERROR_:
       return format_to(ctx.out(), "{}{}{}", red, "ERROR", reset);
     case pscm::logger::Logger::Level::WARN:
       return format_to(ctx.out(), "{}{}{}", yellow, "WARN", reset);

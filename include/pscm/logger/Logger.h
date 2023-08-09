@@ -15,8 +15,8 @@ struct Event;
 
 class Logger {
 public:
-  // avoid DEBUG macro conflict
-  enum class Level { NONE, FATAL, ERROR, WARN, INFO, DEBUG_, TRACE };
+  // avoid DEBUG macro and ERROR macro conflict
+  enum class Level { NONE, FATAL, ERROR_, WARN, INFO, DEBUG_, TRACE };
   static Logger *root_logger();
   static std::unordered_map<std::string, Logger *>& logger_map();
   static Logger *get_logger(std::string name);
