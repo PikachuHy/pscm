@@ -1,25 +1,50 @@
 (cpp_library
-  (name "spdlog")
-  (srcs
-    (glob "3rd/spdlog/src/*.cpp"))
-  (hdrs
-    (glob "3rd/spdlog/include/**/*.h"))
-  (copts "-DSPDLOG_COMPILED_LIB")
-  (includes "3rd/spdlog/include"))
+  (name "fmt")
+  (srcs "3rd/fmt.cppm")
+  (includes "3rd/fmt/include")
+  (copts "-I3rd/fmt/src" "-std=c++20"))
 
+(cpp_library
+  (name "std")
+  (srcs "3rd/std.cppm")
+  (copts "-std=c++20"))
+
+(cpp_library
+  (name "subprocess")
+  (srcs "3rd/subprocess.cppm"
+    (glob "3rd/subprocess/src/cpp/subprocess/*.cpp"))
+  (includes "3rd/subprocess/src/cpp")
+  (copts "-std=c++20"))
+
+(cpp_library
+  (name "glob")
+  (srcs "3rd/glob.cppm" "3rd/glob/source/glob.cpp")
+  (includes "3rd/glob/include")
+  (copts "-std=c++20"))
+  
+(cpp_library
+  (name "linenoise")
+  (srcs "3rd/linenoise.cppm")
+  (includes "3rd/cpp-linenoise")
+  (copts "-std=c++20"))
+  
 (cpp_library
  (name "pscm")
  (srcs
-  (glob "src/*.cpp"))
+  (glob "src/**/*.cpp" "src/**/*.cppm")
+  "build/generate/src/version.cpp"
+  )
  (hdrs
   (glob "include/**/*.h"))
- (includes "include" "3rd/UniversalStacktrace/ust")
+ (includes "include" "3rd/UniversalStacktrace" "3rd/cpp-linenoise")
+ (defines "PSCM_USE_CXX20_MODULES")
  (copts "-std=c++20" "-I" "build/generate")
- (deps ":spdlog"))
+ (deps ":fmt" ":std" ":glob" ":subprocess" ":linenoise"))
 
 (cpp_binary
   (name "pscm-main")
   (srcs "main.cpp")
+  (copts "-std=c++20")
   (deps ":pscm"))
 
 

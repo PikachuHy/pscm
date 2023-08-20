@@ -2,7 +2,6 @@
 // Created by PikachuHy on 2023/3/20.
 //
 #include <pscm/Scheme.h>
-#include <spdlog/spdlog.h>
 using namespace pscm;
 
 void version_1() {
@@ -36,7 +35,6 @@ void version_2() {
 }
 
 int main() {
-  spdlog::set_level(spdlog::level::err);
   version_2();
   return 0;
 }

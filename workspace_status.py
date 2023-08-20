@@ -13,26 +13,34 @@ def main():
 
 
 def get_git_hash(path):
-    p = subprocess.Popen(["git", "rev-parse", "HEAD"], cwd=path, stdout=subprocess.PIPE)
+    cmd = ["git", "rev-parse", "HEAD"]
+    p = subprocess.Popen(cmd, cwd=path, stdout=subprocess.PIPE)
     (out, err) = p.communicate()
     if p.returncode != 0:
+        print(f"run {cmd} fail")
         sys.exit(p.returncode)
     return out.decode("ascii").strip()
 
 
 # symbolic-ref --short -q HEAD
 def get_git_branch(path):
-    p = subprocess.Popen(["git", "symbolic-ref", "--short", "-q", "HEAD"], cwd=path, stdout=subprocess.PIPE)
+    cmd = ["git", "symbolic-ref", "--short", "-q", "HEAD"]
+    p = subprocess.Popen(cmd, cwd=path, stdout=subprocess.PIPE)
     (out, err) = p.communicate()
     if p.returncode != 0:
-        sys.exit(p.returncode)
+        print(f"run {cmd} fail")
+        # sys.exit(p.returncode)
+        # can not get branch when run on GitHub PR ci
+        return ""
     return out.decode("ascii").strip()
 
 
 def is_git_dirty(path):
-    p = subprocess.Popen(["git", "status", "-s"], cwd=path, stdout=subprocess.PIPE)
+    cmd = ["git", "status", "-s"]
+    p = subprocess.Popen(cmd, cwd=path, stdout=subprocess.PIPE)
     (out, err) = p.communicate()
     if p.returncode != 0:
+        print(f"run {cmd} fail")
         sys.exit(p.returncode)
     return not not out.decode("ascii").strip()
 

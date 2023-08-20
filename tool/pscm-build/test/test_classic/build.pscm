@@ -1,0 +1,6 @@
+
+(cpp_binary
+  (name "main")
+  (srcs (glob "*.cc" "*.cppm" "*.cpp"))
+  (copts "-std=c++20"))
+

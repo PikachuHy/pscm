@@ -2,8 +2,6 @@
 // Created by PikachuHy on 2023/3/20.
 //
 #include <pscm/Scheme.h>
-#include <spdlog/sinks/basic_file_sink.h>
-#include <spdlog/spdlog.h>
 using namespace pscm;
 using namespace std::chrono_literals;
 
@@ -81,7 +79,6 @@ void version_4() {
 }
 
 int main() {
-  spdlog::set_level(spdlog::level::err);
   version_4();
   return 0;
 }

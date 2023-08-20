@@ -10,8 +10,12 @@
 #include "pscm/Symbol.h"
 #include "pscm/common_def.h"
 #include <concepts>
+#ifdef PSCM_USE_CXX20_MODULES
+#include <fmt/core.h>
+#include <fmt/format.h>
+#else
 #include <spdlog/fmt/fmt.h>
-
+#endif
 namespace pscm {
 inline Cell list(Cell t) {
   return cons(t, nil);
@@ -110,7 +114,7 @@ Cell map(Func f, Cell list1, Cell list2, SourceLocation loc = {}) {
 template <>
 class fmt::formatter<pscm::Cell> {
 public:
-  auto parse(format_parse_context& ctx) {
+  constexpr auto parse(format_parse_context& ctx) {
     // PSCM_THROW_EXCEPTION("not supported now");
     auto i = ctx.begin();
     return i;

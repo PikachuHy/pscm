@@ -1,0 +1,8 @@
+(cpp_library
+(name "foo")
+(srcs "foo.cpp")
+(includes "include"))
+(cpp_library
+(name "bar")
+(srcs "bar.cpp")
+(deps ":foo"))

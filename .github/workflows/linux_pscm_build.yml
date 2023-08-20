@@ -2,9 +2,9 @@ name: Linux pscm-build
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   build_with_clang:
@@ -34,5 +34,5 @@ jobs:
 
       - name: Build with pscm-build
         working-directory: ${{github.workspace}}
-        run: ${{github.workspace}}/build/tool/pscm-build/pscm-build
+        run: CC=/usr/bin/clang ${{github.workspace}}/build/tool/pscm-build/src/pscm-build build :all
       

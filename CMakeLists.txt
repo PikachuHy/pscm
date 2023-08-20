@@ -77,7 +77,6 @@ if (USE_CPP_STD_COMPAT)
 endif ()
 
 file(GLOB PSCM_SRCS "src/*.cpp")
-message(STATUS "PSCM_SRCS: ${PSCM_SRCS}")
 target_sources(pscm PRIVATE ${PSCM_SRCS})
 target_sources(pscm PRIVATE
         ${CMAKE_CURRENT_BINARY_DIR}/generate/src/version.cpp
@@ -93,12 +92,12 @@ if (PSCM_USE_CXX20_MODULES)
             src/misc/misc.cppm
             src/pscm.cppm
             src/compat.cppm
-            3rd/std.cppm
-            3rd/fmt.cppm
             3rd/linenoise.cppm
     )
+    target_link_libraries(pscm PUBLIC fmt)
+else ()
+    target_link_libraries(pscm PUBLIC spdlog::spdlog)
 endif ()
-target_link_libraries(pscm PUBLIC spdlog::spdlog)
 if (EMSCRIPTEN)
     target_compile_definitions(pscm PUBLIC WASM_PLATFORM)
     target_link_options(pscm PUBLIC "-sEXPORTED_RUNTIME_METHODS=ccall,cwrap")
