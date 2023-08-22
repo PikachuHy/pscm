@@ -101,6 +101,7 @@ using pscm::Pair;
 //
 using pscm::for_each;
 using pscm::list;
+using pscm::list_length;
 using pscm::map;
 using pscm::reverse_argl;
 } // namespace pscm

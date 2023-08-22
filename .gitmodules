@@ -25,3 +25,12 @@
 [submodule "3rd/string-view-lite"]
 	path = 3rd/string-view-lite
 	url = https://github.com/martinmoene/string-view-lite.git
+[submodule "3rd/fmt"]
+	path = 3rd/fmt
+	url = https://github.com/fmtlib/fmt.git
+[submodule "3rd/subprocess"]
+	path = 3rd/subprocess
+	url = https://github.com/benman64/subprocess.git
+[submodule "3rd/json"]
+	path = 3rd/json
+	url = https://github.com/nlohmann/json.git

@@ -3,6 +3,13 @@
 //
 
 #include "pscm/Evaluator.h"
+#ifdef PSCM_USE_CXX20_MODULES
+#include "pscm/Logger.h"
+#include "pscm/common_def.h"
+import pscm;
+import std;
+import fmt;
+#else
 #include "pscm/Char.h"
 #include "pscm/Continuation.h"
 #include "pscm/Exception.h"
@@ -37,6 +44,7 @@ namespace fs = std::filesystem;
 #endif
 
 #include <spdlog/fmt/fmt.h>
+#endif
 PSCM_INLINE_LOG_DECLARE("pscm.core.Evaluator");
 #define PSCM_PUSH_STACK(reg_name)                                                                                      \
   PSCM_DEBUG("push {} stack: {}", #reg_name, stack_.reg_name.size());                                                  \
@@ -78,7 +86,7 @@ PSCM_INLINE_LOG_DECLARE("pscm.core.Evaluator");
 template <>
 class fmt::formatter<pscm::Label> {
 public:
-  auto parse(format_parse_context& ctx) {
+  constexpr auto parse(format_parse_context& ctx) {
     // PSCM_THROW_EXCEPTION("not supported now");
     auto i = ctx.begin();
     return i;

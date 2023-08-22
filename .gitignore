@@ -62,3 +62,5 @@ node_modules
 bazel-*
 
 .idea
+
+pscm-build-bin

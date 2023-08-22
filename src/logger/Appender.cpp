@@ -1,17 +1,22 @@
 //
 // Created by PikachuHy on 2023/7/15.
 //
-
+#ifdef PSCM_USE_CXX20_MODULES
+#include "pscm/Logger.h"
+#include "pscm/common_def.h"
+import pscm.logger;
+import fmt;
+#else
 #include "pscm/logger/Appender.h"
 #include <chrono>
 #include <iostream>
 #include <spdlog/fmt/chrono.h>
 #include <spdlog/fmt/fmt.h>
-
+#endif
 template <>
 class fmt::formatter<pscm::logger::Logger::Level> {
 public:
-  auto parse(format_parse_context& ctx) {
+  constexpr auto parse(format_parse_context& ctx) {
     // PSCM_THROW_EXCEPTION("not supported now");
     auto i = ctx.begin();
     return i;

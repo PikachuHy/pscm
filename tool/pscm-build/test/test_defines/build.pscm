@@ -1,0 +1,9 @@
+(cpp_binary
+(name "main")
+(deps ":foo")
+)
+(cpp_library
+(name "foo")
+(srcs "foo.cpp")
+(defines "HAVE_MAIN")
+)
