@@ -55,8 +55,8 @@ using std::optional;
 using std::partial_ordering;
 using std::span;
 using std::strong_ordering;
-using std::span;
 using std::thread;
+using std::weak_ordering;
 
 using std::filesystem::path;
 
