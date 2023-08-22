@@ -21,7 +21,9 @@ module;
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#ifdef __GNUC__
 # 3 __FILE__ 1 3 // Enter "faked" system files since std is reserved module name
+#endif
 export module std;
 
 export namespace std {
