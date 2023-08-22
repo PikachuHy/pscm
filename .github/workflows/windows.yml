@@ -33,7 +33,7 @@ jobs:
           arch: ${{ matrix.arch }}
 
       - name: Generate Project
-        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -G Ninja
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -G Ninja -DPSCM_USE_CXX20_MODULES=ON
 
       - name: Build
         run: cmake --build build --config ${{ matrix.mode }} --verbose
