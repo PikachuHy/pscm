@@ -3,6 +3,7 @@
 //
 module;
 #include <algorithm>
+#include <compare>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
@@ -51,6 +52,7 @@ using std::hash;
 using std::lcm;
 using std::move;
 using std::optional;
+using std::partial_ordering;
 using std::span;
 using std::thread;
 
