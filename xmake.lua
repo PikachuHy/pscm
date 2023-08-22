@@ -1,4 +1,4 @@
-add_requires("spdlog", {configs = {fmt_external = true}})
+add_requires("spdlog")
 add_requires("doctest")
 add_requires("universal_stacktrace")
 add_requires("cpp-linenoise")

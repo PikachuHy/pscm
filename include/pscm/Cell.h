@@ -7,6 +7,7 @@
 #include "pscm/misc/SourceLocation.h"
 #include <ostream>
 #include <vector>
+#include <cstdint>
 
 namespace pscm {
 class Scheme;
