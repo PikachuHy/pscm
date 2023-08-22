@@ -1,4 +1,4 @@
-add_requires("spdlog")
+add_requires("spdlog", {configs = {header_only = false}})
 add_requires("doctest")
 add_requires("universal_stacktrace")
 add_requires("cpp-linenoise")
@@ -18,7 +18,6 @@ target("pscm") do
     set_languages("cxx20", "c17")
     add_includedirs("include")
     add_packages({"spdlog","universal_stacktrace","cpp-linenoise"})
-    add_links({"fmt"})
     add_files({
         "src/**.cpp",
         "$(buildir)/version.cpp"})
