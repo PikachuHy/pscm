@@ -18,6 +18,7 @@ target("pscm") do
     set_languages("cxx20", "c17")
     add_includedirs("include")
     add_packages({"spdlog","universal_stacktrace","cpp-linenoise"})
+    add_links({"fmt"})
     add_files({
         "src/**.cpp",
         "$(buildir)/version.cpp"})
