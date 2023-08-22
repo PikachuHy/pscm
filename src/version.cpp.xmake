@@ -1,0 +1,9 @@
+#include "pscm/version.h"
+namespace pscm {
+const char* VersionInfo::GIT_BRANCH = "${GIT_BRANCH}";
+const char* VersionInfo::GIT_HASH = "${GIT_COMMIT}";
+const char* VersionInfo::PSCM_VERSION = "${VERSION}";
+const int VersionInfo::PSCM_VERSION_MAJOR = ${VERSION_MAJOR};
+const int VersionInfo::PSCM_VERSION_MINOR = ${VERSION_MINOR};
+const int VersionInfo::PSCM_VERSION_PATCH = ${VERSION_ALTER};
+}

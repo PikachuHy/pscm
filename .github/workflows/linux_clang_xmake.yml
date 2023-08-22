@@ -2,9 +2,9 @@ name: Linux Clang (xmake)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   build_with_xmake_and_clang:
@@ -16,10 +16,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Clone Deps
-        run: git submodule update --init
-        working-directory: ${{github.workspace}}
-
       - name: cache xmake
         uses: actions/cache@v2
         with:
@@ -30,12 +26,12 @@ jobs:
     
       - uses: xmake-io/github-action-setup-xmake@v1
         with:
-          xmake-version: v2.7.7
+          xmake-version: v2.8.1
           actions-cache-folder: '.xmake-cache'
 
       - name: Build
         run: |
-          xmake config --yes --mode=${{matrix.mode}} --cc=clang --cxx=clang++
+          xmake config --yes --mode=${{matrix.mode}} --toolchain=clang
           xmake build --jobs=8
 
       - name: Test

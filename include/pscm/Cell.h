@@ -5,6 +5,7 @@
 #pragma once
 #include "compat.h"
 #include "pscm/misc/SourceLocation.h"
+#include <cstdint>
 #include <ostream>
 #include <vector>
 

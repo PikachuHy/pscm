@@ -4,6 +4,7 @@
 
 #pragma once
 #include "compat.h"
+#include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <variant>

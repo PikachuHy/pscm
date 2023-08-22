@@ -2,9 +2,9 @@ name: Linux GCC (xmake)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   build_with_xmake_and_gcc:
@@ -16,10 +16,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-
-      - name: Clone Deps
-        run: git submodule update --init
-        working-directory: ${{github.workspace}}
 
       - name: deps
         run: |

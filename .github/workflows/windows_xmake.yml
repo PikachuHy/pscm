@@ -2,9 +2,9 @@ name: Windows (xmake)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 
 jobs:
   build_with_xmake_on_windows:
@@ -19,10 +19,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-
-      - name: Clone Deps
-        run: git submodule update --init
-        working-directory: ${{github.workspace}}
 
       - name: Enable Developer Command Prompt
         uses: ilammy/msvc-dev-cmd@v1.12.0
