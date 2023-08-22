@@ -27,19 +27,19 @@ public:
     case pscm::logger::Logger::Level::NONE:
       break;
     case pscm::logger::Logger::Level::FATAL:
-      return fmt::v9::format_to(ctx.out(), "{}{}{}{}", on_red, white, "FATAL", reset, reset);
+      return format_to(ctx.out(), "{}{}{}{}", on_red, white, "FATAL", reset, reset);
     case pscm::logger::Logger::Level::ERROR_:
-      return fmt::v9::format_to(ctx.out(), "{}{}{}", red, "ERROR", reset);
+      return format_to(ctx.out(), "{}{}{}", red, "ERROR", reset);
     case pscm::logger::Logger::Level::WARN:
-      return fmt::v9::format_to(ctx.out(), "{}{}{}", yellow, "WARN", reset);
+      return format_to(ctx.out(), "{}{}{}", yellow, "WARN", reset);
     case pscm::logger::Logger::Level::INFO:
-      return fmt::v9::format_to(ctx.out(), "{}{}{}", green, "INFO", reset);
+      return format_to(ctx.out(), "{}{}{}", green, "INFO", reset);
     case pscm::logger::Logger::Level::DEBUG_:
-      return fmt::v9::format_to(ctx.out(), "{}{}{}", cyan, "DEBUG", reset);
+      return format_to(ctx.out(), "{}{}{}", cyan, "DEBUG", reset);
     case pscm::logger::Logger::Level::TRACE:
-      return fmt::v9::format_to(ctx.out(), "{}", "TRACE");
+      return format_to(ctx.out(), "{}", "TRACE");
     }
-    return fmt::v9::format_to(ctx.out(), "{}", "");
+    return format_to(ctx.out(), "{}", "");
   }
 
   // Formatting codes
