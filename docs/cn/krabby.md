@@ -65,10 +65,10 @@
   - 每页有5行输入的文本
   
 ### 当前实现
-![demo](https://img-blog.csdnimg.cn/20190406212406814.png)
+![demo](http://cdn.pikachu.net.cn/project/Krabby/krabby_v1_demo.png)
 
-![score](https://img-blog.csdnimg.cn/20190407123805743.png)
+![score](http://cdn.pikachu.net.cn/project/Krabby/krabby_v1_score.png)
 
-![article](https://img-blog.csdnimg.cn/2019040721350423.png)
+![article](http://cdn.pikachu.net.cn/project/Krabby/krabby_v1_article.png)
 
-![setting](https://img-blog.csdnimg.cn/20190407213525447.png)
+![setting](http://cdn.pikachu.net.cn/project/Krabby/krabby_v1_settings.png)
