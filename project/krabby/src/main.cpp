@@ -10,6 +10,7 @@
 #include <map>
 #include <string>
 #include <unordered_map>
+#include <vector>
 namespace fs = std::filesystem;
 // import std;
 #ifdef __EMSCRIPTEN__
