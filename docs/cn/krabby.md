@@ -22,6 +22,8 @@
 
 基于SDL2的wasm版本正在开发中
 
+![Krabby base on WASM SDL2](http://cdn.pikachu.net.cn/project/Krabby/krabby_v3_sdl2_wasm_screenshot.png)
+
 ## v2
 
 ### v2.1.0 支持统计

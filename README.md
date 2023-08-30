@@ -35,6 +35,10 @@ see [Development Plan](https://github.com/PikachuHy/pscm/issues/13)
 
 ## Screenshot
 
+- krabby
+
+![Krabby base on WASM SDL2](http://cdn.pikachu.net.cn/project/Krabby/krabby_v3_sdl2_wasm_screenshot.png)
+
 - vau
 
 ![vau pdf preview](http://cdn.pikachu.net.cn/pscm/vau/vau-test_pdf.png)
