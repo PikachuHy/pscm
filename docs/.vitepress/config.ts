@@ -110,6 +110,16 @@ function sidebarGuideZh() {
           link: '/cn/code_statistics'
         }
       ]
+    },
+    {
+      text: 'project',
+      collapsible: true,
+      items: [
+        {
+          text: 'Krabby',
+          link: '/cn/krabby'
+        }
+      ]
     }
   ]
 }

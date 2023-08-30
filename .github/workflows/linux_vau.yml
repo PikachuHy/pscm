@@ -18,9 +18,12 @@ jobs:
 
       - name: deps
         run: |
-          brew install ghostscript
-          brew install freetype
+          env HOMEBREW_NO_AUTO_UPDATE=1 brew install ghostscript
+          env HOMEBREW_NO_AUTO_UPDATE=1 brew install freetype
 
+      - name: Install SDL2
+        run: env HOMEBREW_NO_AUTO_UPDATE=1 brew install sdl2 sdl2_image sdl2_mixer sdl2_ttf
+  
       - name: Clone Deps
         run: git submodule update --init
         working-directory: ${{github.workspace}}
