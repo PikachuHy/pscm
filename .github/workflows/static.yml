@@ -3,7 +3,7 @@ name: Deploy static content to Pages
 
 on:
   workflow_run:
-    workflows: [ "Linux Bazel" ]
+    workflows: [ "Linux Bazel", "Linux WASM" ]
     branches: [ master ]
     types:
       - completed
@@ -60,6 +60,19 @@ jobs:
           repo: ${{ github.repository }}
       - name: Check linux-pscm-wasm
         run: ls -lha
+      - name: Download artifact
+        id: download-artifact-krabby-wasm
+        uses: dawidd6/action-download-artifact@v2
+        with:
+          github_token: ${{secrets.GITHUB_TOKEN}}
+          workflow: linux_wasm.yml
+          workflow_conclusion: success
+          branch: master
+          event: push
+          name: linux-krabby-wasm
+          repo: ${{ github.repository }}
+      - name: Check linux-krabby-wasm
+        run: ls -lha
       - name: Yarn Install
         run: yarn install
         working-directory: ${{github.workspace}}
@@ -71,6 +84,13 @@ jobs:
           cp pscm.js docs/public
           cp pscm.wasm docs/public
           cp wasm/demo.html docs/public
+          mkdir -p docs/public/project/krabby
+          cp index.html docs/public/project/krabby
+          cp krabby.data docs/public/project/krabby
+          cp krabby.js docs/public/project/krabby
+          cp krabby.wasm docs/public/project/krabby
+          cp -r icon docs/public/project/krabby
+          cp -r images docs/public/project/krabby
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
         with:
