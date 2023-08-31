@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "pscm/misc/ICUCompat.h"
 #include <string>
 
 namespace pscm {
@@ -19,7 +20,7 @@ struct SourceLocation {
   unsigned int linenum;
   const char *funcname;
 
-  std::string to_string() const;
+  UString to_string() const;
 };
 
 } // namespace pscm

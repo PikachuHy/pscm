@@ -14,7 +14,7 @@ import fmt;
 #include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
-#include "pscm/logger/Logger.h"
+#include "pscm/logger/Logger.hpp"
 #include "pscm/scm_utils.h"
 #include <spdlog/fmt/fmt.h>
 #include <tuple>
@@ -33,14 +33,14 @@ SymbolTable *ApiManager::private_env() {
   return &env;
 }
 
-ApiManager::ApiManager(Cell::ScmFunc f, std::string name, SourceLocation loc)
+ApiManager::ApiManager(Cell::ScmFunc f, UString name, SourceLocation loc)
     : f_(f)
     , name_(name)
     , loc_(loc) {
   ApiManager::api_list().push_back(this);
 }
 
-ApiManager::ApiManager(Cell::ScmMacro2 f, std::string name, Label label, SourceLocation loc)
+ApiManager::ApiManager(Cell::ScmMacro2 f, UString name, Label label, SourceLocation loc)
     : f_(f)
     , label_(label)
     , name_(name)
@@ -48,7 +48,7 @@ ApiManager::ApiManager(Cell::ScmMacro2 f, std::string name, Label label, SourceL
   ApiManager::api_list().push_back(this);
 }
 
-ApiManager::ApiManager(Cell::ScmMacro2 f, std::string name, Label label, const char *args, SourceLocation loc)
+ApiManager::ApiManager(Cell::ScmMacro2 f, UString name, Label label, UString args, SourceLocation loc)
     : label_(label)
     , name_(name)
     , loc_(loc) {
@@ -65,16 +65,16 @@ ApiManager::ApiManager(Cell::ScmMacro2 f, std::string name, Label label, const c
 }
 
 void ApiManager::install_api(SymbolTable *env) {
-  PSCM_TRACE("api count: {}", ApiManager::api_list().size());
+  PSCM_TRACE("api count: {0}", ApiManager::api_list().size());
   for (const auto& api_manager : ApiManager::api_list()) {
     auto name = api_manager->name_;
     auto loc = api_manager->loc_;
     auto sym = new Symbol(name);
     if (env->contains(sym)) {
-      PSCM_ERROR("replication api defined in: {}", loc.to_string());
+      PSCM_ERROR("replication api defined in: {0}", loc.to_string());
       PSCM_THROW_EXCEPTION("replication api install, previous is " + env->get(sym).to_string());
     }
-    PSCM_TRACE("insert {} from {}", name, loc.to_string());
+    PSCM_TRACE("insert {0} from {0}", name, loc.to_string());
     if (api_manager->is_func()) {
       auto f = std::get<0>(api_manager->f_);
       env->insert(sym, new Function(name, f));

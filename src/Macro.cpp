@@ -17,6 +17,8 @@ import fmt;
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
+#include "pscm/misc/ICUCompat.h"
+#include "unicode/ustream.h"
 #endif
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Macro");
@@ -34,11 +36,11 @@ Cell Macro::call(Scheme& scm, SymbolTable *env, Cell args) {
     auto proc = std::get<3>(f_);
     auto ret = scm.call_proc(env, proc, args);
     ret = scm.eval(env, ret);
-    PSCM_DEBUG("expand result: {}", ret);
+    PSCM_DEBUG("expand result: {0}", ret);
     return ret;
   }
   else {
-    PSCM_THROW_EXCEPTION("not supported now, macro index: " + std::to_string(f_.index()));
+    PSCM_THROW_EXCEPTION("not supported now, macro index: " + pscm::to_string(f_.index()));
   }
 }
 
@@ -48,19 +50,17 @@ Cell Macro::call(Cell args) {
   return (*f)(args);
 }
 
-std::ostream& operator<<(std::ostream& out, const Macro& macro) {
-  out << "#";
-  out << "<";
-  if (macro.is_proc()) {
-    out << "macro!";
+UString Macro::to_string() const{
+  UString out;
+  out += "#<";
+  if (is_proc()) {
+    out += "macro!";
   }
   else {
-    out << "primitive-builtin-macro!";
+    out += "primitive-builtin-macro!";
   }
 
-  out << " ";
-  out << macro.name_;
-  out << ">";
+  out += " " + name_ + ">";
   return out;
 }
 
@@ -77,12 +77,12 @@ Symbol *scm_define_macro(SchemeProxy scm, SymbolTable *env, Cell args) {
   else {
     auto proc_name = car(first_arg);
     auto proc_args = cdr(first_arg);
-    PSCM_INFO("{} {}", proc_name, proc_args);
+    PSCM_INFO("{0} {1}", proc_name, proc_args);
     PSCM_ASSERT(proc_name.is_sym());
     sym = proc_name.to_sym();
     proc = new Procedure(sym, proc_args, cdr(args), env);
   }
-  env->insert(sym, new Macro(std::string(sym->name()), proc));
+  env->insert(sym, new Macro(sym->name(), proc));
   return sym;
 }
 

@@ -140,7 +140,7 @@ public:
     Label cont;       // place to go to next
     Cell val;         // result of evaluation
     Cell unev;        // temporary register for expressions
-    std::string to_string() const;
+    UString to_string() const;
   };
 
   enum RegisterType { reg_expr, reg_env, reg_proc, reg_argl, reg_cont, reg_val, reg_unev };
@@ -154,18 +154,15 @@ public:
     std::vector<Cell> val;
     std::vector<Cell> unev;
     bool empty() const;
-    std::string to_string() const;
+    UString to_string() const;
   };
 
 private:
   void run();
-  bool load(const char *filename, SymbolTable *env);
+  bool load(const UString& filename, SymbolTable *env);
   Label eval_map_expr(Label default_pos);
 
 private:
-  friend std::ostream& operator<<(std::ostream& out, const Register& reg);
-  friend std::ostream& operator<<(std::ostream& out, const RegisterType& reg);
-  friend std::ostream& operator<<(std::ostream& out, const Stack& stack);
   Register reg_;
   Stack stack_;
   Label pos_;
@@ -174,4 +171,6 @@ private:
   Scheme& scm_;
   Evaluator *parent_;
 };
+
+UString to_string(pscm::Evaluator::RegisterType type);
 } // namespace pscm

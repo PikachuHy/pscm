@@ -9,14 +9,16 @@ import std;
 import fmt;
 #else
 #include "pscm/Continuation.h"
+#include "pscm/misc/ICUCompat.h"
 #endif
 namespace pscm {
-std::ostream& operator<<(std::ostream& out, const Continuation& cont) {
-  out << "#<continuation ";
-  out << "TODO";
-  out << " @ ";
-  out << &cont;
-  out << ">";
+UString Continuation::to_string() const{
+  UString out;
+  out += "#<continuation ";
+  out += "TODO";
+  out += " @ ";
+  out += pscm::to_string(this);
+  out += ">";
   return out;
 }
 

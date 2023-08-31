@@ -2,9 +2,10 @@
 // Created by PikachuHy on 2023/7/15.
 //
 
-#include "pscm/logger/Logger.h"
+#include "pscm/logger/Logger.hpp"
 #include "pscm/logger/Appender.h"
-#include "pscm/logger/Event.h"
+#include "unicode/msgfmt.h"
+#include <cassert>
 #include <mutex>
 #include <unordered_map>
 #include <utility>
@@ -53,7 +54,7 @@ Logger *Logger::get_logger(std::string name) {
   return ret;
 }
 
-void Logger::log(Logger::Level level, std::string msg, SourceLocation loc) {
+void Logger::log(Logger::Level level, UString msg, SourceLocation loc) {
   Event event;
   event.level = level;
   event.msg = std::move(msg);
@@ -81,5 +82,18 @@ bool Logger::is_level_enabled(Level level) const {
   }
   return level <= level_;
 }
+
+void _setup_formattable(UFormattable& res, const UString& txt){
+  res.setString(txt);
+};
+void _setup_formattable(UFormattable& res, const char* txt){
+  res.setString(UString(txt));
+};
+void _setup_formattable(UFormattable& res, std::int64_t num){
+  res.setInt64(num);
+};
+void _setup_formattable(UFormattable& res, std::int32_t num){
+  res.setLong(num);
+};
 } // namespace logger
 } // namespace pscm

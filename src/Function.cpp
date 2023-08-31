@@ -31,13 +31,11 @@ Cell Function::call(Cell args, SourceLocation loc) {
   }
 }
 
-std::ostream& operator<<(std::ostream& out, const Function& func) {
-  out << "#";
-  out << "<";
-  out << "primitive-generic";
-  out << " ";
-  out << func.name_;
-  out << ">";
+UString Function::to_string() const{
+  UString out;
+  out += "#<primitive-generic "
+    + name_
+    + ">";
   return out;
 }
 

@@ -21,18 +21,19 @@ import fmt;
 #endif
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Procedure");
-std::ostream& operator<<(std::ostream& out, const Procedure& proc) {
-  out << "#";
-  out << "<procedure ";
-  if (proc.name_) {
-    out << proc.name_->name();
+UString Procedure::to_string() const{
+  UString out;
+  out += "#";
+  out += "<procedure ";
+  if (name_) {
+    out += name_->name();
   }
   else {
-    out << "#f";
+    out += "#f";
   }
-  out << " ";
-  out << proc.args_;
-  out << ">";
+  out += " ";
+  out += args_.to_string();
+  out += ">";
   return out;
 }
 

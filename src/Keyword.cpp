@@ -15,11 +15,12 @@ import fmt;
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Keyword");
 
-std::ostream& operator<<(std::ostream& os, const Keyword& keyword) {
-  PSCM_ASSERT(keyword.sym_);
-  os << '#';
-  os << keyword.sym_->name();
-  return os;
+UString Keyword::to_string() const{
+  PSCM_ASSERT(sym_);
+  UString res;
+  res += '#';
+  res += sym_->name();
+  return res;
 }
 
 bool operator==(const Keyword& lhs, const Keyword& rhs) {

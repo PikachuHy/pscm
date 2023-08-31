@@ -85,7 +85,7 @@ enum class Label {
   AFTER_APPLY_EVAL,
   TODO
 };
-std::string to_string(Label label);
+const UString to_string(Label label);
 std::ostream& operator<<(std::ostream& out, const Label& pos);
 
 class SmallObject {
@@ -95,7 +95,7 @@ public:
       , data(data) {
   }
 
-  friend std::ostream& operator<<(std::ostream& out, const SmallObject& smob);
+  UString to_string() const;
   long tag;
   void *data;
 };
@@ -148,9 +148,8 @@ public:
     KEYWORD,     // keyword
     CONTINUATION // continuation
   };
-  friend std::ostream& operator<<(std::ostream& out, const Cell& cell);
-  std::string to_string() const;
-  std::string pretty_string() const;
+  UString to_string() const;
+  UString pretty_string() const;
   void display(Port& port);
 
   static Cell nil() {
@@ -221,7 +220,7 @@ public:
   static bool is_eqv(Cell lhs, Cell rhs);
   static bool is_equal(Cell lhs, Cell rhs);
 
-  std::string source_location() const {
+  UString source_location() const {
     return loc_.to_string();
   }
 

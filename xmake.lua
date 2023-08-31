@@ -1,3 +1,4 @@
+add_rules("mode.debug", "mode.releasedbg")
 option("cxx20-modules")
     set_description("enable c++20 modules")
     set_default(false)
@@ -14,6 +15,7 @@ end
 add_requires("doctest")
 add_requires("universal_stacktrace")
 add_requires("cpp-linenoise")
+add_requires("icu4c")
 set_version("0.3.0")
 target("pscm") do
     set_kind("static")
@@ -24,6 +26,7 @@ target("pscm") do
     set_languages("cxx20")
     add_includedirs("include")
     add_packages({"spdlog","universal_stacktrace","cpp-linenoise"})
+    add_packages({"icu4c"}, {public = true})
     add_files({
         "src/**.cpp",
         "$(buildir)/version.cpp"})

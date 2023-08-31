@@ -13,8 +13,10 @@ import fmt;
 #include <spdlog/fmt/chrono.h>
 #include <spdlog/fmt/fmt.h>
 #endif
+
+namespace fmt{
 template <>
-class fmt::formatter<pscm::logger::Logger::Level> {
+class formatter<pscm::logger::Logger::Level> {
 public:
   constexpr auto parse(format_parse_context& ctx) {
     // PSCM_THROW_EXCEPTION("not supported now");
@@ -27,19 +29,19 @@ public:
     case pscm::logger::Logger::Level::NONE:
       break;
     case pscm::logger::Logger::Level::FATAL:
-      return format_to(ctx.out(), "{}{}{}{}", on_red, white, "FATAL", reset, reset);
+      return fmt::format_to(ctx.out(), "{}{}{}{}", on_red, white, "FATAL", reset, reset);
     case pscm::logger::Logger::Level::ERROR_:
-      return format_to(ctx.out(), "{}{}{}", red, "ERROR", reset);
+      return fmt::format_to(ctx.out(), "{}{}{}", red, "ERROR", reset);
     case pscm::logger::Logger::Level::WARN:
-      return format_to(ctx.out(), "{}{}{}", yellow, "WARN", reset);
+      return fmt::format_to(ctx.out(), "{}{}{}", yellow, "WARN", reset);
     case pscm::logger::Logger::Level::INFO:
-      return format_to(ctx.out(), "{}{}{}", green, "INFO", reset);
+      return fmt::format_to(ctx.out(), "{}{}{}", green, "INFO", reset);
     case pscm::logger::Logger::Level::DEBUG_:
-      return format_to(ctx.out(), "{}{}{}", cyan, "DEBUG", reset);
+      return fmt::format_to(ctx.out(), "{}{}{}", cyan, "DEBUG", reset);
     case pscm::logger::Logger::Level::TRACE:
-      return format_to(ctx.out(), "{}", "TRACE");
+      return fmt::format_to(ctx.out(), "{}", "TRACE");
     }
-    return format_to(ctx.out(), "{}", "");
+    return fmt::format_to(ctx.out(), "{}", "");
   }
 
   // Formatting codes
@@ -77,6 +79,24 @@ public:
   const std::string red_bold = "\033[31m\033[1m";
   const std::string bold_on_red = "\033[1m\033[41m";
 };
+
+template <>
+class formatter<pscm::UString> {
+public:
+  constexpr auto parse(format_parse_context& ctx) {
+    // PSCM_THROW_EXCEPTION("not supported now");
+    auto i = ctx.begin();
+    return i;
+  }
+
+  auto format(const pscm::UString& str, format_context& ctx) const {
+    std::string utf8;
+    str.toUTF8String(utf8);
+    return fmt::format_to(ctx.out(), "{}", utf8);
+  }
+};
+
+}
 
 namespace pscm {
 namespace logger {

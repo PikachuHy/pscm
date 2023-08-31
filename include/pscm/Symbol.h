@@ -4,32 +4,33 @@
 
 #pragma once
 #include "pscm/Cell.h"
+#include "pscm/misc/ICUCompat.h"
 #include <string>
 
 namespace pscm {
 
 class Symbol {
 public:
-  Symbol(std::string name)
+  Symbol(UString name)
       : name_(std::move(name)) {
   }
 
-  Symbol(std::string name, StringView filename, std::size_t row, std::size_t col)
+  Symbol(UString name, const UString & filename, std::size_t row, std::size_t col)
       : name_(std::move(name))
       , filename_(filename)
       , row_(row)
       , col_(col) {
   }
 
-  StringView name() const {
-    return name_;
+  const UString & name() const {
+    return get_const_string(name_);
   }
 
-  friend std::ostream& operator<<(std::ostream& out, const Symbol& sym);
   bool operator==(const Symbol& sym) const;
 
   HashCodeType hash_code() const;
   void print_debug_info();
+  UString to_string() const;
   static Symbol for_each;
   static Symbol map;
   static Symbol load;
@@ -37,8 +38,8 @@ public:
   static Symbol unquote_splicing;
 
 private:
-  std::string name_;
-  std::string filename_;
+  UString name_;
+  UString filename_;
   std::size_t row_;
   std::size_t col_;
 };

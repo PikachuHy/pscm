@@ -11,6 +11,7 @@ import fmt;
 #include "pscm/Number.h"
 #include "pscm/Exception.h"
 #include "pscm/common_def.h"
+#include "pscm/misc/ICUCompat.h"
 #include <numeric>
 #include <spdlog/fmt/fmt.h>
 #include <sstream>
@@ -35,25 +36,27 @@ std::ostream& operator<<(std::ostream& out, const Number& num) {
     return out << std::get<4>(num.data_);
   }
   else {
-    PSCM_THROW_EXCEPTION("invalid number index: " + std::to_string(num.data_.index()) + ", update needed");
+    PSCM_THROW_EXCEPTION("invalid number index: " + pscm::to_string(num.data_.index()) + ", update needed");
   }
   return out;
 }
 
-std::ostream& operator<<(std::ostream& out, const Complex& num) {
-  out << num.real_part_;
-  if (num.imag_part_ > 0) {
-    out << "+";
+UString Complex::to_string() const{
+  UString out;
+  out += pscm::to_string(real_part_);
+  if (imag_part_ > 0) {
+    out += "+";
   }
-  out << num.imag_part_;
-  out << "i";
+  out += pscm::to_string(imag_part_);
+  out += "i";
   return out;
 }
 
-std::ostream& operator<<(std::ostream& out, const Rational& num) {
-  out << num.numerator_;
-  out << "/";
-  out << num.denominator_;
+UString Rational::to_string() const{
+  UString out;
+  out += pscm::to_string(numerator_);
+  out += "/";
+  out += pscm::to_string(denominator_);
   return out;
 }
 
@@ -91,7 +94,7 @@ Number Number::operator/(const Number& num) {
   auto n1 = std::get<1>(data_);
   auto n2 = std::get<1>(num.data_);
   if (n2 == 0) {
-    PSCM_THROW_EXCEPTION("bad expresion: " + std::to_string(n1) + "/" + std::to_string(n2));
+    PSCM_THROW_EXCEPTION("bad expresion: " + pscm::to_string(n1) + "/" + pscm::to_string(n2));
   }
   auto data = n1 / n2;
   if (data * n2 == n1) {
@@ -316,10 +319,24 @@ void Number::display() const {
   }
 }
 
-std::string Number::to_string() const {
-  std::stringstream ss;
-  ss << *this;
-  return ss.str();
+UString Number::to_string() const{
+  PSCM_ASSERT(!std::holds_alternative<std::monostate>(data_));
+  if (std::holds_alternative<int64_t>(data_)) {
+    return pscm::to_string(std::get<int64_t>(data_));
+  }
+  else if (std::holds_alternative<double>(data_)) {
+    return pscm::to_string(std::get<double>(data_));
+  }
+  else if (std::holds_alternative<Rational>(data_)) {
+    return std::get<Rational>(data_).to_string();
+  }
+  else if (std::holds_alternative<Complex>(data_)) {
+    return std::get<Complex>(data_).to_string();
+  }
+  else {
+    PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
+  }
+
 }
 
 bool Number::is_zero() const {

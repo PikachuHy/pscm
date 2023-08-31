@@ -351,7 +351,7 @@ PSCM_DEFINE_BUILTIN_PROC(List, "list-head") {
   auto n = num->to_int();
   auto max_len = list_length(list);
   if (max_len < n) {
-    PSCM_THROW_EXCEPTION("out of range: "s + std::to_string(max_len) + ", but got "s + std::to_string(n));
+    PSCM_THROW_EXCEPTION("out of range: " + pscm::to_string(max_len) + ", but got " + pscm::to_string(n));
   }
   auto ret = cons(nil, nil);
   auto it = ret;
@@ -378,7 +378,7 @@ PSCM_DEFINE_BUILTIN_PROC(List, "list-tail") {
   auto n = num->to_int();
   auto max_len = list_length(list);
   if (max_len < n) {
-    PSCM_THROW_EXCEPTION("out of range: "s + std::to_string(max_len) + ", but got "s + std::to_string(n));
+    PSCM_THROW_EXCEPTION("out of range: " + pscm::to_string(max_len) + ", but got " + pscm::to_string(n));
   }
   auto ret = cons(nil, nil);
   auto it = ret;
@@ -455,7 +455,7 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(List, "map", Label::APPLY_MAP, "(proc . l
   auto proc = car(args);
   PSCM_ASSERT(proc.is_sym());
   auto lists = cdr(args);
-  PSCM_INFO("lists: {}", lists);
+  PSCM_INFO("lists: {0}", lists);
   PSCM_ASSERT(lists.is_sym());
   proc = env->get(proc.to_sym());
   lists = env->get(lists.to_sym());

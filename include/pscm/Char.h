@@ -11,15 +11,19 @@ class Port;
 
 class Char {
 public:
-  Char(std::string ch)
-      : ch_(std::move(ch)) {
+  Char(UString ch)
+      : ch_(ch.char32At(0)) {
   }
 
   Char(Char&& ch) {
     ch_ = std::move(ch.ch_);
   }
 
-  static Cell from(char ch);
+  Char(UChar32 ch) {
+    ch_ = ch;
+  }
+
+  static Cell from(UChar32 ch);
   bool operator==(const Char& rhs) const;
   bool operator<(const Char& rhs) const;
   bool operator>(const Char& rhs) const;
@@ -31,12 +35,12 @@ public:
   bool is_eof() const;
   Char to_downcase() const;
   Char to_upcase() const;
-  std::int64_t to_int() const;
-  friend std::ostream& operator<<(std::ostream& out, const Char& ch);
+  UChar32 to_int() const;
+  UString to_string() const;
   void display(Port& port) const;
 
 private:
-  std::string ch_;
+  UChar32 ch_;
 };
 
 } // namespace pscm

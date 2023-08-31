@@ -12,8 +12,7 @@ namespace pscm {
 class Continuation {
 public:
   Continuation(Evaluator::Register reg, Evaluator::Stack stack, std::vector<Evaluator::RegisterType> reg_type_stack);
-  friend std::ostream& operator<<(std::ostream& out, const Continuation& cont);
-
+  UString to_string() const;
 private:
   Evaluator::Register reg_;
   Evaluator::Stack stack_;

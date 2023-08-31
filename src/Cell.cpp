@@ -25,7 +25,10 @@ import fmt;
 #include "pscm/Str.h"
 #include "pscm/Symbol.h"
 #include "pscm/common_def.h"
-#include "pscm/logger/Logger.h"
+#include "pscm/logger/Logger.hpp"
+#include "pscm/misc/ICUCompat.h"
+#include "unicode/ustream.h"
+#include "unicode/schriter.h"
 #include <cassert>
 #include <cstring>
 #include <spdlog/fmt/fmt.h>
@@ -36,14 +39,15 @@ namespace pscm {
 Cell nil = Cell::nil();
 PSCM_INLINE_LOG_DECLARE("pscm.core.Cell");
 
-std::ostream& operator<<(std::ostream& out, const SmallObject& smob) {
-  out << '<';
-  out << "smob";
-  out << ' ';
-  out << smob.tag;
-  out << ' ';
-  out << smob.data;
-  out << '>';
+UString SmallObject::to_string() const{
+  UString out;
+  out += '<';
+  out += "smob";
+  out += ' ';
+  out += pscm::to_string(tag);
+  out += ' ';
+  out += pscm::to_string(data);
+  out += '>';
   return out;
 }
 
@@ -57,13 +61,126 @@ Cell::Cell(bool val) {
   }
 }
 
-std::string Cell::to_string() const {
-  std::stringstream ss;
-  ss << *this;
-  return ss.str();
+UString Cell::to_string() const {
+  if (tag_ == Cell::Tag::NONE) {
+    return "NONE";
+  }
+  if (tag_ == Cell::Tag::EXCEPTION) {
+    UString res("EXCEPTION: ");
+    res += (const char *)data_;
+    return res;
+  }
+  if (tag_ == Cell::Tag::NIL) {
+    return "()";
+  }
+  if (tag_ == Cell::Tag::SYMBOL) {
+    return to_sym()->to_string();
+  }
+  if (tag_ == Cell::Tag::FUNCTION) {
+    return to_func()->to_string();
+  }
+  if (tag_ == Cell::Tag::MACRO) {
+    return to_macro()->to_string();
+  }
+  if (tag_ == Cell::Tag::NUMBER) {
+    return to_num()->to_string();
+  }
+  if (tag_ == Cell::Tag::CHAR) {
+    return to_char()->to_string();
+  }
+  if (tag_ == Cell::Tag::STRING) {
+    return to_str()->str();
+  }
+  if (tag_ == Cell::Tag::BOOL) {
+    if (to_bool()) {
+      return "#t";
+    }
+    else {
+      return "#f";
+    }
+  }
+  if (tag_ == Cell::Tag::PAIR) {
+    UString out;
+    out += "(";
+    // TODO:
+    std::unordered_set<Pair *> p_set;
+    int num = 0;
+    auto p = to_pair();
+    p_set.insert(p);
+    while (p) {
+      out += p->first.to_string();
+      if (p->second.is_pair()) {
+        out += " ";
+        p = p->second.to_pair();
+        if (p_set.find(p) != p_set.end()) {
+          out += ". ";
+          out += "#" + pscm::to_string(num) + "#";
+          break;
+        }
+      }
+      else if (p->second.is_nil()) {
+        break;
+      }
+      else {
+        out += " . ";
+        if (p->second.is_pair()) {
+          auto p2 = p->second.to_pair();
+          if (p_set.find(p2) != p_set.end()) {
+            out += ". ";
+            out += "#" + pscm::to_string(num) + "#";
+            break;
+          }
+        }
+        out += p->second.to_string();
+        break;
+      }
+    }
+    out += ")";
+    return out;
+  }
+  if (tag_ == Cell::Tag::VECTOR) {
+    UString out;
+    out += "#(";
+    auto vec = to_vec();
+    if (!vec->empty()) {
+      for (int i = 0; i < vec->size() - 1; ++i) {
+        out += vec->at(i).to_string() + " ";
+      }
+      out += vec->back().to_string();
+    }
+    out += ")";
+    return out;
+  }
+  if (tag_ == Cell::Tag::PROCEDURE) {
+    return to_proc()->to_string();
+  }
+  if (tag_ == Cell::Tag::PROMISE) {
+    return to_promise()->to_string();
+  }
+  if (tag_ == Cell::Tag::CONTINUATION) {
+    return to_cont()->to_string();
+  }
+  if (tag_ == Cell::Tag::PORT) {
+    return to_port()->to_string();
+  }
+  if (tag_ == Cell::Tag::MODULE) {
+    return to_module()->to_string();
+  }
+  if (tag_ == Cell::Tag::HASH_TABLE) {
+    return to_hash_table()->to_string();
+  }
+  if (tag_ == Cell::Tag::KEYWORD) {
+    return to_keyword()->to_string();
+  }
+  if (tag_ == Cell::Tag::SMOB) {
+    return to_smob()->to_string();
+  }
+  PSCM_ERROR("TODO: {0}", int(tag_));
+  //  PSCM_THROW_EXCEPTION("TODO: cell tag ");
+  return "TODO";
 }
 
-std::string Cell::pretty_string() const {
+UString Cell::pretty_string() const {
   if (is_none()) {
     return "";
   }
@@ -80,110 +197,106 @@ std::string Cell::pretty_string() const {
   }
   if (is_sym()) {
     auto sym = to_sym();
-    if (sym->name().find(' ') != StringView::npos) {
-      std::stringstream ss;
-      ss << "\e[;34m";
-      ss << *this;
-      ss << "\e[0m";
-      return ss.str();
+    if (sym->name().indexOf(' '_u) != -1) {
+      UString ss;
+      ss += "\e[;34m";
+      ss += to_string();
+      ss += "\e[0m";
+      return ss;
     }
     else {
-      std::stringstream ss;
-      ss << *this;
-      return ss.str();
+      UString ss;
+      ss += to_string();
+      return ss;
     }
   }
   if (is_macro()) {
     auto macro = to_macro();
-    auto name = std::string(macro->name());
-    std::stringstream ss;
-    ss << "\e[;35m";
-    ss << name;
-    ss << "\e[0m";
-    return ss.str();
+    auto name = macro->name();
+    UString ss;
+    ss += "\e[;35m";
+    ss += name;
+    ss += "\e[0m";
+    return ss;
   }
   if (is_func()) {
     auto func = to_func();
-    return std::string(func->name());
+    return func->name();
   }
   if (is_pair()) {
-    std::stringstream ss;
+    UString ss;
     if (car(*this).is_macro()) {
       auto macro = car(*this).to_macro();
       if (macro->name() == "quote") {
-        ss << "'";
-        ss << cadr(*this).pretty_string();
-        return ss.str();
+        ss += "'";
+        ss += cadr(*this).pretty_string();
+        return ss;
       }
       else if (macro->name() == "quasiquote") {
-        ss << "`";
-        ss << cadr(*this).pretty_string();
-        return ss.str();
+        ss += "`";
+        ss += cadr(*this).pretty_string();
+        return ss;
       }
       else if (macro->name() == "unquote") {
-        ss << ",";
-        ss << cadr(*this).pretty_string();
-        return ss.str();
+        ss += ",";
+        ss += cadr(*this).pretty_string();
+        return ss;
       }
     }
     else if (car(*this).is_sym()) {
       auto sym = car(*this).to_sym();
       if (sym->name() == "quasiquote") {
-        ss << "`";
-        ss << cadr(*this).pretty_string();
-        return ss.str();
+        ss += "`";
+        ss += cadr(*this).pretty_string();
+        return ss;
       }
       else if (sym->name() == "unquote") {
-        ss << ",";
-        ss << cadr(*this).pretty_string();
-        return ss.str();
+        ss += ",";
+        ss += cadr(*this).pretty_string();
+        return ss;
       }
       else if (sym->name() == "unquote-splicing") {
-        ss << ",@";
-        ss << cadr(*this).pretty_string();
-        return ss.str();
+        ss += ",@";
+        ss += cadr(*this).pretty_string();
+        return ss;
       }
     }
 
-    ss << '(';
+    ss += '(';
     auto it = *this;
-    ss << car(it).pretty_string();
+    ss += car(it).pretty_string();
     it = cdr(it);
     while (it.is_pair()) {
-      ss << " ";
+      ss += " ";
       if (car(it).is_sym() && car(it).to_sym()->name() == "unquote") {
         if (cdr(it).is_pair() && cddr(it).is_nil()) {
-          ss << ".";
-          ss << " ";
-          ss << ",";
-          ss << cadr(it).pretty_string();
+          ss += ".";
+          ss += " ";
+          ss += ",";
+          ss += cadr(it).pretty_string();
           it = Cell::nil();
           break;
         }
       }
-      ss << car(it).pretty_string();
+      ss += car(it).pretty_string();
       it = cdr(it);
     }
     if (!it.is_nil()) {
-      ss << " ";
-      ss << ".";
-      ss << " ";
-      ss << it.pretty_string();
+      ss += " ";
+      ss += ".";
+      ss += " ";
+      ss += it.pretty_string();
     }
-    ss << ')';
-    return ss.str();
+    ss += ')';
+    return ss;
   }
   if (is_num()) {
-    std::stringstream ss;
-    ss << *to_num();
-    return ss.str();
+    return to_num()->to_string();
   }
   if (is_str()) {
-    return std::string(to_str()->str());
+    return to_str()->str();
   }
-  std::stringstream ss;
-  ss << *this;
-  return ss.str();
+  return to_string();
 }
 
 bool Cell::to_bool(SourceLocation loc PSCM_CXX20_MODULES_DEFAULT_ARG_COMPAT) const {
@@ -229,123 +342,6 @@ Cell Cell::ex(const char *msg) {
   return ret;
 }
 
-std::ostream& operator<<(std::ostream& out, const Cell& cell) {
-  if (cell.tag_ == Cell::Tag::NONE) {
-    return out << "NONE";
-  }
-  if (cell.tag_ == Cell::Tag::EXCEPTION) {
-    return out << "EXCEPTION: " << (const char *)cell.data_;
-  }
-  if (cell.tag_ == Cell::Tag::NIL) {
-    return out << "()";
-  }
-  if (cell.tag_ == Cell::Tag::SYMBOL) {
-    return out << *cell.to_sym();
-  }
-  if (cell.tag_ == Cell::Tag::FUNCTION) {
-    return out << *cell.to_func();
-  }
-  if (cell.tag_ == Cell::Tag::MACRO) {
-    return out << *cell.to_macro();
-  }
-  if (cell.tag_ == Cell::Tag::NUMBER) {
-    return out << *cell.to_num();
-  }
-  if (cell.tag_ == Cell::Tag::CHAR) {
-    return out << *cell.to_char();
-  }
-  if (cell.tag_ == Cell::Tag::STRING) {
-    return out << *cell.to_str();
-  }
-  if (cell.tag_ == Cell::Tag::BOOL) {
-    if (cell.to_bool()) {
-      return out << "#t";
-    }
-    else {
-      return out << "#f";
-    }
-  }
-  if (cell.tag_ == Cell::Tag::PAIR) {
-    out << "(";
-    // TODO:
-    std::unordered_set<Pair *> p_set;
-    int num = 0;
-    auto p = cell.to_pair();
-    p_set.insert(p);
-    while (p) {
-      out << p->first;
-      if (p->second.is_pair()) {
-        out << " ";
-        p = p->second.to_pair();
-        if (p_set.find(p) != p_set.end()) {
-          out << ". ";
-          out << "#" << num << "#";
-          break;
-        }
-      }
-      else if (p->second.is_nil()) {
-        break;
-      }
-      else {
-        out << " . ";
-        if (p->second.is_pair()) {
-          auto p2 = p->second.to_pair();
-          if (p_set.find(p2) != p_set.end()) {
-            out << ". ";
-            out << "#" << num << "#";
-            break;
-          }
-        }
-        out << p->second;
-        break;
-      }
-    }
-    out << ")";
-    return out;
-  }
-  if (cell.tag_ == Cell::Tag::VECTOR) {
-    out << "#";
-    out << "(";
-    auto vec = cell.to_vec();
-    if (!vec->empty()) {
-      for (int i = 0; i < vec->size() - 1; ++i) {
-        out << vec->at(i);
-        out << " ";
-      }
-      out << vec->back();
-    }
-    out << ")";
-    return out;
-  }
-  if (cell.tag_ == Cell::Tag::PROCEDURE) {
-    return out << *cell.to_proc();
-  }
-  if (cell.tag_ == Cell::Tag::PROMISE) {
-    return out << *cell.to_promise();
-  }
-  if (cell.tag_ == Cell::Tag::CONTINUATION) {
-    return out << *cell.to_cont();
-  }
-  if (cell.tag_ == Cell::Tag::PORT) {
-    return out << cell.to_port()->to_string();
-  }
-  if (cell.tag_ == Cell::Tag::MODULE) {
-    return out << *cell.to_module();
-  }
-  if (cell.tag_ == Cell::Tag::HASH_TABLE) {
-    return out << *cell.to_hash_table();
-  }
-  if (cell.tag_ == Cell::Tag::KEYWORD) {
-    return out << *cell.to_keyword();
-  }
-  if (cell.tag_ == Cell::Tag::SMOB) {
-    return out << *cell.to_smob();
-  }
-  PSCM_ERROR("TODO: {}", int(cell.tag_));
-  //  PSCM_THROW_EXCEPTION("TODO: cell tag ");
-  return out << "TODO";
-}
-
 void Cell::display(Port& port) {
   if (is_char()) {
     to_char()->display(port);
@@ -356,8 +352,11 @@ void Cell::display(Port& port) {
     return;
   }
   auto s = to_string();
-  for (auto ch : s) {
-    port.write_char(ch);
+  auto iter = UIterator(s);
+  auto curchr = iter.next32PostInc();
+  while (curchr != UIterator::DONE) {
+    port.write_char(curchr);
+    curchr = iter.next32PostInc();
   }
 }
 
@@ -447,240 +446,182 @@ bool operator==(const Cell& lhs, const String& rhs) {
   return *val == rhs;
 }
 
-std::string to_string(Label label) {
-  std::stringstream ss;
-  ss << label;
-  return ss.str();
+std::ostream& operator<<(std::ostream& out, const Label& pos) {
+  return out << to_string(pos);
 }
 
-std::ostream& operator<<(std::ostream& out, const Label& pos) {
-  switch (pos) {
+const UString to_string(Label label) {
+  switch (label) {
   case Label::EVAL: {
-    out << "EVAL";
-    break;
+    return "EVAL";
   }
   case Label::DONE: {
-    out << "DONE";
-    break;
+    return "DONE";
   }
   case Label::APPLY: {
-    out << "APPLY";
-    break;
+    return "APPLY";
   }
   case Label::EVAL_ARGS: {
-    out << "EVAL_ARGS";
-    break;
+    return "EVAL_ARGS";
   }
   case Label::AFTER_EVAL_FIRST_ARG: {
-    out << "AFTER_EVAL_FIRST_ARG";
-    break;
+    return "AFTER_EVAL_FIRST_ARG";
   }
   case Label::AFTER_EVAL_OTHER_ARG: {
-    out << "AFTER_EVAL_OTHER_ARG";
-    break;
+    return "AFTER_EVAL_OTHER_ARG";
   }
   case Label::AFTER_EVAL_ARGS: {
-    out << "AFTER_EVAL_ARGS";
-    break;
+    return "AFTER_EVAL_ARGS";
   }
   case Label::AFTER_EVAL_OP: {
-    out << "AFTER_EVAL_OP";
-    break;
+    return "AFTER_EVAL_OP";
   }
   case Label::AFTER_APPLY: {
-    out << "AFTER_APPLY";
-    break;
+    return "AFTER_APPLY";
   }
   case Label::APPLY_FUNC: {
-    out << "APPLY_FUNC";
-    break;
+    return "APPLY_FUNC";
   }
   case Label::APPLY_PROC: {
-    out << "APPLY_PROC";
-    break;
+    return "APPLY_PROC";
   }
   case Label::APPLY_MACRO: {
-    out << "APPLY_MACRO";
-    break;
+    return "APPLY_MACRO";
   }
   case Label::AFTER_APPLY_USER_DEFINED_MACRO: {
-    out << "AFTER_APPLY_USER_DEFINED_MACRO";
-    break;
+    return "AFTER_APPLY_USER_DEFINED_MACRO";
   }
   case Label::APPLY_CONT: {
-    out << "APPLY_CONT";
-    break;
+    return "APPLY_CONT";
   }
   case Label::AFTER_APPLY_FUNC: {
-    out << "AFTER_APPLY_FUNC";
-    break;
+    return "AFTER_APPLY_FUNC";
   }
   case Label::AFTER_APPLY_PROC: {
-    out << "AFTER_APPLY_PROC";
-    break;
+    return "AFTER_APPLY_PROC";
   }
   case Label::AFTER_APPLY_MACRO: {
-    out << "AFTER_APPLY_MACRO";
-    break;
+    return "AFTER_APPLY_MACRO";
   }
   case Label::AFTER_APPLY_CONT: {
-    out << "AFTER_APPLY_CONT";
-    break;
+    return "AFTER_APPLY_CONT";
   }
   case Label::APPLY_APPLY: {
-    out << "APPLY_APPLY";
-    break;
+    return "APPLY_APPLY";
   }
   case Label::APPLY_DEFINE: {
-    out << "APPLY_DEFINE";
-    break;
+    return "APPLY_DEFINE";
   }
   case Label::APPLY_DEFINE_MACRO: {
-    out << "APPLY_DEFINE_MACRO";
-    break;
+    return "APPLY_DEFINE_MACRO";
   }
   case Label::APPLY_IS_DEFINED: {
-    out << "APPLY_IS_DEFINED";
-    break;
+    return "APPLY_IS_DEFINED";
   }
   case Label::APPLY_COND: {
-    out << "APPLY_COND";
-    break;
+    return "APPLY_COND";
   }
   case Label::APPLY_IF: {
-    out << "APPLY_IF";
-    break;
+    return "APPLY_IF";
   }
   case Label::APPLY_AND: {
-    out << "APPLY_AND";
-    break;
+    return "APPLY_AND";
   }
   case Label::APPLY_OR: {
-    out << "APPLY_OR";
-    break;
+    return "APPLY_OR";
   }
   case Label::APPLY_SET: {
-    out << "APPLY_SET";
-    break;
+    return "APPLY_SET";
   }
   case Label::APPLY_DELAY: {
-    out << "APPLY_DELAY";
-    break;
+    return "APPLY_DELAY";
   }
   case Label::APPLY_BEGIN: {
-    out << "APPLY_BEGIN";
-    break;
+    return "APPLY_BEGIN";
   }
   case Label::APPLY_LOAD: {
-    out << "APPLY_LOAD";
-    break;
+    return "APPLY_LOAD";
   }
   case Label::AFTER_APPLY_EVAL: {
-    out << "AFTER_APPLY_EVAL";
-    break;
+    return "AFTER_APPLY_EVAL";
   }
   case Label::APPLY_EVAL: {
-    out << "APPLY_EVAL";
-    break;
+    return "APPLY_EVAL";
   }
   case Label::APPLY_CURRENT_MODULE: {
-    out << "APPLY_CURRENT_MODULE";
-    break;
+    return "APPLY_CURRENT_MODULE";
   }
   case Label::APPLY_USE_MODULES: {
-    out << "APPLY_USE_MODULES";
-    break;
+    return "APPLY_USE_MODULES";
   }
   case Label::APPLY_RESOLVE_MODULE: {
-    out << "APPLY_RESOLVE_MODULE";
-    break;
+    return "APPLY_RESOLVE_MODULE";
   }
   case Label::APPLY_EXPORT: {
-    out << "APPLY_EXPORT";
-    break;
+    return "APPLY_EXPORT";
   }
   case Label::AFTER_EVAL_DEFINE_ARG: {
-    out << "AFTER_EVAL_DEFINE_ARG";
-    break;
+    return "AFTER_EVAL_DEFINE_ARG";
   }
   case Label::AFTER_EVAL_SET_ARG: {
-    out << "AFTER_EVAL_SET_ARG";
-    break;
+    return "AFTER_EVAL_SET_ARG";
   }
   case Label::APPLY_LAMBDA: {
-    out << "APPLY_LAMBDA";
-    break;
+    return "APPLY_LAMBDA";
   }
   case Label::APPLY_QUOTE: {
-    out << "APPLY_QUOTE";
-    break;
+    return "APPLY_QUOTE";
   }
   case Label::APPLY_QUASIQUOTE: {
-    out << "APPLY_QUASIQUOTE";
-    break;
+    return "APPLY_QUASIQUOTE";
   }
   case Label::APPLY_FOR_EACH: {
-    out << "APPLY_FOR_EACH";
-    break;
+    return "APPLY_FOR_EACH";
   }
   case Label::APPLY_MAP: {
-    out << "APPLY_MAP";
-    break;
+    return "APPLY_MAP";
   }
   case Label::APPLY_FORCE: {
-    out << "APPLY_FORCE";
-    break;
+    return "APPLY_FORCE";
   }
   case Label::AFTER_EVAL_PROMISE: {
-    out << "AFTER_EVAL_PROMISE";
-    break;
+    return "AFTER_EVAL_PROMISE";
   }
   case Label::AFTER_EVAL_FOR_EACH_FIRST_EXPR: {
-    out << "AFTER_EVAL_FOR_EACH_FIRST_EXPR";
-    break;
+    return "AFTER_EVAL_FOR_EACH_FIRST_EXPR";
   }
   case Label::AFTER_EVAL_MAP_FIRST_EXPR: {
-    out << "AFTER_EVAL_MAP_FIRST_EXPR";
-    break;
+    return "AFTER_EVAL_MAP_FIRST_EXPR";
   }
   case Label::AFTER_EVAL_MAP_OTHER_EXPR: {
-    out << "AFTER_EVAL_MAP_OTHER_EXPR";
-    break;
+    return "AFTER_EVAL_MAP_OTHER_EXPR";
   }
   case Label::AFTER_EVAL_FIRST_EXPR: {
-    out << "AFTER_EVAL_FIRST_EXPR";
-    break;
+    return "AFTER_EVAL_FIRST_EXPR";
   }
   case Label::AFTER_EVAL_OTHER_EXPR: {
-    out << "AFTER_EVAL_OTHER_EXPR";
-    break;
+    return "AFTER_EVAL_OTHER_EXPR";
   }
   case Label::AFTER_EVAL_COND_TEST: {
-    out << "AFTER_EVAL_COND_TEST";
-    break;
+    return "AFTER_EVAL_COND_TEST";
   }
   case Label::AFTER_EVAL_IF_PRED: {
-    out << "AFTER_EVAL_IF_PRED";
-    break;
+    return "AFTER_EVAL_IF_PRED";
   }
   case Label::AFTER_EVAL_AND_EXPR: {
-    out << "AFTER_EVAL_AND_EXPR";
-    break;
+    return "AFTER_EVAL_AND_EXPR";
   }
   case Label::AFTER_EVAL_OR_EXPR: {
-    out << "AFTER_EVAL_OR_EXPR";
-    break;
+    return "AFTER_EVAL_OR_EXPR";
   }
   case Label::AFTER_EVAL_CALL_WITH_VALUES_PRODUCER: {
-    out << "AFTER_EVAL_CALL_WITH_VALUES_PRODUCER";
-    break;
+    return "AFTER_EVAL_CALL_WITH_VALUES_PRODUCER";
   }
   default: {
-    PSCM_ERROR("pos: {}", int(pos));
-    PSCM_THROW_EXCEPTION("TODO: pos to_string " + std::to_string(int(pos)));
+    PSCM_ERROR("pos: {0}", int(label));
+    PSCM_THROW_EXCEPTION("TODO: pos to_string " + pscm::to_string(int(label)));
   }
   }
-  return out;
 }
 
 bool Cell::is_self_evaluated() const {
@@ -798,9 +739,7 @@ PSCM_DEFINE_BUILTIN_PROC(Cell, "equal?") {
 
 namespace std {
 std::size_t hash<pscm::Cell>::operator()(const pscm::Cell& cell) const {
-  std::stringstream ss;
-  ss << cell;
-  auto s = ss.str();
-  return std::hash<std::string>()(s);
+  auto s = cell.to_string();
+  return s.hashCode();
 }
 } // namespace std

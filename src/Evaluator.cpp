@@ -12,6 +12,7 @@ import fmt;
 #else
 #include "pscm/Char.h"
 #include "pscm/Continuation.h"
+#include "pscm/Displayable.h"
 #include "pscm/Exception.h"
 #include "pscm/Expander.h"
 #include "pscm/Function.h"
@@ -30,7 +31,9 @@ import fmt;
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
-#include <fstream>
+#include "pscm/misc/ICUCompat.h"
+#include "unicode/unistr.h"
+#include "unicode/schriter.h"
 #include <numeric>
 #include <ostream>
 #include <sstream>
@@ -47,28 +50,28 @@ namespace fs = std::filesystem;
 #endif
 PSCM_INLINE_LOG_DECLARE("pscm.core.Evaluator");
 #define PSCM_PUSH_STACK(reg_name)                                                                                      \
-  PSCM_DEBUG("push {} stack: {}", #reg_name, stack_.reg_name.size());                                                  \
+  PSCM_DEBUG("push {0} stack: {1}", #reg_name, stack_.reg_name.size());                                                  \
   reg_type_stack_.push_back(reg_##reg_name);                                                                           \
   stack_.reg_name.push_back(reg_.reg_name)
 
 #define PSCM_POP_STACK(reg_name)                                                                                       \
-  PSCM_DEBUG("pop {} stack: {}", #reg_name, stack_.reg_name.size());                                                   \
+  PSCM_DEBUG("pop {0} stack: {1}", #reg_name, stack_.reg_name.size());                                                   \
   PSCM_ASSERT(!reg_type_stack_.empty());                                                                               \
   if (reg_type_stack_.back() != reg_##reg_name) {                                                                      \
-    std::stringstream ss1, ss2, ss3, ss4;                                                                              \
-    ss1 << reg_##reg_name;                                                                                             \
-    ss2 << reg_type_stack_.back();                                                                                     \
-    PSCM_ERROR("reg stack error, expect '{}' but got '{}'", ss1.str(), ss2.str());                                     \
+    UString ss1, ss2, ss3, ss4;                                                                             \
+    ss1 += reg_##reg_name;                                                                                             \
+    ss2 += pscm::to_string(reg_type_stack_.back());                                                                                     \
+    PSCM_ERROR("reg stack error, expect '{0}' but got '{1}'", ss1, ss2);                                                 \
     for (int i = 0; i < reg_type_stack_.size(); i++) {                                                                 \
-      ss3 << reg_type_stack_[reg_type_stack_.size() - i - 1];                                                          \
-      ss3 << ", ";                                                                                                     \
+      ss3 += pscm::to_string(reg_type_stack_[reg_type_stack_.size() - i - 1]);                                                          \
+      ss3 += ", ";                                                                                                     \
     }                                                                                                                  \
     for (int i = 0; i < stack_.reg_name.size(); i++) {                                                                 \
-      ss4 << stack_.reg_name[stack_.reg_name.size() - i - 1];                                                          \
-      ss4 << ", ";                                                                                                     \
+      ss4 += pscm::to_string(stack_.reg_name[stack_.reg_name.size() - i - 1]);                                                          \
+      ss4 += ", ";                                                                                                     \
     }                                                                                                                  \
-    PSCM_DEBUG("reg stack: {}", ss3.str());                                                                            \
-    PSCM_DEBUG("{} reg stack: {}", #reg_name, ss4.str());                                                              \
+    PSCM_DEBUG("reg stack: {0}", ss3);                                                                                  \
+    PSCM_DEBUG("{0} reg stack: {1}", #reg_name, ss4);                                                                    \
     PSCM_ASSERT(reg_type_stack_.back() == reg_##reg_name);                                                             \
   }                                                                                                                    \
   reg_type_stack_.pop_back();                                                                                          \
@@ -78,10 +81,10 @@ PSCM_INLINE_LOG_DECLARE("pscm.core.Evaluator");
 
 #define GOTO(label)                                                                                                    \
   pos_ = label;                                                                                                        \
-  PSCM_TRACE("GOTO label: {}", pos_);                                                                                  \
+  PSCM_TRACE("GOTO label: {0}", pos_);                                                                                  \
   break
 
-#define PRINT_STEP() PSCM_TRACE("[step: {}] label: {}", step_, pos_)
+#define PRINT_STEP() PSCM_TRACE("[step: {0}] label: {1}", step_, pos_)
 
 template <>
 class fmt::formatter<pscm::Label> {
@@ -93,9 +96,9 @@ public:
   }
 
   auto format(const pscm::Label& pos, format_context& ctx) const {
-    std::stringstream ss;
-    ss << pos;
-    return format_to(ctx.out(), "{}", ss.str());
+    std::string str;
+    pscm::to_string(pos).toUTF8String(str);
+    return fmt::format_to(ctx.out(), "{}", str);
   }
 };
 
@@ -231,7 +234,7 @@ Cell div(Cell args) {
 }
 
 Cell less_than(Cell args) {
-  PSCM_DEBUG("args: {}", args);
+  PSCM_DEBUG("args: {0}", args);
   if (args.is_nil()) {
     return Cell(true);
   }
@@ -246,7 +249,7 @@ Cell less_than(Cell args) {
   while (ret && args.is_pair()) {
     arg = car(args);
     if (!arg.is_num()) {
-      PSCM_THROW_EXCEPTION("Wrong type argument in position " + std::to_string(index) + ": " + arg.to_string());
+      PSCM_THROW_EXCEPTION("Wrong type argument in position " + pscm::to_string(index) + ": " + arg.to_string());
     }
     ret = (*n1 < *arg.to_num());
     n1 = arg.to_num();
@@ -289,7 +292,7 @@ Cell equal_to(Cell args) {
       [&ret, &arg, &index](Cell expr, auto) {
         if (ret) {
           if (!expr.is_num()) {
-            PSCM_THROW_EXCEPTION("Wrong type argument in position " + std::to_string(index) + ": " + expr.to_string());
+            PSCM_THROW_EXCEPTION("Wrong type argument in position " + pscm::to_string(index) + ": " + expr.to_string());
           }
           ret = (arg == expr);
         }
@@ -604,12 +607,12 @@ Cell make_vector(Cell args) {
   v->resize(num->to_int());
   std::fill(v->begin(), v->end(), default_value);
   auto vec = Cell(v);
-  PSCM_DEBUG("vec: {} from {}", vec, (void *)v);
+  PSCM_DEBUG("vec: {0} from {1}", vec, PSCM_ADDRESS_LOG(v));
   return vec;
 }
 
 Cell proc_vector(Cell args) {
-  PSCM_DEBUG("args: {}", args);
+  PSCM_DEBUG("args: {0}", args);
   auto vec = new Cell::Vec();
   for_each(
       [vec](Cell expr, auto loc) {
@@ -617,7 +620,7 @@ Cell proc_vector(Cell args) {
       },
       args);
   auto ret = Cell(vec);
-  PSCM_DEBUG("ret: {}", ret);
+  PSCM_DEBUG("ret: {0}", ret);
   return ret;
 }
 
@@ -650,15 +653,15 @@ Cell vector_set(Cell args) {
   PSCM_ASSERT(k.is_num());
   auto num = k.to_num();
   PSCM_ASSERT(num->is_int());
-  PSCM_DEBUG("vec: {} from {}", vec, (void *)vec.to_vec());
-  PSCM_DEBUG("k: {} --> {}", k, obj);
+  PSCM_DEBUG("vec: {0} from {1}", vec, PSCM_ADDRESS_LOG(vec.to_vec()));
+  PSCM_DEBUG("k: {0} --> {1}", k, obj);
   auto index = num->to_int();
   auto& v = *vec.to_vec();
   if (index >= v.size()) {
     PSCM_THROW_EXCEPTION("Value out of range: " + k.to_string());
   }
   v[index] = obj;
-  PSCM_DEBUG("vec: {} from {}", vec, (void *)vec.to_vec());
+  PSCM_DEBUG("vec: {0} from {1}", vec, PSCM_ADDRESS_LOG(vec.to_vec()));
   return Cell::none();
 }
 
@@ -855,7 +858,7 @@ Cell symbol_to_string(Cell args) {
   auto arg = car(args);
   PSCM_ASSERT(arg.is_sym());
   auto name = arg.to_sym()->name();
-  return new String(std::string(name));
+  return new String(name);
 }
 
 Cell string_to_symbol(Cell args) {
@@ -889,13 +892,13 @@ Cell make_string(Cell args) {
 }
 
 Cell proc_string(Cell args) {
-  std::string s;
+  UString s;
   for_each(
       [&s](Cell expr, auto) {
         PSCM_ASSERT(expr.is_char());
         auto ch = expr.to_char();
         auto n = ch->to_int();
-        s.push_back(n);
+        s += n;
       },
       args);
   return new String(std::move(s));
@@ -1043,7 +1046,7 @@ Cell proc_substring(Cell args) {
 }
 
 Cell string_append(Cell args) {
-  std::string s;
+  UString s;
   for_each(
       [&s](Cell expr, auto) {
         PSCM_ASSERT(expr.is_str());
@@ -1071,12 +1074,12 @@ Cell string_to_list(Cell args) {
 Cell list_to_string(Cell args) {
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
-  std::string s;
+  UString s;
   for_each(
       [&s](Cell expr, auto) {
         PSCM_ASSERT(expr.is_char());
         auto ch = expr.to_char();
-        s.push_back(ch->to_int());
+        s.append(ch->to_int());
       },
       args);
   return new String(std::move(s));
@@ -1087,7 +1090,7 @@ Cell string_copy(Cell args) {
   auto arg = car(args);
   PSCM_ASSERT(arg.is_str());
   auto s = arg.to_str();
-  return new String(std::string(s->str()));
+  return new String(s->str());
 }
 
 Cell string_fill(Cell args) {
@@ -1166,7 +1169,7 @@ Cell string_to_number(Cell args) {
   auto arg = car(args);
   PSCM_ASSERT(arg.is_str());
   auto s = arg.to_str();
-  Parser parser(std::string(s->str()));
+  Parser parser(s->str());
   try {
     auto num = parser.parse();
     if (num.is_num()) {
@@ -1203,7 +1206,7 @@ Cell number_to_string(Cell args) {
   auto n = num->to_int();
   args = cdr(args);
   if (args.is_nil()) {
-    return new String(std::to_string(n));
+    return new String(pscm::to_string(n));
   }
   arg = car(args);
   PSCM_ASSERT(arg.is_num());
@@ -1211,21 +1214,21 @@ Cell number_to_string(Cell args) {
   PSCM_ASSERT(num->is_int());
   auto m = num->to_int();
   if (m < 2 || m > 36) {
-    PSCM_THROW_EXCEPTION("Value out of range 2 to 36: " + std::to_string(m));
+    PSCM_THROW_EXCEPTION("Value out of range 2 to 36: " + pscm::to_string(m));
   }
-  std::string s;
+  UString s;
   static std::string alphabet = "abcdefghijklmnoprstuvwxyz";
   while (n != 0) {
     auto item = n % m;
     if (item < 10) {
-      s.push_back('0' + item);
+      s.append(static_cast<UChar>('0' + item));
     }
     else {
-      s.push_back(alphabet.at(item - 10));
+      s.append(alphabet.at(item - 10));
     }
     n /= m;
   }
-  return new String(std::string(s.rbegin(), s.rend()));
+  return new String(s);
 }
 
 Cell is_char(Cell args) {
@@ -1476,14 +1479,14 @@ Cell Evaluator::eval(Cell expr, SymbolTable *env) {
   reg_ = Register{ .expr = expr, .env = env, .cont = Label::DONE };
   pos_ = Label::EVAL;
   run();
-  PSCM_DEBUG("eval ret: {}", reg_.val);
+  PSCM_DEBUG("eval ret: {0}", reg_.val);
   return reg_.val;
 }
 
 void Evaluator::run() {
   while (true) {
     if (step_ > 100000) {
-      PSCM_THROW_EXCEPTION("evaluator terminate due to reach max step: " + std::to_string(step_));
+      PSCM_THROW_EXCEPTION("evaluator terminate due to reach max step: " + pscm::to_string(step_));
     }
     step_++;
     switch (pos_) {
@@ -1495,7 +1498,7 @@ void Evaluator::run() {
     }
     case Label::EVAL: {
       PRINT_STEP();
-      PSCM_DEBUG("eval expr: {}", reg_.expr.pretty_string());
+      PSCM_DEBUG("eval expr: {0}", reg_.expr.pretty_string());
       if (reg_.expr.is_none() || reg_.expr.is_self_evaluated()) {
         reg_.val = reg_.expr;
         GOTO(reg_.cont);
@@ -1507,12 +1510,12 @@ void Evaluator::run() {
       if (reg_.expr.is_pair()) {
         GOTO(Label::APPLY);
       }
-      PSCM_ERROR("unsupported expr: {}", reg_.expr);
+      PSCM_ERROR("unsupported expr: {0}", reg_.expr);
       PSCM_THROW_EXCEPTION("unsupported expr");
     }
     case Label::APPLY: {
       PRINT_STEP();
-      PSCM_DEBUG("apply: {}", reg_.expr);
+      PSCM_DEBUG("apply: {0}", reg_.expr);
       // restore after_apply
       PSCM_PUSH_STACK(env);
       PSCM_PUSH_STACK(unev);
@@ -1551,20 +1554,20 @@ void Evaluator::run() {
     }
     case Label::APPLY_FUNC: {
       PRINT_STEP();
-      PSCM_DEBUG("apply {} with args: {}", reg_.proc, reg_.argl);
+      PSCM_DEBUG("apply {0} with args: {1}", reg_.proc, reg_.argl);
       PSCM_ASSERT(reg_.proc.is_func());
       auto f = reg_.proc.to_func();
       auto args = reg_.argl;
-      PSCM_DEBUG("func args: {}", args);
+      PSCM_DEBUG("func args: {0}", args);
       reg_.val = f->call(args);
-      PSCM_DEBUG("func ret: {}", reg_.val);
+      PSCM_DEBUG("func ret: {0}", reg_.val);
       PSCM_POP_STACK(argl);
       PSCM_POP_STACK(cont);
       GOTO(reg_.cont);
     }
     case Label::APPLY_PROC: {
       PRINT_STEP();
-      PSCM_DEBUG("apply {} with args: {}", reg_.proc, reg_.argl);
+      PSCM_DEBUG("apply {0} with args: {1}", reg_.proc, reg_.argl);
       PSCM_ASSERT(reg_.proc.is_proc());
       auto proc = reg_.proc.to_proc();
       PSCM_ASSERT(proc);
@@ -1589,7 +1592,7 @@ void Evaluator::run() {
         else if (proc->name_ == &call_with_values) {
           // special handle for call-with-values
           PSCM_ASSERT(args.is_pair());
-          PSCM_DEBUG("call-with-values args: {}", args);
+          PSCM_DEBUG("call-with-values args: {0}", args);
           reg_.expr = cons(car(args), nil);
           reg_.unev = cdr(args);
           reg_.cont = Label::AFTER_EVAL_CALL_WITH_VALUES_PRODUCER;
@@ -1598,7 +1601,7 @@ void Evaluator::run() {
         else if (proc->name_ == &values) {
           // special handle for values
           PSCM_ASSERT(args.is_pair());
-          PSCM_DEBUG("values args: {}", args);
+          PSCM_DEBUG("values args: {0}", args);
           reg_.val = args;
           GOTO(Label::AFTER_APPLY_PROC);
         }
@@ -1617,7 +1620,7 @@ void Evaluator::run() {
     }
     case Label::APPLY_CONT: {
       PRINT_STEP();
-      PSCM_DEBUG("apply {} with args: {}", reg_.proc, reg_.argl);
+      PSCM_DEBUG("apply {0} with args: {1}", reg_.proc, reg_.argl);
       PSCM_ASSERT(reg_.proc.is_cont());
       auto cont = reg_.proc.to_cont();
       auto args = reg_.argl;
@@ -1625,7 +1628,7 @@ void Evaluator::run() {
         PSCM_THROW_EXCEPTION("Invalid arguments of Continuation: " + reg_.proc.to_string());
       }
       auto val = car(args);
-      PSCM_DEBUG("val: {}", val);
+      PSCM_DEBUG("val: {0}", val);
       if (!cdr(args).is_nil()) {
         PSCM_THROW_EXCEPTION("Invalid arguments of Continuation: " + reg_.proc.to_string());
       }
@@ -1660,7 +1663,7 @@ void Evaluator::run() {
       }
       else {
         PSCM_PUSH_STACK(argl);
-        PSCM_DEBUG("push argl: {}", reg_.argl);
+        PSCM_DEBUG("push argl: {0}", reg_.argl);
         reg_.expr = car(reg_.unev);
         reg_.unev = cdr(reg_.unev);
         reg_.cont = Label::AFTER_EVAL_OTHER_ARG;
@@ -1670,15 +1673,15 @@ void Evaluator::run() {
     case Label::AFTER_EVAL_OTHER_ARG: {
       PRINT_STEP();
       PSCM_POP_STACK(argl);
-      PSCM_DEBUG("pop argl: {}", reg_.argl);
+      PSCM_DEBUG("pop argl: {0}", reg_.argl);
       reg_.argl = cons(reg_.val, reg_.argl);
-      PSCM_DEBUG("argl: {}", reg_.argl);
+      PSCM_DEBUG("argl: {1}", reg_.argl);
       if (reg_.unev.is_nil()) {
         GOTO(Label::AFTER_EVAL_ARGS);
       }
       else {
         PSCM_PUSH_STACK(argl);
-        PSCM_DEBUG("push argl: {}", reg_.argl);
+        PSCM_DEBUG("push argl: {0}", reg_.argl);
         reg_.expr = car(reg_.unev);
         reg_.unev = cdr(reg_.unev);
         reg_.cont = Label::AFTER_EVAL_OTHER_ARG;
@@ -1732,7 +1735,7 @@ void Evaluator::run() {
     case Label::AFTER_APPLY_FUNC: {
       PRINT_STEP();
       PSCM_POP_STACK(argl);
-      PSCM_DEBUG("pop argl: {}", reg_.argl);
+      PSCM_DEBUG("pop argl: {0}", reg_.argl);
       pos_ = Label::AFTER_APPLY;
       break;
     }
@@ -1757,7 +1760,7 @@ void Evaluator::run() {
       PRINT_STEP();
       auto proc = car(reg_.unev);
       auto args = cdr(reg_.unev);
-      PSCM_DEBUG("apply {}: {}", proc, args);
+      PSCM_DEBUG("apply {0}: {1}", proc, args);
       PSCM_ASSERT(proc.is_sym());
       PSCM_ASSERT(args.is_sym());
       proc = reg_.env->get(proc.to_sym());
@@ -1816,7 +1819,7 @@ void Evaluator::run() {
       PSCM_ASSERT(proc_name.is_sym());
       auto proc_name_sym = proc_name.to_sym();
       auto proc = new Procedure(proc_name_sym, args, val, reg_.env);
-      std::string name = std::string(proc_name_sym->name());
+      const UString& name = proc_name_sym->name();
       auto macro = new Macro(name, proc);
       reg_.env->insert(proc_name_sym, macro);
       reg_.val = Cell::none();
@@ -1913,7 +1916,7 @@ void Evaluator::run() {
       PSCM_ASSERT(val.is_str());
       auto s = val.to_str();
       auto filename = s->str();
-      bool ok = load(std::string(filename).c_str(), SchemeProxy(scm_).current_module()->env());
+      bool ok = load(filename, SchemeProxy(scm_).current_module()->env());
       reg_.val = Cell(ok);
       PSCM_POP_STACK(cont);
       GOTO(reg_.cont);
@@ -1921,7 +1924,7 @@ void Evaluator::run() {
     case Label::APPLY_EVAL: {
       PRINT_STEP();
       reg_.expr = car(reg_.unev);
-      PSCM_ERROR("expr: {}", reg_.expr);
+      PSCM_ERROR("expr: {0}", reg_.expr);
       PSCM_PUSH_STACK(cont);
       reg_.cont = Label::AFTER_APPLY_EVAL;
       GOTO(Label::EVAL);
@@ -1929,7 +1932,7 @@ void Evaluator::run() {
     case Label::AFTER_APPLY_EVAL: {
       PRINT_STEP();
       reg_.expr = reg_.val;
-      PSCM_ERROR("expr: {}", reg_.expr);
+      PSCM_ERROR("expr: {0}", reg_.expr);
       PSCM_POP_STACK(cont);
       GOTO(Label::EVAL);
     }
@@ -1966,7 +1969,7 @@ void Evaluator::run() {
       auto var_name = reg_.val;
       PSCM_ASSERT(var_name.is_sym());
       auto sym = var_name.to_sym();
-      PSCM_DEBUG("AFTER set! {} -> {}", var_name, val);
+      PSCM_DEBUG("AFTER set! {0} -> {1}", var_name, val);
       reg_.env->set(sym, val);
       reg_.val = Cell{};
       PSCM_POP_STACK(cont);
@@ -1999,8 +2002,8 @@ void Evaluator::run() {
       auto lists = cdr(reg_.unev);
       proc = reg_.env->get(proc.to_sym());
       lists = reg_.env->get(lists.to_sym());
-      PSCM_DEBUG("proc: {}", proc);
-      PSCM_DEBUG("lists: {}", lists);
+      PSCM_DEBUG("proc: {0}", proc);
+      PSCM_DEBUG("lists: {0}", lists);
       PSCM_ASSERT(proc.is_proc() || proc.is_func());
       PSCM_ASSERT(lists.is_pair());
       auto len = list_length(lists);
@@ -2166,7 +2169,7 @@ void Evaluator::run() {
           if (*sym == cond_else) {
             reg_.expr = cadr(clause);
             reg_.cont = Label::AFTER_APPLY_MACRO;
-            PSCM_DEBUG("cond expr: {}", reg_.expr);
+            PSCM_DEBUG("cond expr: {0}", reg_.expr);
             GOTO(Label::EVAL);
           }
         }
@@ -2252,21 +2255,21 @@ void Evaluator::run() {
     case Label::AFTER_EVAL_CALL_WITH_VALUES_PRODUCER: {
       PRINT_STEP();
       auto consumer = car(reg_.unev);
-      PSCM_DEBUG("consumer: {}", consumer);
-      PSCM_DEBUG("consumer args: {}", reg_.val);
+      PSCM_DEBUG("consumer: {0}", consumer);
+      PSCM_DEBUG("consumer args: {0}", reg_.val);
       // FIXME
       // hack
       if (reg_.val.is_num()) {
         reg_.val = cons(reg_.val, nil);
       }
       auto expr = list(new Symbol("apply"), consumer, list(quote, reg_.val));
-      PSCM_DEBUG("expr: {}", expr);
+      PSCM_DEBUG("expr: {0}", expr);
       reg_.expr = expr;
       reg_.cont = Label::AFTER_APPLY_PROC;
       GOTO(Label::EVAL);
     }
     default: {
-      PSCM_ERROR("Unsupported pos: {}", pos_);
+      PSCM_ERROR("Unsupported pos: {0}", pos_);
       PSCM_THROW_EXCEPTION("Unsupported pos: " + to_string(pos_));
     }
     }
@@ -2276,8 +2279,8 @@ void Evaluator::run() {
 Label Evaluator::eval_map_expr(Label default_pos) {
   auto proc = reg_.proc;
   auto lists = reg_.unev;
-  PSCM_DEBUG("proc: {}", proc);
-  PSCM_DEBUG("lists: {}", lists);
+  PSCM_DEBUG("proc: {0}", proc);
+  PSCM_DEBUG("lists: {0}", lists);
   PSCM_ASSERT(proc.is_proc() || proc.is_func());
   PSCM_ASSERT(lists.is_pair());
   auto len = list_length(lists);
@@ -2314,54 +2317,49 @@ Label Evaluator::eval_map_expr(Label default_pos) {
   return Label::EVAL;
 }
 
-std::ostream& operator<<(std::ostream& out, const Evaluator::Register& reg) {
-  out << "expr: " << reg.expr;
-  out << ", ";
-  out << "env: " << reg.env;
-  out << ", ";
-  out << "proc: " << reg.proc;
-  out << ", ";
-  out << "argl: " << reg.argl;
-  out << ", ";
-  out << "cont: " << reg.cont;
-  out << ", ";
-  out << "val: " << reg.val;
-  out << ", ";
-  out << "unev: " << reg.unev;
-  return out;
-}
-
-std::ostream& operator<<(std::ostream& out, const Evaluator::RegisterType& reg) {
+UString to_string(pscm::Evaluator::RegisterType reg){
   switch (reg) {
   case Evaluator::reg_expr:
-    return out << "expr";
+    return "expr";
     break;
   case Evaluator::reg_env:
-    return out << "env";
+    return "env";
     break;
   case Evaluator::reg_proc:
-    return out << "proc";
+    return "proc";
     break;
   case Evaluator::reg_argl:
-    return out << "argl";
+    return "argl";
     break;
   case Evaluator::reg_cont:
-    return out << "cont";
+    return "cont";
     break;
   case Evaluator::reg_val:
-    return out << "val";
+    return "val";
     break;
   case Evaluator::reg_unev:
-    return out << "unev";
+    return "unev";
     break;
   }
-  return out;
+  return "";
 }
 
-std::string Evaluator::Register::to_string() const {
-  std::stringstream ss;
-  ss << *this;
-  return ss.str();
+UString Evaluator::Register::to_string() const {
+  UString out;
+  out += "expr: " + this->expr.to_string();
+  out += ", ";
+  out += "env: " + pscm::to_string(this->env);
+  out += ", ";
+  out += "proc: " + this->proc.to_string();
+  out += ", ";
+  out += "argl: " + this->argl.to_string();
+  out += ", ";
+  out += "cont: " + pscm::to_string(this->cont);
+  out += ", ";
+  out += "val: " + this->val.to_string();
+  out += ", ";
+  out += "unev: " + this->unev.to_string();
+  return out;
 }
 
 bool Evaluator::Stack::empty() const {
@@ -2389,31 +2387,54 @@ bool Evaluator::Stack::empty() const {
   return true;
 }
 
-std::string Evaluator::Stack::to_string() const {
-  std::stringstream ss;
-  ss << *this;
-  return ss.str();
+template <Displayable T>
+void print_list(UString& out, const std::vector<T>& l) {
+  if (l.empty()) {
+    out += "[]";
+  }
+  else {
+    out += "[";
+    for (int i = 0; i < l.size() - 1; ++i) {
+      out += pscm::to_string(l.at(i));
+      out += ", ";
+    }
+    out += pscm::to_string(l.back());
+    out += "]";
+  }
 }
 
-bool Evaluator::load(const char *filename, SymbolTable *env) {
+UString Evaluator::Stack::to_string() const {
+  UString out;
+  out += "expr: ";
+  print_list(out, expr);
+  out += ", ";
+  out += "env: ";
+  print_list(out, env);
+  out += ", ";
+  out += "proc: ";
+  print_list(out, proc);
+  out += ", ";
+  out += "argl: ";
+  print_list(out, argl);
+  out += ", ";
+  out += "cont: ";
+  print_list(out, cont);
+  out += ", ";
+  out += "val: ";
+  print_list(out, val);
+  out += ", ";
+  out += "unev: ";
+  print_list(out, unev);
+  return out;
+}
+
+bool Evaluator::load(const UString& filename, SymbolTable *env) {
   std::cout << "load: " << filename << std::endl;
-  if (!fs::exists(filename)) {
-    PSCM_ERROR("file not found: {}", filename);
+  auto res = read_file(filename);
+  if (!std::holds_alternative<UString>(res)){
     return false;
   }
-  std::fstream ifs;
-  ifs.open(filename, std::ios::in);
-  if (!ifs.is_open()) {
-    PSCM_ERROR("load file {} error", filename);
-    return false;
-  }
-  ifs.seekg(0, ifs.end);
-  auto sz = ifs.tellg();
-  ifs.seekg(0, ifs.beg);
-  std::string code;
-  code.resize(sz);
-  char *data = (char *)code.data();
-  ifs.read(data, sz);
+  auto code = std::get<UString>(res);
   try {
     Parser parser(code, filename);
     Cell expr = parser.next();
@@ -2424,49 +2445,9 @@ bool Evaluator::load(const char *filename, SymbolTable *env) {
     }
   }
   catch (Exception& ex) {
-    PSCM_ERROR("load file {} error", filename);
+    PSCM_ERROR("load file {0} error", filename);
     return false;
   }
   return true;
-}
-
-template <typename T>
-void print_list(std::ostream& out, const std::vector<T>& l) {
-  if (l.empty()) {
-    out << "[]";
-  }
-  else {
-    out << "[";
-    for (int i = 0; i < l.size() - 1; ++i) {
-      out << l.at(i);
-      out << ", ";
-    }
-    out << l.back();
-    out << "]";
-  }
-}
-
-std::ostream& operator<<(std::ostream& out, const Evaluator::Stack& stack) {
-  out << "expr: ";
-  print_list(out, stack.expr);
-  out << ", ";
-  out << "env: ";
-  print_list(out, stack.env);
-  out << ", ";
-  out << "proc: ";
-  print_list(out, stack.proc);
-  out << ", ";
-  out << "argl: ";
-  print_list(out, stack.argl);
-  out << ", ";
-  out << "cont: ";
-  print_list(out, stack.cont);
-  out << ", ";
-  out << "val: ";
-  print_list(out, stack.val);
-  out << ", ";
-  out << "unev: ";
-  print_list(out, stack.unev);
-  return out;
 }
 } // namespace pscm

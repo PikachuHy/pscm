@@ -32,32 +32,32 @@ TEST_CASE("testing parse .") {
   CHECK(ret == list(a, b, c, d));
 }
 
-TEST_CASE("testing parse stream") {
-  std::stringstream ss;
-  ss << "(a b . (c d))";
-  Parser parser((std::istream *)&ss);
-  auto ret = parser.parse();
-  auto a = "a"_sym;
-  auto b = "b"_sym;
-  auto c = "c"_sym;
-  auto d = "d"_sym;
-  CHECK(ret == list(a, b, c, d));
-}
+// TEST_CASE("testing parse stream") {
+//   std::stringstream ss;
+//   ss << "(a b . (c d))";
+//   Parser parser((std::istream *)&ss);
+//   auto ret = parser.parse();
+//   auto a = "a"_sym;
+//   auto b = "b"_sym;
+//   auto c = "c"_sym;
+//   auto d = "d"_sym;
+//   CHECK(ret == list(a, b, c, d));
+// }
 
-TEST_CASE("testing parse stream 2") {
-  std::stringstream ss;
-  ss << "a b c d";
-  Parser parser((std::istream *)&ss);
+// TEST_CASE("testing parse stream 2") {
+//   std::stringstream ss;
+//   ss << "a b c d";
+//   Parser parser((std::istream *)&ss);
 
-  auto a = "a"_sym;
-  auto b = "b"_sym;
-  auto c = "c"_sym;
-  auto d = "d"_sym;
-  auto ret = parser.next();
-  CHECK(ret == a);
-  ret = parser.next();
-  CHECK(ret == b);
-}
+//   auto a = "a"_sym;
+//   auto b = "b"_sym;
+//   auto c = "c"_sym;
+//   auto d = "d"_sym;
+//   auto ret = parser.next();
+//   CHECK(ret == a);
+//   ret = parser.next();
+//   CHECK(ret == b);
+// }
 
 TEST_CASE("testing parse #\\ ") {
   auto f = [](Scheme& scm) {

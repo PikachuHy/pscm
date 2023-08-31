@@ -1,7 +1,6 @@
 module;
 #include "pscm/logger/Appender.h"
-#include "pscm/logger/Event.h"
-#include "pscm/logger/Logger.h"
+#include "pscm/logger/Logger.hpp"
 export module pscm.logger;
 
 export namespace pscm::logger {

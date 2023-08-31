@@ -17,6 +17,13 @@ using namespace pscm;
 using namespace std::string_literals;
 using namespace doctest;
 
+namespace pscm{
+doctest::String toString(const Cell& value) {
+  std::string str;
+  value.to_string().toUTF8String(str);
+  return {str.data(), static_cast<doctest::String::size_type>(str.size())};
+}}
+
 TEST_CASE("testing acons") {
   auto f = [](Scheme& scm) {
     Cell ret;

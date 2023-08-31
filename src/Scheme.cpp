@@ -11,6 +11,7 @@ import fmt;
 import linenoise;
 #else
 #include "pscm/ApiManager.h"
+#include "pscm/Displayable.h"
 #include "pscm/Evaluator.h"
 #include "pscm/Exception.h"
 #include "pscm/Expander.h"
@@ -31,29 +32,24 @@ import linenoise;
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/logger/Appender.h"
+#include "pscm/misc/ICUCompat.h"
 #include "pscm/scm_utils.h"
 #include "pscm/version.h"
 #include "spdlog/spdlog.h"
+#include "unicode/schriter.h"
 #include <fstream>
 #include <linenoise.hpp>
 #include <string>
 #include <string_view>
 #endif
 using namespace std::string_literals;
-#if PSCM_STD_COMPAT
-#include <ghc/filesystem.hpp>
-namespace fs = ghc::filesystem;
-#else
-#include <filesystem>
-namespace fs = std::filesystem;
-#endif
 
 PSCM_INLINE_LOG_DECLARE("pscm.core.Scheme");
 
 namespace pscm {
 
 Symbol *scm_define(SchemeProxy scm, SymbolTable *env, Cell args) {
-  PSCM_DEBUG("args: {}", args);
+  PSCM_DEBUG("args: {0}", args);
   PSCM_ASSERT(args.is_pair());
   auto key = car(args);
   auto val = cdr(args);
@@ -99,7 +95,7 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "set!", Label::APPLY_SET) {
   v = scm.eval(env, v);
   bool has_k = env->contains(sym);
   if (!has_k) {
-    PSCM_ERROR("Unbound variable: {} from {}", k, k.source_location());
+    PSCM_ERROR("Unbound variable: {0} from {1}", k, k.source_location());
     PSCM_THROW_EXCEPTION("Unbound variable: " + k.to_string());
   }
   env->set(sym, v);
@@ -117,15 +113,15 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "cond", Label::APPLY_COND) {
   }
   while (!args.is_nil()) {
     auto clause = car(args);
-    PSCM_DEBUG("clause: {}", clause);
+    PSCM_DEBUG("clause: {0}", clause);
     args = cdr(args);
     if (clause.is_nil()) {
       PSCM_THROW_EXCEPTION("Bad cond clause " + clause.to_string() + " in expression " + args.to_string());
     }
     auto test = car(clause);
-    PSCM_DEBUG("test: {}", test);
+    PSCM_DEBUG("test: {0}", test);
     auto expr = cdr(clause);
-    PSCM_DEBUG("expr: {}", expr);
+    PSCM_DEBUG("expr: {0}", expr);
     if (test.is_sym()) {
       PSCM_ASSERT(test.to_sym());
       auto sym = test.to_sym();
@@ -150,7 +146,7 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "cond", Label::APPLY_COND) {
       return Cell::bool_true();
     }
     auto tmp = cdr(clause);
-    PSCM_DEBUG("tmp: {}", tmp);
+    PSCM_DEBUG("tmp: {0}", tmp);
     auto arrow = car(tmp);
     auto arrow_sym = "=>"_sym;
     if (arrow.is_sym() && *arrow.to_sym() == arrow_sym && !env->contains(&arrow_sym)) {
@@ -257,8 +253,8 @@ Cell unquote = new Macro("unquote", Label::APPLY_QUOTE);
 Cell apply = new Macro("builtin_apply", Label::APPLY_APPLY);
 
 Cell version(Cell) {
-  static String ver(std::string() + std::string(VersionInfo::PSCM_VERSION) + " (" +
-                    std::string(VersionInfo::GIT_BRANCH) + "@" + std::string(VersionInfo::GIT_HASH) + ")");
+  static String ver(UString(VersionInfo::PSCM_VERSION) + " (" +
+                    UString(VersionInfo::GIT_BRANCH) + "@" + UString(VersionInfo::GIT_HASH) + ")");
   return &ver;
 }
 
@@ -431,14 +427,14 @@ Scheme::Scheme(bool use_register_machine)
         (ret (apply proc (list port))))
     (close-output-port port)
     ret))
-)");
+)"_u);
   eval_internal(env, R"(
 (define (call-with-input-file filename proc)
   (let* ((port (open-input-file filename))
          (ret (apply proc (list port))))
     (close-input-port port)
     ret))
-)");
+)"_u);
   root_env_ = env;
   env->insert(new Symbol("map-in-order"), env->get(&Symbol::map));
   env->insert(new Symbol("primitive-load"), env->get(&Symbol::load));
@@ -457,7 +453,7 @@ Scheme::~Scheme() {
   }
 }
 
-Cell Scheme::eval(const char *code) {
+Cell Scheme::eval(const UString& code) {
   try {
     Parser parser(code);
     auto ret = parser.parse();
@@ -466,7 +462,7 @@ Cell Scheme::eval(const char *code) {
     }
     if (in_repl_ && ret.is_sym()) {
       if (!current_module_->env()->contains(ret.to_sym())) {
-        std::cout << "ERROR: Unbound variable: " << ret << std::endl;
+        std::cout << "ERROR: Unbound variable: " << ret.to_string() << std::endl;
         std::cout << "ABORT: (unbound-variable)" << std::endl;
         return Cell::none();
       }
@@ -480,12 +476,12 @@ Cell Scheme::eval(const char *code) {
     return ret;
   }
   catch (Exception& ex) {
-    PSCM_ERROR("eval {} error: {}", code, ex.what());
+    PSCM_ERROR("eval {0} error: {1}", code, ex.what());
     return Cell::ex(ex.what());
   }
 }
 
-Cell Scheme::eval_internal(SymbolTable *env, const char *code) {
+Cell Scheme::eval_internal(SymbolTable *env, const UString code) {
   try {
     Parser parser(code);
     auto ret = parser.parse();
@@ -501,12 +497,12 @@ Cell Scheme::eval_internal(SymbolTable *env, const char *code) {
     return ret;
   }
   catch (Exception& ex) {
-    PSCM_ERROR("eval {} error: {}", code, ex.what());
+    PSCM_ERROR("eval {0} error: {1}", code, ex.what());
     return Cell::ex(ex.what());
   }
 }
 
-void Scheme::eval_all(const char *code, SourceLocation loc) {
+void Scheme::eval_all(const UString& code, SourceLocation loc) {
   try {
     Parser parser(code);
     while (true) {
@@ -524,29 +520,18 @@ void Scheme::eval_all(const char *code, SourceLocation loc) {
     }
   }
   catch (Exception& ex) {
-    PSCM_ERROR("eval {} error: {}", code, ex.what());
-    PSCM_THROW_EXCEPTION(loc.to_string() + ", EVAL_ALL Error: " + std::string(code));
+    PSCM_ERROR("eval {0} error: {1}", code, ex.what());
+    PSCM_THROW_EXCEPTION(loc.to_string() + ", EVAL_ALL Error: " + code);
   }
 }
 
-bool Scheme::load(const char *filename) {
+bool Scheme::load(const UString& filename) {
   std::cout << "load: " << filename << std::endl;
-  if (!fs::exists(filename)) {
-    PSCM_ERROR("file not found: {}", filename);
+  auto res = read_file(filename);
+  if (!std::holds_alternative<UString>(res)){
     return false;
   }
-  std::fstream ifs;
-  ifs.open(filename, std::ios::in);
-  if (!ifs.is_open()) {
-    PSCM_ERROR("load file {} error", filename);
-    return false;
-  }
-  ifs.seekg(0, ifs.end);
-  auto sz = ifs.tellg();
-  ifs.seekg(0, ifs.beg);
-  std::string code;
-  code.resize(sz);
-  ifs.read((char *)code.data(), sz);
+  auto code = std::get<UString>(res);
   try {
     Parser parser(code, filename);
     Cell expr = parser.next();
@@ -561,7 +546,7 @@ bool Scheme::load(const char *filename) {
     }
   }
   catch (Exception& ex) {
-    PSCM_ERROR("load file {} error", filename);
+    PSCM_ERROR("load file {0} error", filename);
     ex.print_stack_trace();
     return false;
   }
@@ -584,8 +569,8 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
   Cell proc;
   Cell args;
   while (true) {
-    PSCM_TRACE("eval: {}", expr.pretty_string());
-    // PSCM_INFO("eval: {}", expr);
+    PSCM_TRACE("eval: {0}", expr.pretty_string());
+    // PSCM_INFO("eval: {0}", expr);
     if (expr.is_none()) {
       return expr;
     }
@@ -598,12 +583,12 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
     proc = eval(env, car(expr));
     args = cdr(expr);
     if (proc.is_func()) {
-      PSCM_DEBUG("proc {} args: {}", proc, args.pretty_string());
+      PSCM_DEBUG("proc {0} args: {1}", proc, args.pretty_string());
       PSCM_ASSERT(args.is_pair() || args.is_nil());
       auto f = proc.to_func();
       auto func_args = eval_args(env, args);
       auto ret = f->call(func_args);
-      PSCM_DEBUG("proc {} ret: {}", expr.pretty_string(), ret.pretty_string());
+      PSCM_DEBUG("proc {0} ret: {1}", expr.pretty_string(), ret.pretty_string());
       return ret;
     }
     else if (proc.is_macro()) {
@@ -617,8 +602,8 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
         auto op_args = cdr(args);
         op = eval(env, op);
         op_args = eval(env, op_args);
-        PSCM_DEBUG("op: {}", op);
-        PSCM_DEBUG("args: {}", op_args);
+        PSCM_DEBUG("op: {0}", op);
+        PSCM_DEBUG("args: {0}", op_args);
         args = construct_apply_argl(op_args);
         // TODO:
         if (op.is_func()) {
@@ -627,7 +612,7 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
         else if (op.is_proc()) {
           expr = call_proc(env, op.to_proc(), args);
           // expr = cons(op, car(op_args));
-          PSCM_DEBUG("new expr: {}", expr);
+          PSCM_DEBUG("new expr: {0}", expr);
           continue;
         }
         PSCM_THROW_EXCEPTION("unsupported now: " + op.to_string());
@@ -639,9 +624,9 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
         expr = f->call(args);
       }
       else {
-        PSCM_TRACE("call macro: {}", proc);
+        PSCM_TRACE("call macro: {0}", proc);
         expr = f->call(*this, env, args);
-        PSCM_DEBUG("expand result pretty: {}", expr.pretty_string());
+        PSCM_DEBUG("expand result pretty: {0}", expr.pretty_string());
       }
       continue;
     }
@@ -653,7 +638,7 @@ Cell Scheme::eval(pscm::SymbolTable *env, pscm::Cell expr) {
       continue;
     }
     else {
-      PSCM_ERROR("unsupported {} from {}", proc, proc.source_location());
+      PSCM_ERROR("unsupported {0} from {1}", proc, proc.source_location());
       // repl();
       PSCM_THROW_EXCEPTION("unsupported");
     }
@@ -676,11 +661,11 @@ Cell Scheme::lookup(SymbolTable *env, Cell expr, SourceLocation loc) {
   bool has_sym = env->contains(sym);
   if (!has_sym) {
     sym->print_debug_info();
-    PSCM_ERROR("env: {} {}", (void *)env, env->name());
+    PSCM_ERROR("env: {0} {1}", PSCM_ADDRESS_LOG(env), env->name());
     env->dump();
     // uncomment for debug
     // repl();
-    PSCM_THROW_EXCEPTION("Unbound variable: "s + std::string(sym->name()));
+    PSCM_THROW_EXCEPTION("Unbound variable: " + sym->name());
   }
   auto ret = env->get_or(sym, {}, loc);
   return ret;
@@ -693,7 +678,7 @@ Cell Scheme::call_proc(SymbolTable *& env, Procedure *proc, Cell args, SourceLoc
   }
   env = proc->create_proc_env(args);
   auto body = proc->body();
-  PSCM_DEBUG("body: {}", body);
+  PSCM_DEBUG("body: {0}", body);
   while (body.is_pair() && cdr(body).is_pair()) {
     [[maybe_unused]] auto ret = eval(env, car(body));
     body = cdr(body);
@@ -706,25 +691,14 @@ Cell Scheme::call_proc(SymbolTable *& env, Procedure *proc, Cell args, SourceLoc
   }
 }
 
-void Scheme::load_module(const std::string& filename, Cell module_name) {
+void Scheme::load_module(const UString& filename, Cell module_name) {
   auto old_module = current_module_;
   std::cout << "load: " << filename << std::endl;
-  if (!fs::exists(filename)) {
-    PSCM_ERROR("file not found: {}", filename);
+  auto res = read_file(filename);
+  if (!std::holds_alternative<UString>(res)){
     PSCM_THROW_EXCEPTION("load module error: " + Cell(module_name).to_string());
   }
-  std::fstream ifs;
-  ifs.open(filename, std::ios::in);
-  if (!ifs.is_open()) {
-    PSCM_ERROR("load file {} error", filename);
-    PSCM_THROW_EXCEPTION("load module error: " + Cell(module_name).to_string());
-  }
-  ifs.seekg(0, ifs.end);
-  auto sz = ifs.tellg();
-  ifs.seekg(0, ifs.beg);
-  std::string code;
-  code.resize(sz);
-  ifs.read((char *)code.data(), sz);
+  auto code = std::get<UString>(res);
   try {
     Parser parser(code, filename);
     Cell expr = parser.next();
@@ -740,7 +714,7 @@ void Scheme::load_module(const std::string& filename, Cell module_name) {
   }
   catch (Exception& ex) {
     ex.print_stack_trace();
-    PSCM_ERROR("load file {} error", filename);
+    PSCM_ERROR("load file {0} error", filename);
     PSCM_THROW_EXCEPTION("load module error: " + Cell(module_name).to_string());
   }
   current_module_ = old_module;
@@ -780,7 +754,7 @@ void Scheme::repl() {
     }
     auto ret = eval(line.c_str());
     if (!ret.is_none()) {
-      std::cout << ret << std::endl;
+      std::cout << ret.to_string() << std::endl;
     }
     // Add line to history
     linenoise::AddHistory(line.c_str());
@@ -798,10 +772,12 @@ PSCM_DEFINE_BUILTIN_MACRO(Scheme, "repl", Label::TODO) {
     if (quit) {
       break;
     }
-    auto expr = Parser(line).parse();
+    UString str(line.data());
+    UIterator iter(str);
+    auto expr = Parser(&iter).parse();
     auto ret = scm.eval(env, expr);
     if (!ret.is_none()) {
-      std::cout << ret << std::endl;
+      std::cout << ret.to_string() << std::endl;
     }
   }
   return Cell::none();
@@ -813,7 +789,7 @@ PSCM_DEFINE_BUILTIN_PROC(Scheme, "select") {
 }
 
 PSCM_DEFINE_BUILTIN_PROC(Scheme, "scm-error") {
-  PSCM_ERROR("scm-error: {}", args);
+  PSCM_ERROR("scm-error: {0}", args);
   return Cell::none();
 }
 
