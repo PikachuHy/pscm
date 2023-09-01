@@ -21,6 +21,33 @@ endif ()
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# https://cmake.org/cmake/help/latest/module/FindICU.html#module:FindICU
+# find_package(ICU REQUIRED) is broken on MacOS due to Failed to find all ICU components
+# TODO: better way to handle icu4c
+if (NOT DEFINED ICU4C_ROOT)
+  message(FATAL_ERROR "use cmake -DICU4C_ROOT=/path/to/your/icu4c")
+endif()
+function(_import_icu_ component)
+if(NOT TARGET ICU::${component})
+add_library(ICU::${component} UNKNOWN IMPORTED)
+find_library(ICU_${component}_LIBRARY NAMES icu${component} HINTS ${ICU4C_ROOT}/lib)
+if (ICU_${component}_LIBRARY)
+message(STATUS "ICU_${component}_LIBRARY: ${ICU_${component}_LIBRARY}")
+set_target_properties(ICU::${component} PROPERTIES
+          INTERFACE_INCLUDE_DIRECTORIES "${ICU4C_ROOT}/include"
+          INTERFACE_LINK_DIRECTORIES "${ICU4C_ROOT}/lib"
+          INTERFACE_LINK_LIBRARIES ${ICU_${component}_LIBRARY}
+          IMPORTED_LOCATION "${ICU_${component}_LIBRARY}"
+          )
+          message(INFO "Imported ICU::${component}")
+else()
+  message(WARNING "icu${component} not found")
+endif()
+endif()
+endfunction(_import_icu_)
+_import_icu_(uc)
+_import_icu_(i18n)
+_import_icu_(io)
 option(USE_CPP_STD_COMPAT "use c++14 std library compat" ON)
 find_package(Git REQUIRED)
 message(STATUS "Git: ${GIT_EXECUTABLE}")
