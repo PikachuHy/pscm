@@ -10,5 +10,3 @@
 #define PSCM_TRACE(format_, ...) PSCM_LOGGER_LOG(logger_, pscm::logger::Logger::Level::TRACE, format_, ##__VA_ARGS__)
 
 #define PSCM_INLINE_LOG_DECLARE(name) static pscm::logger::Logger *logger_ = pscm::logger::Logger::get_logger(name)
-
-#define PSCM_ADDRESS_LOG(name) pscm::to_string(name)

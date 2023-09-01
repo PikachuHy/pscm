@@ -22,7 +22,7 @@ public:
       , col_(col) {
   }
 
-  const UString & name() const {
+  const UString name() const {
     return get_const_string(name_);
   }
 

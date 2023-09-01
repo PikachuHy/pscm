@@ -14,9 +14,9 @@ namespace pscm {
 namespace logger {
 
 void _setup_formattable(UFormattable& res, const UString& txt);
-void _setup_formattable(UFormattable& res, const char* txt);
 void _setup_formattable(UFormattable& res, std::int64_t num);
 void _setup_formattable(UFormattable& res, std::int32_t num);
+void _setup_formattable(UFormattable& res, const void* txt);
 template<Displayable ObjT>
 void _setup_formattable(UFormattable& res, ObjT obj){
   res.setString(pscm::to_string(obj));
@@ -48,11 +48,10 @@ public:
     event.loc = loc;
 
     constexpr std::size_t arity = sizeof...(msg);
-    UErrorCode status;
+    UErrorCode status = U_ZERO_ERROR;
     UFormattable msgf[arity];
     _to_formattable(msgf, msg...);
     UFormatter::format(format_, msgf, arity, event.msg, status);
-    std::cout << status << std::endl;
     assert(!U_FAILURE(status)); // 这里可能返回默认环境（-127）
     this->_log(event);
   }

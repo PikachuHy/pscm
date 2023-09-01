@@ -607,7 +607,7 @@ Cell make_vector(Cell args) {
   v->resize(num->to_int());
   std::fill(v->begin(), v->end(), default_value);
   auto vec = Cell(v);
-  PSCM_DEBUG("vec: {0} from {1}", vec, PSCM_ADDRESS_LOG(v));
+  PSCM_DEBUG("vec: {0} from {1}", vec, (void *)v);
   return vec;
 }
 
@@ -653,7 +653,7 @@ Cell vector_set(Cell args) {
   PSCM_ASSERT(k.is_num());
   auto num = k.to_num();
   PSCM_ASSERT(num->is_int());
-  PSCM_DEBUG("vec: {0} from {1}", vec, PSCM_ADDRESS_LOG(vec.to_vec()));
+  PSCM_DEBUG("vec: {0} from {1}", vec, (void *)vec.to_vec());
   PSCM_DEBUG("k: {0} --> {1}", k, obj);
   auto index = num->to_int();
   auto& v = *vec.to_vec();
@@ -661,7 +661,7 @@ Cell vector_set(Cell args) {
     PSCM_THROW_EXCEPTION("Value out of range: " + k.to_string());
   }
   v[index] = obj;
-  PSCM_DEBUG("vec: {0} from {1}", vec, PSCM_ADDRESS_LOG(vec.to_vec()));
+  PSCM_DEBUG("vec: {0} from {1}", vec, (void *)vec.to_vec());
   return Cell::none();
 }
 

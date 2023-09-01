@@ -7,7 +7,7 @@
 #include "pscm/Logger.h"
 #include <cassert>
 #define PSCM_THROW_EXCEPTION(msg)                                                                                      \
-  PSCM_ERROR("Exception occurred here: {0}", msg);                                                                      \
+  PSCM_ERROR("Exception occurred here: {0}", (msg));                                                                      \
   throw ::pscm::Exception(msg)
 #define PSCM_ASSERT(e)                                                                                                 \
   if (!(e)) {                                                                                                          \

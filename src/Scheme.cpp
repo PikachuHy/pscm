@@ -661,7 +661,7 @@ Cell Scheme::lookup(SymbolTable *env, Cell expr, SourceLocation loc) {
   bool has_sym = env->contains(sym);
   if (!has_sym) {
     sym->print_debug_info();
-    PSCM_ERROR("env: {0} {1}", PSCM_ADDRESS_LOG(env), env->name());
+    PSCM_ERROR("env: {0} {1}", (void *)env, env->name());
     env->dump();
     // uncomment for debug
     // repl();

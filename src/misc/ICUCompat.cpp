@@ -88,7 +88,7 @@ PSCM_INLINE_LOG_DECLARE("pscm.core.Module");
   }
 
   const UString get_const_string(const UString & src){
-    UString res(false, src.getBuffer(), src.getCapacity());
+    UString res(false, src.getBuffer(), src.length());
     return res;
   }
 

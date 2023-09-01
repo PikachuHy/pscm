@@ -86,8 +86,8 @@ bool Logger::is_level_enabled(Level level) const {
 void _setup_formattable(UFormattable& res, const UString& txt){
   res.setString(txt);
 };
-void _setup_formattable(UFormattable& res, const char* txt){
-  res.setString(UString(txt));
+void _setup_formattable(UFormattable& res, const void* ptr){
+  res.setString(pscm::to_string(ptr));
 };
 void _setup_formattable(UFormattable& res, std::int64_t num){
   res.setInt64(num);
