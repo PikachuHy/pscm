@@ -22,9 +22,17 @@ void _setup_formattable(UFormattable& res, ObjT obj){
   res.setString(pscm::to_string(obj));
 };
 
+// avoid DEBUG macro and ERROR macro conflict
+enum class Level { NONE, FATAL, ERROR_, WARN, INFO, DEBUG_, TRACE };
+
 class Appender;
-struct Event;
 class Logger;
+
+struct Event {
+  Level level;
+  UString msg;
+  SourceLocation loc;
+};
 
 template<typename Obj>
 concept Formattable = requires (UFormattable& res, Obj obj) {
@@ -32,15 +40,13 @@ concept Formattable = requires (UFormattable& res, Obj obj) {
 };
 class Logger {
 public:
-  // avoid DEBUG macro and ERROR macro conflict
-  enum class Level { NONE, FATAL, ERROR_, WARN, INFO, DEBUG_, TRACE };
   static Logger *root_logger();
   static std::unordered_map<std::string, Logger *>& logger_map();
   static Logger *get_logger(std::string name);
-  void log(Logger::Level level, UString msg, SourceLocation loc = {});
+  void log(Level level, UString msg, SourceLocation loc = {});
   void add_appender(Appender *appender);
   template<typename... MsgT>
-  void log(Logger::Level level, const UString format_, SourceLocation loc, MsgT... msg)
+  void log(Level level, const UString format_, SourceLocation loc, MsgT... msg)
   {
   if (is_level_enabled(level)) {
     Event event;
@@ -105,12 +111,6 @@ private:
   Level level_;
   Logger *parent_ = nullptr;
   std::vector<Logger *> children_;
-};
-
-struct Event {
-  Logger::Level level;
-  UString msg;
-  SourceLocation loc;
 };
 } // namespace logger
 } // namespace pscm

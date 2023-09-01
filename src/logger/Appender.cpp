@@ -16,7 +16,7 @@ import fmt;
 
 namespace fmt{
 template <>
-class formatter<pscm::logger::Logger::Level> {
+class formatter<pscm::logger::Level> {
 public:
   constexpr auto parse(format_parse_context& ctx) {
     // PSCM_THROW_EXCEPTION("not supported now");
@@ -24,21 +24,21 @@ public:
     return i;
   }
 
-  auto format(const pscm::logger::Logger::Level level, format_context& ctx) const {
+  auto format(const pscm::logger::Level level, format_context& ctx) const {
     switch (level) {
-    case pscm::logger::Logger::Level::NONE:
+    case pscm::logger::Level::NONE:
       break;
-    case pscm::logger::Logger::Level::FATAL:
+    case pscm::logger::Level::FATAL:
       return fmt::format_to(ctx.out(), "{}{}{}{}", on_red, white, "FATAL", reset, reset);
-    case pscm::logger::Logger::Level::ERROR_:
+    case pscm::logger::Level::ERROR_:
       return fmt::format_to(ctx.out(), "{}{}{}", red, "ERROR", reset);
-    case pscm::logger::Logger::Level::WARN:
+    case pscm::logger::Level::WARN:
       return fmt::format_to(ctx.out(), "{}{}{}", yellow, "WARN", reset);
-    case pscm::logger::Logger::Level::INFO:
+    case pscm::logger::Level::INFO:
       return fmt::format_to(ctx.out(), "{}{}{}", green, "INFO", reset);
-    case pscm::logger::Logger::Level::DEBUG_:
+    case pscm::logger::Level::DEBUG_:
       return fmt::format_to(ctx.out(), "{}{}{}", cyan, "DEBUG", reset);
-    case pscm::logger::Logger::Level::TRACE:
+    case pscm::logger::Level::TRACE:
       return fmt::format_to(ctx.out(), "{}", "TRACE");
     }
     return fmt::format_to(ctx.out(), "{}", "");
@@ -102,7 +102,7 @@ namespace pscm {
 namespace logger {
 
 int ConsoleAppender::append(Event& event) {
-  if (event.level == Logger::Level::NONE) {
+  if (event.level == Level::NONE) {
     return 0;
   }
   auto now = std::chrono::system_clock::now();

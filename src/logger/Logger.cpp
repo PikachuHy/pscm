@@ -13,7 +13,7 @@
 namespace pscm {
 namespace logger {
 
-Logger::Logger(std::string name, pscm::logger::Logger::Level level, pscm::logger::Logger *parent)
+Logger::Logger(std::string name, pscm::logger::Level level, pscm::logger::Logger *parent)
     : name_(std::move(name))
     , level_(level)
     , parent_(parent) {
@@ -54,7 +54,7 @@ Logger *Logger::get_logger(std::string name) {
   return ret;
 }
 
-void Logger::log(Logger::Level level, UString msg, SourceLocation loc) {
+void Logger::log(Level level, UString msg, SourceLocation loc) {
   Event event;
   event.level = level;
   event.msg = std::move(msg);
