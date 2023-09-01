@@ -45,7 +45,8 @@ public:
   }
 
   Number parse() {
-    while (iter_.hasNext() && iter_.next32PostInc() == ' ') {
+    while (iter_.hasNext() && (iter_.current32() == ' ')) {
+      iter_.next32PostInc();
     }
     if (iter_.hasNext() && iter_.current32() == 'i') {
       PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: " + data_);
@@ -77,7 +78,7 @@ public:
       }
       PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: " + data_);
     }
-    if (!iter_.hasNext()) {
+    if (iter_.getIndex() != iter_.endIndex()) {
       PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: " + data_);
     }
     return num;
