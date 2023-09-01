@@ -742,7 +742,10 @@ void Parser::advance(UChar32 curchar) {
 
 /** helper type for visiting variant */
 template<class ... Ts>
-struct overloaded : Ts... { using Ts::operator()...; };
+struct overloaded : Ts... {
+  overloaded(Ts const &...ts) : Ts{ts}... {}
+  using Ts::operator()...;
+};
 
 /**
  * First read current character, then move iterator forward. This behavior is

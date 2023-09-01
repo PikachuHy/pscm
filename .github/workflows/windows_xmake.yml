@@ -12,10 +12,10 @@ jobs:
 
     strategy:
       matrix:
-        # FIXME: Debug Assertion failed: string subscript out of range
-        # mode: [ Debug, Release ]
-        mode: [ Release ]
-        arch: [ x86, x64 ]
+        mode: [ Debug, Release ]
+        arch: [ x64 ]
+        # ICU4C is not supported on x86
+        # arch: [ x86, x64 ]
 
     steps:
       - uses: actions/checkout@v3
