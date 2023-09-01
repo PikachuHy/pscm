@@ -739,12 +739,15 @@ void Parser::advance(UChar32 curchar) {
   col_++;
 }
 
-// 观览器 #4 的辅助类型
+
+/** helper type for visiting variant */
 template<class ... Ts>
 struct overloaded : Ts... { using Ts::operator()...; };
 
 /**
- * 读取当前字符并前移迭代器，类似于 nextposinc 系列。返回EOF表示读到末尾。
+ * First read current character, then move iterator forward. This behavior is
+ * like UIterator.next32PostInc or istream.get. If no more character can be
+ * read from current position, EOF is returned.
 */
 UChar32 Parser::next_char() {
   UChar32 ch = std::visit(overloaded{
