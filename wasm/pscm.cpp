@@ -5,6 +5,7 @@
 #include <iostream>
 #include <pscm/Scheme.h>
 #include <spdlog/spdlog.h>
+#include <unicode/ustream.h>
 using namespace pscm;
 #ifdef __cplusplus
 extern "C" {
@@ -38,8 +39,9 @@ const char *EMSCRIPTEN_KEEPALIVE eval(void *scm, const char *code) {
   auto p = (Scheme *)scm;
   std::cout << "eval: " << code << std::endl;
   auto ret = p->eval(code);
-  std::cout << "--> " << ret << std::endl;
-  auto s = ret.to_string();
+  std::cout << "--> " << ret.to_string() << std::endl;
+  std::string s;
+  ret.to_string().toUTF8String(s);
   char *str = new char[s.size() + 1];
   std::memcpy(str, s.data(), s.size());
   str[s.size()] = '\0';
@@ -53,6 +55,6 @@ int EMSCRIPTEN_KEEPALIVE main() {
   Scheme scm;
   auto version = scm.eval("(version)");
   std::cout << "Welcome to PikachuHy's Scheme" << std::endl;
-  std::cout << "version: " << version << std::endl;
+  std::cout << "version: " << version.to_string() << std::endl;
   return 0;
 }

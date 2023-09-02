@@ -1,7 +1,7 @@
 workspace(name = "dev_pscm")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
 
 new_git_repository(
     name = "cpp-linenoise",
@@ -209,4 +209,28 @@ rules_nodejs_dependencies()
 nodejs_register_toolchains(
     name = "nodejs",
     node_version = "20.4.0",
+)
+
+http_archive(
+    name = "rules_foreign_cc",
+    # TODO: Get the latest sha256 value from a bazel debug message or the latest
+    #       release on the releases page: https://github.com/bazelbuild/rules_foreign_cc/releases
+    #
+    # sha256 = "...",
+    strip_prefix = "rules_foreign_cc-60813d57a0e99be1a009c1a0e9627cdbe81fcd19",
+    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/60813d57a0e99be1a009c1a0e9627cdbe81fcd19.tar.gz",
+)
+
+load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
+
+rules_foreign_cc_dependencies()
+
+git_repository(
+    name = "icu",
+    build_file = "@//:icu.bazel",
+    commit = "d501225db2bfed4fee3049827d6e9076dae2d1ad",
+    patch_args = ["apply"],
+    patch_tool = "git",
+    patches = ["@//:0001-remove-BUILD.bazel.patch"],
+    remote = "https://github.com/unicode-org/icu.git",
 )

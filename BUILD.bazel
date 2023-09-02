@@ -19,26 +19,6 @@ gen_pscm_version_info(
 )
 
 cc_library(
-    name = "pscm.misc",
-    srcs = glob(["src/misc/*.cpp"]),
-    hdrs = glob(["include/pscm/misc/*.h"]),
-    copts = ["-std=c++20"],
-    strip_include_prefix = "include",
-)
-
-cc_library(
-    name = "pscm.logger",
-    srcs = glob(["src/logger/*.cpp"]),
-    hdrs = glob(["include/pscm/logger/*.h"]),
-    copts = ["-std=c++20"],
-    strip_include_prefix = "include",
-    deps = [
-        ":pscm.misc",
-        "@spdlog",
-    ],
-)
-
-cc_library(
     name = "pscm",
     srcs = glob(
         [
@@ -46,10 +26,13 @@ cc_library(
         ],
     ) + [
         ":src/version.cpp",
-    ],
+    ] + glob(["src/logger/*.cpp"]) + glob(["src/misc/*.cpp"]),
     hdrs = glob(
         ["include/pscm/*.h"],
-    ),
+    ) + glob([
+        "include/pscm/logger/*.h",
+        "include/pscm/logger/*.hpp",
+    ]) + glob(["include/pscm/misc/*.h"]),
     copts = select({
         # disable error: result of comparison of constant -1 with expression of type 'char' is always false
         "@platforms//cpu:wasm32": [
@@ -81,9 +64,10 @@ cc_library(
     }),
     visibility = ["//visibility:public"],
     deps = [
-        ":pscm.logger",
+        "@spdlog",
         "@cpp-linenoise",
         "@ust",
+        "@icu",
         # compat c++14
         # "@filesystem",
         # "@optional",
