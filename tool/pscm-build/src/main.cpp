@@ -165,7 +165,7 @@ export int main(int argc, char **argv) {
       return 0;
     }
     else {
-      PSCM_ERROR("invalid subcommand: {}, only support clean, build now", argv[1]);
+      PSCM_ERROR("invalid subcommand: {0}, only support clean, build now", argv[1]);
       show_usage();
       return 0;
     }

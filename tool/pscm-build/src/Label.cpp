@@ -15,7 +15,7 @@ std::optional<Label> Label::parse(std::string_view s) {
   if (s.starts_with("@")) {
     auto idx = s.find("//");
     if (idx == std::string_view::npos) {
-      PSCM_ERROR("invalid repo name: {}", s);
+      PSCM_ERROR("invalid repo name: {0}", s);
       return std::nullopt;
     }
     repo = s.substr(1, idx - 1);
@@ -25,7 +25,7 @@ std::optional<Label> Label::parse(std::string_view s) {
     auto idx = s.find(":");
     if (idx == std::string_view::npos) {
       if (s.substr(1).empty()) {
-        PSCM_ERROR("invalid package: {}", s);
+        PSCM_ERROR("invalid package: {0}", s);
         return std::nullopt;
       }
       idx = s.find_last_of("/");
@@ -45,7 +45,7 @@ std::optional<Label> Label::parse(std::string_view s) {
   if (s == "...") {
     return Label(repo, package, s);
   }
-  PSCM_ERROR("invalid target: {}", s);
+  PSCM_ERROR("invalid target: {0}", s);
   return std::nullopt;
 }
 

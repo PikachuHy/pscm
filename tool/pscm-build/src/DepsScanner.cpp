@@ -34,11 +34,11 @@ auto DepsScanner::scan(CompileBuildVariables variables, std::string_view cwd) ->
   args.push_back("c++-module");
   expander.expand_source_file(variables.get_source_file());
   expander.expand_output_file(variables.get_output_file());
-  PSCM_DEBUG("RUN: {}", args);
+  PSCM_DEBUG("RUN: {0}", args);
   auto process =
       subprocess::run(args, subprocess::RunBuilder().cout(subprocess::PipeOption::pipe).cwd(std::string(cwd)));
   if (process.returncode != 0) {
-    PSCM_ERROR("ERROR: return code: {}", process.returncode);
+    PSCM_ERROR("ERROR: return code: {0}", process.returncode);
     std::exit(1);
   }
   // std::cout << "captured: " << process.cout << '\n';

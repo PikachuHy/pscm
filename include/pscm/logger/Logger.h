@@ -74,6 +74,10 @@ public:
       UFormattable msgf[arity];
       _to_formattable(msgf, msg...);
       UFormatter::format(format_, msgf, arity, event.msg, status);
+      if (U_FAILURE(status)) {
+        std::cout << "U_FAILURE(status): " << std::string(u_errorName(status)) << std::endl;
+        std::cout << loc.to_string() << " " << format_ << std::endl;
+      }
       assert(!U_FAILURE(status)); // U_USING_DEFAULT_WARNING(-127) may be returned here.
       this->_log(event);
     }

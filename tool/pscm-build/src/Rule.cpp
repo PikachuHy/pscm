@@ -24,7 +24,7 @@ namespace pscm::build {
 void make_sure_parent_path_exist(const std::string& filename) {
   auto path = fs::path(filename).parent_path();
   if (!fs::exists(path)) {
-    PSCM_INFO("create directory: {}", path);
+    PSCM_INFO("create directory: {0}", path);
     fs::create_directories(path);
   }
 }
@@ -98,7 +98,7 @@ void parse_file(RuleContext ctx, Cell args, std::vector<std::string>& files) {
           auto s = car(glob_args);
           PSCM_ASSERT(s.is_str());
           std::string file_regex = to_std_string(s.to_str()->str());
-          PSCM_DEBUG("glob: {}", file_regex);
+          PSCM_DEBUG("glob: {0}", file_regex);
           for (auto& p : glob::rglob(file_regex)) {
             files.push_back(get_relative_path(ctx.package(), p.string()));
           }
@@ -156,11 +156,11 @@ std::vector<Vertex *> Graph::topological_sort(const std::vector<Vertex *>& verte
 class CppHelper {
 public:
   std::string get_obj_path(std::string source_path) {
-    return fmt::format("pscm-build-bin{}/_objs/{}.o", package_, source_path);
+    return fmt::format("pscm-build-bin{0}/_objs/{1}.o", package_, source_path);
   }
 
   std::string get_bmi_path(std::string source_path) {
-    return fmt::format("pscm-build-bin{}/_bmis/{}", package_, source_path);
+    return fmt::format("pscm-build-bin{0}/_bmis/{1}", package_, source_path);
   }
 
   auto get_module_bmi_path(const std::string& name, auto& module_bmi_map, auto& module_name_map) -> std::string {
@@ -168,7 +168,7 @@ public:
     if (it == module_bmi_map.end()) {
       auto it2 = module_name_map.find(name);
       if (it2 == module_name_map.end()) {
-        PSCM_ERROR("can not find module: {}", name);
+        PSCM_ERROR("can not find module: {0}", name);
         std::exit(1);
       }
       else {
@@ -202,8 +202,8 @@ public:
       variables->set_defines(defines_);
       auto depsScanner = new DepsScanner(ctx_);
       auto dep = depsScanner->scan(*variables, repo_path_);
-      PSCM_TRACE("requires: {}", dep.require_modules());
-      PSCM_TRACE("provide: {}", dep.provide_module());
+      PSCM_TRACE("requires: {1}", dep.require_modules());
+      PSCM_TRACE("provide: {0}", dep.provide_module());
       if (dep.is_module_interface()) {
         auto module_name = dep.provide_module().value();
         module_src_map[module_name] = src;
@@ -233,7 +233,7 @@ public:
         }
         module_output_path = get_bmi_path(module_output_path);
         module_bmi_map[original_module_name] = module_output_path;
-        PSCM_INFO("add module {} --> {}", original_module_name, module_output_path);
+        PSCM_INFO("add module {0} --> {1}", original_module_name, module_output_path);
         modules_.push_back(new ModuleInfo{ .name = original_module_name, .bmi = module_output_path });
       }
       dep_map[src] = dep;
@@ -251,7 +251,7 @@ public:
         if (it == module_src_map.end()) {
           auto it2 = module_name_map.find(name);
           if (it2 == module_name_map.end()) {
-            PSCM_ERROR("module {} not found", name);
+            PSCM_ERROR("module {0} not found", name);
             std::exit(1);
           }
           else {
@@ -282,7 +282,7 @@ public:
         auto cur_module_name = dep.provide_module().value();
         auto cur_it = module_bmi_map.find(cur_module_name);
         if (cur_it == module_bmi_map.end()) {
-          PSCM_ERROR("can not find module: {}", cur_module_name);
+          PSCM_ERROR("can not find module: {0}", cur_module_name);
           std::exit(1);
         }
         auto module_output_path = cur_it->second;
@@ -377,7 +377,7 @@ Artifact *CppLibraryRule::run(std::string_view repo_path, std::string_view packa
                               const std::unordered_set<Artifact *>& depset) {
   auto compilation_context = init_compilation_context(depset);
   auto linking_context = init_linking_context(depset);
-  PSCM_INFO("Compiling {}", name());
+  PSCM_INFO("Compiling {0}", name());
   std::vector<Artifact *> artifact_list;
   CppHelper cpp_helper{};
   cpp_helper.srcs_ = srcs_;
@@ -392,7 +392,7 @@ Artifact *CppLibraryRule::run(std::string_view repo_path, std::string_view packa
   auto object_files = cpp_helper.object_files;
   std::unordered_set<std::string> libs;
   if (!srcs_.empty()) {
-    PSCM_INFO("Linking {}", name());
+    PSCM_INFO("Linking {0}", name());
     std::string libname = "pscm-build-bin/lib" + name_ + ".a";
     LinkBuildVariables var;
     var.set_output_file(libname);
@@ -421,7 +421,7 @@ Artifact *CppBinaryRule::run(std::string_view repo_path, std::string_view packag
                              const std::unordered_set<Artifact *>& depset) {
   auto compilation_context = init_compilation_context(depset);
   auto linking_context = init_linking_context(depset);
-  PSCM_INFO("Compiling {}", name());
+  PSCM_INFO("Compiling {0}", name());
   std::vector<Artifact *> artifact_list;
   CppHelper cpp_helper{};
   cpp_helper.srcs_ = srcs_;
