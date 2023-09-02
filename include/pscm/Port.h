@@ -3,7 +3,6 @@
 #include <string_view>
 
 namespace pscm {
-class FilePort;
 
 class Port {
 public:
@@ -23,6 +22,27 @@ public:
   virtual void write(Cell obj) = 0;
   virtual Type type() const = 0;
   virtual UString to_string() const = 0;
+};
+
+class FilePort : public Port {
+public:
+  FilePort(const UString& filename, std::ios_base::openmode mode);
+
+  bool is_input_port() const override;
+  bool is_output_port() const override;
+  void close() override;
+  UChar32 read_char() override;
+  UChar32 peek_char() override;
+  void write_char(UChar32 ch) override;
+  Cell read() override;
+  void write(Cell obj) override;
+  Type type() const override;
+  UString to_string() const override;
+
+private:
+  UString filename_;
+  std::fstream f_;
+  std::ios_base::openmode mode_;
 };
 
 } // namespace pscm

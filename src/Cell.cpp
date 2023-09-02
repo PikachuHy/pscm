@@ -89,7 +89,7 @@ UString Cell::to_string() const {
     return to_char()->to_string();
   }
   if (tag_ == Cell::Tag::STRING) {
-    return to_str()->str();
+    return to_str()->to_string();
   }
   if (tag_ == Cell::Tag::BOOL) {
     if (to_bool()) {

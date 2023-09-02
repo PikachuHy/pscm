@@ -11,6 +11,7 @@ import pscm;
 #include <pscm/Number.h>
 #include <pscm/Pair.h>
 #include <pscm/Parser.h>
+#include <pscm/Port.h>
 #include <pscm/Scheme.h>
 #include <pscm/Str.h>
 #include <pscm/Symbol.h>
@@ -33,32 +34,32 @@ TEST_CASE("testing parse .") {
   CHECK(ret == list(a, b, c, d));
 }
 
-// TEST_CASE("testing parse stream") {
-//   std::stringstream ss;
-//   ss << "(a b . (c d))";
-//   Parser parser((std::istream *)&ss);
-//   auto ret = parser.parse();
-//   auto a = "a"_sym;
-//   auto b = "b"_sym;
-//   auto c = "c"_sym;
-//   auto d = "d"_sym;
-//   CHECK(ret == list(a, b, c, d));
-// }
+TEST_CASE("testing parse stream") {
+  UString str("(a b . (c d))");
+  UIterator iter(str);
+  Parser parser(&iter);
+  auto ret = parser.parse();
+  auto a = "a"_sym;
+  auto b = "b"_sym;
+  auto c = "c"_sym;
+  auto d = "d"_sym;
+  CHECK(ret == list(a, b, c, d));
+}
 
-// TEST_CASE("testing parse stream 2") {
-//   std::stringstream ss;
-//   ss << "a b c d";
-//   Parser parser((std::istream *)&ss);
+TEST_CASE("testing parse stream 2") {
+  UString str("a b c d");
+  UIterator iter(str);
+  Parser parser(&iter);
 
-//   auto a = "a"_sym;
-//   auto b = "b"_sym;
-//   auto c = "c"_sym;
-//   auto d = "d"_sym;
-//   auto ret = parser.next();
-//   CHECK(ret == a);
-//   ret = parser.next();
-//   CHECK(ret == b);
-// }
+  auto a = "a"_sym;
+  auto b = "b"_sym;
+  auto c = "c"_sym;
+  auto d = "d"_sym;
+  auto ret = parser.next();
+  CHECK(ret == a);
+  ret = parser.next();
+  CHECK(ret == b);
+}
 
 TEST_CASE("testing parse #\\ ") {
   auto f = [](Scheme& scm) {
