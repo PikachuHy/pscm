@@ -476,7 +476,7 @@ Cell Scheme::eval(const UString& code) {
     return ret;
   }
   catch (Exception& ex) {
-    PSCM_ERROR("eval {0} error: {1}", code, ex.what());
+    PSCM_ERROR("eval {0} error: {1}", code, ex);
     return Cell::ex(ex.what());
   }
 }
@@ -497,7 +497,7 @@ Cell Scheme::eval_internal(SymbolTable *env, const UString code) {
     return ret;
   }
   catch (Exception& ex) {
-    PSCM_ERROR("eval {0} error: {1}", code, ex.what());
+    PSCM_ERROR("eval {0} error: {1}", code, ex);
     return Cell::ex(ex.what());
   }
 }
@@ -520,7 +520,7 @@ void Scheme::eval_all(const UString& code, SourceLocation loc) {
     }
   }
   catch (Exception& ex) {
-    PSCM_ERROR("eval {0} error: {1}", code, ex.what());
+    PSCM_ERROR("eval {0} error: {1}", code, ex);
     PSCM_THROW_EXCEPTION(loc.to_string() + ", EVAL_ALL Error: " + code);
   }
 }

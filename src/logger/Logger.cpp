@@ -95,5 +95,8 @@ void _setup_formattable(UFormattable& res, std::int64_t num){
 void _setup_formattable(UFormattable& res, std::int32_t num){
   res.setLong(num);
 };
+void _setup_formattable(UFormattable& res, const Exception& txt){
+  res.setString(UString(txt.what()));
+};
 } // namespace logger
 } // namespace pscm

@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "pscm/Exception.h"
 #include "pscm/misc/SourceLocation.h"
 #include "pscm/Displayable.h"
 #include <cassert>
@@ -17,6 +18,7 @@ void _setup_formattable(UFormattable& res, const UString& txt);
 void _setup_formattable(UFormattable& res, std::int64_t num);
 void _setup_formattable(UFormattable& res, std::int32_t num);
 void _setup_formattable(UFormattable& res, const void* txt);
+void _setup_formattable(UFormattable& res, const Exception& ex);
 template<Displayable ObjT>
 void _setup_formattable(UFormattable& res, ObjT obj){
   res.setString(pscm::to_string(obj));
@@ -45,7 +47,7 @@ public:
   static Logger *get_logger(std::string name);
   void log(Level level, UString msg, SourceLocation loc = {});
   void add_appender(Appender *appender);
-  template<typename... MsgT>
+  template<Formattable... MsgT>
   void log(Level level, const UString format_, SourceLocation loc, MsgT... msg)
   {
   if (is_level_enabled(level)) {
