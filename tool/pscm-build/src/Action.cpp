@@ -25,6 +25,7 @@ void Action::run(std::string_view cwd) {
   auto p = subprocess::run(command_line, subprocess::RunBuilder().cwd(std::string(cwd)));
   if (p.returncode != 0) {
     PSCM_ERROR("ERROR: return code: {0}", p.returncode);
+    PSCM_ERROR("{0}", command_line);
     std::exit(1);
   }
 }

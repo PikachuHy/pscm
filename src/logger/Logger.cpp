@@ -102,7 +102,7 @@ void _setup_formattable(UFormattable& res, const std::vector<std::string>& txt) 
     msg.append(txt[i]);
     msg.append(", ");
   }
-  msg.resize(msg.size() - 1);
+  msg.resize(msg.size() - 2);
   msg.append("]");
   res.setString(UString::fromUTF8(msg));
 };

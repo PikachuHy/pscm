@@ -361,6 +361,10 @@ void CppRuleBase::parse_attr(RuleContext ctx, Cell args) {
     auto copts = cdr(args);
     parse_string(copts, this->copts_);
   }
+  else if (arg == "linkopts"_sym) {
+    auto linkopts = cdr(args);
+    parse_string(linkopts, this->linkopts_);
+  }
   else if (arg == "deps"_sym) {
     parse_label(ctx, cdr(args), this->deps_);
   }
@@ -432,8 +436,9 @@ Artifact *CppBinaryRule::run(std::string_view repo_path, std::string_view packag
   cpp_helper.package_ = package;
   cpp_helper.compile_cpp_sources(artifact_list);
   auto object_files = cpp_helper.object_files;
-  PSCM_INFO("Linking {}", name());
+  PSCM_INFO("Linking {0}", name());
   LinkBuildVariables var;
+  var.set_linkopts(linkopts_);
   var.set_output_file("pscm-build-bin/" + name_);
   var.set_object_files(object_files);
   CppLinkBinaryAction(&linking_context, var, &toolchain()).run(repo_path);
