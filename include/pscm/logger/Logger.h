@@ -7,6 +7,7 @@
 #include "pscm/Exception.h"
 #include "pscm/misc/SourceLocation.h"
 #include <cassert>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -14,6 +15,9 @@
 namespace pscm {
 namespace logger {
 
+void _setup_formattable(UFormattable& res, const std::string& txt);
+void _setup_formattable(UFormattable& res, std::string_view txt);
+void _setup_formattable(UFormattable& res, const std::vector<std::string>& txt);
 void _setup_formattable(UFormattable& res, const UString& txt);
 void _setup_formattable(UFormattable& res, std::int64_t num);
 void _setup_formattable(UFormattable& res, std::int32_t num);
@@ -23,6 +27,16 @@ void _setup_formattable(UFormattable& res, const Exception& ex);
 template <Displayable ObjT>
 void _setup_formattable(UFormattable& res, ObjT obj) {
   res.setString(pscm::to_string(obj));
+};
+
+template <typename T>
+void _setup_formattable(UFormattable& res, const std::optional<T>& obj) {
+  if (obj.has_value()) {
+    _setup_formattable(res, obj.value());
+  }
+  else {
+    res.setString("");
+  }
 };
 
 // avoid DEBUG macro and ERROR macro conflict

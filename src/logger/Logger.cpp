@@ -83,6 +83,30 @@ bool Logger::is_level_enabled(Level level) const {
   return level <= level_;
 }
 
+void _setup_formattable(UFormattable& res, const std::string& txt) {
+  res.setString(UString::fromUTF8(txt));
+};
+
+void _setup_formattable(UFormattable& res, std::string_view txt) {
+  res.setString(UString::fromUTF8(std::string(txt)));
+};
+
+void _setup_formattable(UFormattable& res, const std::vector<std::string>& txt) {
+  if (txt.empty()) {
+    res.setString("[]");
+    return;
+  }
+  std::string msg;
+  msg.append("[");
+  for (int i = 0; i < txt.size() - 1; i++) {
+    msg.append(txt[i]);
+    msg.append(", ");
+  }
+  msg.resize(msg.size() - 1);
+  msg.append("]");
+  res.setString(UString::fromUTF8(msg));
+};
+
 void _setup_formattable(UFormattable& res, const UString& txt) {
   res.setString(txt);
 };

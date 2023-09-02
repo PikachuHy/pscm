@@ -23,6 +23,16 @@ public:
       : stack_trace_(std::move(stack_trace)) {
     msg.toUTF8String(msg_);
   }
+
+  Exception(std::string msg, ust::StackTrace stack_trace = ust::generate())
+      : msg_(std::move(msg))
+      , stack_trace_(std::move(stack_trace)) {
+  }
+
+  Exception(const char *msg, ust::StackTrace stack_trace = ust::generate())
+      : msg_(msg)
+      , stack_trace_(std::move(stack_trace)) {
+  }
 #endif
   const char *what() const noexcept override;
   void print_stack_trace() const;

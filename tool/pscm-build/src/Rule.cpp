@@ -34,7 +34,9 @@ void parse_string(Cell args, std::vector<std::string>& list) {
       [&list](Cell expr, auto) {
         if (expr.is_str()) {
           auto s = expr.to_str()->str();
-          list.push_back(std::string(s));
+          std::string converted;
+          s.toUTF8String(converted);
+          list.push_back(converted);
         }
         else {
           PSCM_THROW_EXCEPTION("bad expr: " + expr.to_string());
@@ -73,6 +75,16 @@ std::string get_relative_path(std::string_view package, std::string_view filenam
   return fmt::format("{}/{}", package.substr(1), filename);
 }
 
+std::string to_std_string(const UString& s) {
+  std::string converted;
+  s.toUTF8String(converted);
+  return converted;
+}
+
+std::string get_relative_path(std::string_view package, const UString& filename) {
+  return get_relative_path(package, to_std_string(filename));
+}
+
 void parse_file(RuleContext ctx, Cell args, std::vector<std::string>& files) {
   while (args.is_pair()) {
     auto arg = car(args);
@@ -85,7 +97,7 @@ void parse_file(RuleContext ctx, Cell args, std::vector<std::string>& files) {
         while (glob_args.is_pair()) {
           auto s = car(glob_args);
           PSCM_ASSERT(s.is_str());
-          std::string file_regex = std::string(s.to_str()->str());
+          std::string file_regex = to_std_string(s.to_str()->str());
           PSCM_DEBUG("glob: {}", file_regex);
           for (auto& p : glob::rglob(file_regex)) {
             files.push_back(get_relative_path(ctx.package(), p.string()));
@@ -338,7 +350,7 @@ void CppRuleBase::parse_attr(RuleContext ctx, Cell args) {
   if (arg == "name"_sym) {
     auto s = cadr(args);
     PSCM_ASSERT(s.is_str());
-    name_ = s.to_str()->str();
+    name_ = to_std_string(s.to_str()->str());
     label_ = Label(ctx.repo(), ctx.package(), name_);
   }
   else if (arg == "srcs"_sym) {
