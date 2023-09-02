@@ -2,7 +2,6 @@
 // Created by jingkaimori on 2023/8/16.
 //
 
-#pragma once
 #include "pscm/misc/ICUCompat.h"
 #include "pscm/common_def.h"
 #include "unicode/numfmt.h"
