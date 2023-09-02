@@ -14,7 +14,7 @@ import fmt;
 #include <spdlog/fmt/fmt.h>
 #endif
 
-namespace fmt{
+namespace fmt {
 template <>
 class formatter<pscm::logger::Level> {
 public:
@@ -96,7 +96,7 @@ public:
   }
 };
 
-}
+} // namespace fmt
 
 namespace pscm {
 namespace logger {

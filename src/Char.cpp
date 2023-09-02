@@ -112,19 +112,19 @@ Cell Char::from(UChar32 ch) {
   }
 }
 
-UString Char::to_string() const{
+UString Char::to_string() const {
   switch (ch_) {
-    case '\n': {
-      return "#\\newline";
-    }
-    case ' ': {
-      return "#\\space";
-    }
-    default:{
-      UString out("#\\");
-      out += ch_;
-      return out;
-    }
+  case '\n': {
+    return "#\\newline";
+  }
+  case ' ': {
+    return "#\\space";
+  }
+  default: {
+    UString out("#\\");
+    out += ch_;
+    return out;
+  }
   }
 }
 
@@ -175,7 +175,7 @@ Char Char::to_downcase() const {
 Char Char::to_upcase() const {
   return Char(u_toupper(ch_));
 }
- 
+
 UChar32 Char::to_int() const {
   return int(ch_);
 }

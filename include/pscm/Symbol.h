@@ -15,7 +15,7 @@ public:
       : name_(std::move(name)) {
   }
 
-  Symbol(UString name, const UString & filename, std::size_t row, std::size_t col)
+  Symbol(UString name, const UString& filename, std::size_t row, std::size_t col)
       : name_(std::move(name))
       , filename_(filename)
       , row_(row)

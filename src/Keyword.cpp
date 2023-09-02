@@ -5,8 +5,8 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Keyword.h"
 #include "pscm/ApiManager.h"
+#include "pscm/Keyword.h"
 #include "pscm/Pair.h"
 #include "pscm/Symbol.h"
 #include "pscm/common_def.h"
@@ -15,7 +15,7 @@ import fmt;
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Keyword");
 
-UString Keyword::to_string() const{
+UString Keyword::to_string() const {
   PSCM_ASSERT(sym_);
   UString res;
   res += '#';

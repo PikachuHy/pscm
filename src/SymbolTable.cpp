@@ -8,9 +8,9 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/SymbolTable.h"
 #include "pscm/Exception.h"
 #include "pscm/Symbol.h"
+#include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/misc/ICUCompat.h"
 #include "unicode/ustream.h"

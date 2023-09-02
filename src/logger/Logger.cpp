@@ -2,7 +2,7 @@
 // Created by PikachuHy on 2023/7/15.
 //
 
-#include "pscm/logger/Logger.hpp"
+#include "pscm/logger/Logger.h"
 #include "pscm/logger/Appender.h"
 #include "unicode/msgfmt.h"
 #include <cassert>
@@ -83,19 +83,23 @@ bool Logger::is_level_enabled(Level level) const {
   return level <= level_;
 }
 
-void _setup_formattable(UFormattable& res, const UString& txt){
+void _setup_formattable(UFormattable& res, const UString& txt) {
   res.setString(txt);
 };
-void _setup_formattable(UFormattable& res, const void* ptr){
+
+void _setup_formattable(UFormattable& res, const void *ptr) {
   res.setString(pscm::to_string(ptr));
 };
-void _setup_formattable(UFormattable& res, std::int64_t num){
+
+void _setup_formattable(UFormattable& res, std::int64_t num) {
   res.setInt64(num);
 };
-void _setup_formattable(UFormattable& res, std::int32_t num){
+
+void _setup_formattable(UFormattable& res, std::int32_t num) {
   res.setLong(num);
 };
-void _setup_formattable(UFormattable& res, const Exception& txt){
+
+void _setup_formattable(UFormattable& res, const Exception& txt) {
   res.setString(UString(txt.what()));
 };
 } // namespace logger

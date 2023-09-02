@@ -5,9 +5,9 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Module.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Macro.h"
+#include "pscm/Module.h"
 #include "pscm/Procedure.h"
 #include "pscm/SchemeProxy.h"
 #include "pscm/Str.h"

@@ -12,7 +12,7 @@ import fmt;
 #include "pscm/misc/ICUCompat.h"
 #endif
 namespace pscm {
-UString Continuation::to_string() const{
+UString Continuation::to_string() const {
   UString out;
   out += "#<continuation ";
   out += "TODO";

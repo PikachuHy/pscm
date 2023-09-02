@@ -8,12 +8,12 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Parser.h"
 #include "pscm/Char.h"
 #include "pscm/Exception.h"
 #include "pscm/Keyword.h"
 #include "pscm/Number.h"
 #include "pscm/Pair.h"
+#include "pscm/Parser.h"
 #include "pscm/Port.h"
 #include "pscm/Str.h"
 #include "pscm/Symbol.h"
@@ -88,7 +88,7 @@ public:
     int count = 0;
     std::int64_t ret = 0;
     while (iter_.hasNext() && is_digit()) {
-      
+
       ret = ret * 10 + u_digit(iter_.next32PostInc(), 10);
       count++;
     }
@@ -133,11 +133,10 @@ public:
       UString numstr;
       data_.extractBetween(pos, new_pos, numstr);
       auto res = convert_str_to_float(numstr);
-      if (std::holds_alternative<double>(res))
-      {
+      if (std::holds_alternative<double>(res)) {
         return std::get<double>(res);
-      }else if (std::holds_alternative<std::int64_t>(res))
-      {
+      }
+      else if (std::holds_alternative<std::int64_t>(res)) {
         return std::get<std::int64_t>(res);
       }
     }
@@ -230,12 +229,12 @@ public:
     double x;
     auto res = double_from_string(str);
     if (std::holds_alternative<double>(res)) {
-            return std::get<double>(res);
+      return std::get<double>(res);
     }
-    else if (std::holds_alternative<std::int64_t>(res)){
+    else if (std::holds_alternative<std::int64_t>(res)) {
       return std::get<std::int64_t>(res);
     }
-    else{
+    else {
       PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: " + data_);
       return 0.0;
     }
@@ -247,7 +246,7 @@ private:
   SourceLocation loc_;
 };
 
-Parser::Parser(const UString & code)
+Parser::Parser(const UString& code)
     : code_(code) {
 }
 
@@ -255,7 +254,7 @@ Parser::Parser(UIteratorP in)
     : code_(in) {
 }
 
-Parser::Parser(const UString & code, const UString& filename)
+Parser::Parser(const UString& code, const UString& filename)
     : code_(code)
     , filename_(filename) {
   int start = 0;
@@ -286,7 +285,7 @@ Cell Parser::parse() {
     if (token == Token::NONE) {
       return Cell::none();
     }
-    
+
     ret = parse_token(token);
   }
   return ret;
@@ -590,11 +589,11 @@ Cell Parser::parse_string() {
     if (ch == '"') {
       next_char();
       break;
-    } else if (ch == EOF)
-    {
+    }
+    else if (ch == EOF) {
       break;
     }
-    
+
     if (ch == '\\') {
       next_char();
       ch = next_char();
@@ -725,8 +724,8 @@ Parser::Token Parser::next_token() {
     }
     if (u_isdigit(ch) || (s.length() > 1 && (ch == '-' || ch == '+') && u_isdigit(s[1]))) {
       try {
-      std::string utf8;
-      filename_.toUTF8String(utf8);
+        std::string utf8;
+        filename_.toUTF8String(utf8);
         auto num = NumberParser(s, SourceLocation(utf8.c_str(), row)).parse();
         last_num_ = new Number(num);
         return Token::NUMBER;
@@ -749,11 +748,13 @@ void Parser::advance(UChar32 curchar) {
   col_++;
 }
 
-
 /** helper type for visiting variant */
-template<class ... Ts>
+template <class... Ts>
 struct overloaded : Ts... {
-  overloaded(Ts const &...ts) : Ts{ts}... {}
+  overloaded(Ts const&...ts)
+      : Ts{ ts }... {
+  }
+
   using Ts::operator()...;
 };
 
@@ -761,31 +762,41 @@ struct overloaded : Ts... {
  * First read current character, then move iterator forward. This behavior is
  * like UIterator.next32PostInc or istream.get. If no more character can be
  * read from current position, EOF is returned.
-*/
+ */
 UChar32 Parser::next_char() {
   UChar32 ch = std::visit(overloaded{
-      [](UIteratorP iter) -> UChar32 {
-        UChar32 ch = iter->next32PostInc();
-        return ch == UIteratorDone ? EOF : ch; },
-      [](UIterator& iter) -> UChar32 {
-        UChar32 ch = iter.next32PostInc();
-        return ch == UIteratorDone ? EOF : ch; },
-      [](pscm::Port* arg) -> UChar32 { return arg->read_char(); },
-    }, code_);
+                              [](UIteratorP iter) -> UChar32 {
+                                UChar32 ch = iter->next32PostInc();
+                                return ch == UIteratorDone ? EOF : ch;
+                              },
+                              [](UIterator& iter) -> UChar32 {
+                                UChar32 ch = iter.next32PostInc();
+                                return ch == UIteratorDone ? EOF : ch;
+                              },
+                              [](pscm::Port *arg) -> UChar32 {
+                                return arg->read_char();
+                              },
+                          },
+                          code_);
   advance(ch);
   return ch;
 }
 
 UChar32 Parser::peek_char() {
   return std::visit(overloaded{
-      [](UIteratorP iter) -> UChar32 {
-        UChar32 ch = iter->current32();
-        return ch == UIteratorDone ? EOF : ch; },
-      [](UIterator& iter) -> UChar32 {
-        UChar32 ch = iter.current32();
-        return ch == UIteratorDone ? EOF : ch; },
-      [](pscm::Port* arg) -> UChar32 { return arg->peek_char(); },
-    }, code_);
+                        [](UIteratorP iter) -> UChar32 {
+                          UChar32 ch = iter->current32();
+                          return ch == UIteratorDone ? EOF : ch;
+                        },
+                        [](UIterator& iter) -> UChar32 {
+                          UChar32 ch = iter.current32();
+                          return ch == UIteratorDone ? EOF : ch;
+                        },
+                        [](pscm::Port *arg) -> UChar32 {
+                          return arg->peek_char();
+                        },
+                    },
+                    code_);
 }
 
 void Parser::read_until(UString& s, const USet& end) {

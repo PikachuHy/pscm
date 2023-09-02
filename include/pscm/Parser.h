@@ -17,10 +17,10 @@ class Number;
 
 class Parser {
 public:
-  Parser(const UString & code);
+  Parser(const UString& code);
   Parser(UIteratorP in);
-  Parser(const UString & code, const UString& filename);
-  Parser(Port* in);
+  Parser(const UString& code, const UString& filename);
+  Parser(Port *in);
   Cell parse();
   Cell next();
 
@@ -55,7 +55,7 @@ private:
   void read_until(UString& s, const USet& end);
 
 private:
-  std::variant<UIterator, UIteratorP, Port*> code_;
+  std::variant<UIterator, UIteratorP, Port *> code_;
   UString last_token_;
   bool use_stream_ = false;
   bool has_parsed_ = false;

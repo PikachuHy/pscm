@@ -8,14 +8,15 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Function.h"
 #include "pscm/ApiManager.h"
+#include "pscm/Function.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
 #include <ostream>
 #endif
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Function");
+
 Cell Function::call(Cell args, SourceLocation loc) {
   PSCM_ASSERT(f_.index() == 1 || f_.index() == 2);
   if (f_.index() == 1) {
@@ -31,11 +32,9 @@ Cell Function::call(Cell args, SourceLocation loc) {
   }
 }
 
-UString Function::to_string() const{
+UString Function::to_string() const {
   UString out;
-  out += "#<primitive-generic "
-    + name_
-    + ">";
+  out += "#<primitive-generic " + name_ + ">";
   return out;
 }
 

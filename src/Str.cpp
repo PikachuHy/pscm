@@ -8,21 +8,22 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Str.h"
 #include "pscm/Port.h"
+#include "pscm/Str.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
 #include <iostream>
 #endif
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.String");
+
 void String::display(Port& port) const {
   for (auto ch : data_) {
     port.write_char(ch);
   }
 }
 
-UString String::to_string() const{
+UString String::to_string() const {
   UString data(data_);
   data.findAndReplace("\"", "\\\"");
   UString os;
@@ -30,7 +31,6 @@ UString String::to_string() const{
   os += data;
   os += '"';
   return os;
-
 }
 
 bool String::operator==(const String& rhs) const {
@@ -57,18 +57,17 @@ void String::set(std::size_t idx, UChar32 ch) {
   int32_t index = data_.moveIndex32(0, idx);
   bool pos_is_s = U_IS_SURROGATE(data_.charAt(index));
   bool ch_is_s = U_IS_SURROGATE(ch);
-  if (!(pos_is_s || ch_is_s))
-  {
+  if (!(pos_is_s || ch_is_s)) {
     // replace between single codepoints
     data_.setCharAt(index, ch);
-  }else if (pos_is_s && ch_is_s)
-  {
+  }
+  else if (pos_is_s && ch_is_s) {
     // replace between surrogate pairs
     data_.replace(index, 2, ch);
-  }else
-  {
+  }
+  else {
     // replace a surrogate pair with single code point or conversely
-    int32_t behind = data_.moveIndex32(index,1);
+    int32_t behind = data_.moveIndex32(index, 1);
     UString&& behindstr = data_.tempSubStringBetween(behind, data_.length());
     data_.truncate(index);
     data_.append(ch);

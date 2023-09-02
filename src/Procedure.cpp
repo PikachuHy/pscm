@@ -8,11 +8,11 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Procedure.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Exception.h"
 #include "pscm/Expander.h"
 #include "pscm/Pair.h"
+#include "pscm/Procedure.h"
 #include "pscm/Scheme.h"
 #include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
@@ -21,7 +21,8 @@ import fmt;
 #endif
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Procedure");
-UString Procedure::to_string() const{
+
+UString Procedure::to_string() const {
   UString out;
   out += "#";
   out += "<procedure ";

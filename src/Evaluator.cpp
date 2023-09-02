@@ -30,10 +30,10 @@ import fmt;
 #include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
-#include "pscm/scm_utils.h"
 #include "pscm/misc/ICUCompat.h"
-#include "unicode/unistr.h"
+#include "pscm/scm_utils.h"
 #include "unicode/schriter.h"
+#include "unicode/unistr.h"
 #include <numeric>
 #include <ostream>
 #include <sstream>
@@ -50,28 +50,28 @@ namespace fs = std::filesystem;
 #endif
 PSCM_INLINE_LOG_DECLARE("pscm.core.Evaluator");
 #define PSCM_PUSH_STACK(reg_name)                                                                                      \
-  PSCM_DEBUG("push {0} stack: {1}", #reg_name, stack_.reg_name.size());                                                  \
+  PSCM_DEBUG("push {0} stack: {1}", #reg_name, stack_.reg_name.size());                                                \
   reg_type_stack_.push_back(reg_##reg_name);                                                                           \
   stack_.reg_name.push_back(reg_.reg_name)
 
 #define PSCM_POP_STACK(reg_name)                                                                                       \
-  PSCM_DEBUG("pop {0} stack: {1}", #reg_name, stack_.reg_name.size());                                                   \
+  PSCM_DEBUG("pop {0} stack: {1}", #reg_name, stack_.reg_name.size());                                                 \
   PSCM_ASSERT(!reg_type_stack_.empty());                                                                               \
   if (reg_type_stack_.back() != reg_##reg_name) {                                                                      \
-    UString ss1, ss2, ss3, ss4;                                                                             \
+    UString ss1, ss2, ss3, ss4;                                                                                        \
     ss1 += reg_##reg_name;                                                                                             \
-    ss2 += pscm::to_string(reg_type_stack_.back());                                                                                     \
-    PSCM_ERROR("reg stack error, expect '{0}' but got '{1}'", ss1, ss2);                                                 \
+    ss2 += pscm::to_string(reg_type_stack_.back());                                                                    \
+    PSCM_ERROR("reg stack error, expect '{0}' but got '{1}'", ss1, ss2);                                               \
     for (int i = 0; i < reg_type_stack_.size(); i++) {                                                                 \
-      ss3 += pscm::to_string(reg_type_stack_[reg_type_stack_.size() - i - 1]);                                                          \
+      ss3 += pscm::to_string(reg_type_stack_[reg_type_stack_.size() - i - 1]);                                         \
       ss3 += ", ";                                                                                                     \
     }                                                                                                                  \
     for (int i = 0; i < stack_.reg_name.size(); i++) {                                                                 \
-      ss4 += pscm::to_string(stack_.reg_name[stack_.reg_name.size() - i - 1]);                                                          \
+      ss4 += pscm::to_string(stack_.reg_name[stack_.reg_name.size() - i - 1]);                                         \
       ss4 += ", ";                                                                                                     \
     }                                                                                                                  \
-    PSCM_DEBUG("reg stack: {0}", ss3);                                                                                  \
-    PSCM_DEBUG("{0} reg stack: {1}", #reg_name, ss4);                                                                    \
+    PSCM_DEBUG("reg stack: {0}", ss3);                                                                                 \
+    PSCM_DEBUG("{0} reg stack: {1}", #reg_name, ss4);                                                                  \
     PSCM_ASSERT(reg_type_stack_.back() == reg_##reg_name);                                                             \
   }                                                                                                                    \
   reg_type_stack_.pop_back();                                                                                          \
@@ -81,7 +81,7 @@ PSCM_INLINE_LOG_DECLARE("pscm.core.Evaluator");
 
 #define GOTO(label)                                                                                                    \
   pos_ = label;                                                                                                        \
-  PSCM_TRACE("GOTO label: {0}", pos_);                                                                                  \
+  PSCM_TRACE("GOTO label: {0}", pos_);                                                                                 \
   break
 
 #define PRINT_STEP() PSCM_TRACE("[step: {0}] label: {1}", step_, pos_)
@@ -2317,7 +2317,7 @@ Label Evaluator::eval_map_expr(Label default_pos) {
   return Label::EVAL;
 }
 
-UString to_string(pscm::Evaluator::RegisterType reg){
+UString to_string(pscm::Evaluator::RegisterType reg) {
   switch (reg) {
   case Evaluator::reg_expr:
     return "expr";
@@ -2431,7 +2431,7 @@ UString Evaluator::Stack::to_string() const {
 bool Evaluator::load(const UString& filename, SymbolTable *env) {
   std::cout << "load: " << filename << std::endl;
   auto res = read_file(filename);
-  if (!std::holds_alternative<UString>(res)){
+  if (!std::holds_alternative<UString>(res)) {
     return false;
   }
   auto code = std::get<UString>(res);

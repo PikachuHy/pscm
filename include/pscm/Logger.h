@@ -1,5 +1,5 @@
 #pragma once
-#include "pscm/logger/Logger.hpp"
+#include "pscm/logger/Logger.h"
 #define PSCM_LOGGER_LOG(logger_, level, format_, ...) (logger_)->log(level, format_, {}, ##__VA_ARGS__);
 
 #define PSCM_FATAL(format_, ...) PSCM_LOGGER_LOG(logger_, pscm::logger::Level::FATAL, format_, ##__VA_ARGS__)

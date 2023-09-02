@@ -8,8 +8,8 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Cell.h"
 #include "pscm/ApiManager.h"
+#include "pscm/Cell.h"
 #include "pscm/Char.h"
 #include "pscm/Continuation.h"
 #include "pscm/Function.h"
@@ -25,10 +25,10 @@ import fmt;
 #include "pscm/Str.h"
 #include "pscm/Symbol.h"
 #include "pscm/common_def.h"
-#include "pscm/logger/Logger.hpp"
+#include "pscm/logger/Logger.h"
 #include "pscm/misc/ICUCompat.h"
-#include "unicode/ustream.h"
 #include "unicode/schriter.h"
+#include "unicode/ustream.h"
 #include <cassert>
 #include <cstring>
 #include <spdlog/fmt/fmt.h>
@@ -39,7 +39,7 @@ namespace pscm {
 Cell nil = Cell::nil();
 PSCM_INLINE_LOG_DECLARE("pscm.core.Cell");
 
-UString SmallObject::to_string() const{
+UString SmallObject::to_string() const {
   UString out;
   out += '<';
   out += "smob";

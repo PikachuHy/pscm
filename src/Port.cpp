@@ -5,7 +5,6 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Port.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Cell.h"
 #include "pscm/Char.h"
@@ -13,16 +12,17 @@ import fmt;
 #include "pscm/Macro.h"
 #include "pscm/Pair.h"
 #include "pscm/Parser.h"
+#include "pscm/Port.h"
 #include "pscm/Procedure.h"
 #include "pscm/SchemeProxy.h"
 #include "pscm/Str.h"
 #include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
-#include "pscm/scm_utils.h"
 #include "pscm/misc/ICUCompat.h"
-#include "unicode/ustream.h"
+#include "pscm/scm_utils.h"
 #include "unicode/ucnv.h"
+#include "unicode/ustream.h"
 #include "unicode/utf8.h"
 #include <fstream>
 #include <iostream>
@@ -41,7 +41,7 @@ public:
     PSCM_ASSERT(U_SUCCESS(err));
   }
 
-  ~StandardPort(){
+  ~StandardPort() {
     close();
   }
 
@@ -63,24 +63,21 @@ public:
     return std::get<0>(res);
   }
 
-  std::tuple<UChar32, uint8_t> read_utf8(){
+  std::tuple<UChar32, uint8_t> read_utf8() {
     char charbuf[5];
     char& first = charbuf[0];
     std::cin >> first;
-    if (U8_IS_SINGLE(first))
-    {
+    if (U8_IS_SINGLE(first)) {
       return std::make_tuple(first, 1);
-    }else if (U8_IS_LEAD(first))
-    {
+    }
+    else if (U8_IS_LEAD(first)) {
       uint8_t length = U8_COUNT_TRAIL_BYTES_UNSAFE(first);
       std::cin.read(&charbuf[1], length);
       UChar32 ch;
-      U8_GET_OR_FFFD(
-        reinterpret_cast<uint8_t*>(charbuf),
-        0, 0, 5, ch);
+      U8_GET_OR_FFFD(reinterpret_cast<uint8_t *>(charbuf), 0, 0, 5, ch);
       return std::make_tuple(ch, length + 1);
-    }else
-    {
+    }
+    else {
       PSCM_THROW_EXCEPTION("incorrect position of stdin");
     }
   }
@@ -88,8 +85,7 @@ public:
   UChar32 peek_char() override {
     PSCM_ASSERT(is_input_);
     auto res = read_utf8();
-    for (uint8_t i = 0; i < std::get<1>(res); i++)
-    {
+    for (uint8_t i = 0; i < std::get<1>(res); i++) {
       std::cin.unget();
     }
     return std::get<0>(res);
@@ -98,12 +94,12 @@ public:
   void write_char(UChar32 ch) override {
     PSCM_ASSERT(!is_input_);
     uint8_t charbuf[5];
-    uint8_t offset=0;
+    uint8_t offset = 0;
     uint8_t length = U8_LENGTH(charbuf[0]);
     bool isError = false;
     U8_APPEND(charbuf, offset, 5, ch, isError);
     PSCM_ASSERT(!isError);
-    std::cout.write(reinterpret_cast<char*>(charbuf), length);
+    std::cout.write(reinterpret_cast<char *>(charbuf), length);
   }
 
   UString to_string() const override {
@@ -138,8 +134,9 @@ public:
   }
 
   bool is_input_;
+
 private:
-  UConverter* conv_;
+  UConverter *conv_;
 };
 
 class StringReadPort : public Port {
@@ -162,11 +159,10 @@ public:
 
   UChar32 read_char() override {
     UChar32 ch = iter_.next32PostInc();
-    if (ch != UIteratorDone)
-    {
+    if (ch != UIteratorDone) {
       return ch;
-    }else
-    {
+    }
+    else {
       return EOF;
     }
   }
@@ -208,9 +204,10 @@ public:
 private:
   UIterator iter_;
 };
+
 class StringOutputPort : public Port {
 public:
-  StringOutputPort(){
+  StringOutputPort() {
   }
 
   bool is_input_port() const override {

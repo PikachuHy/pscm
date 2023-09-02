@@ -8,15 +8,15 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Symbol.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Cell.h"
 #include "pscm/Pair.h"
 #include "pscm/SchemeProxy.h"
+#include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
-#include "pscm/scm_utils.h"
 #include "pscm/misc/ICUCompat.h"
+#include "pscm/scm_utils.h"
 #include <fstream>
 #include <iostream>
 #include <ostream>
@@ -34,18 +34,13 @@ Symbol Symbol::load = Symbol("load");
 Symbol Symbol::quasiquote = Symbol("quasiquote");
 Symbol Symbol::unquote_splicing = Symbol("unquote-splicing");
 
-UString Symbol::to_string() const{
+UString Symbol::to_string() const {
   if (name_.indexOf(' ') != -1) {
     UString out("#{");
-    out.append(
-      name_
-    ).findAndReplace(
-      " ", "\\ "
-    ).append(
-      "}#"
-    );
+    out.append(name_).findAndReplace(" ", "\\ ").append("}#");
     return out;
-  } else {
+  }
+  else {
     UString out(name_);
     return out;
   }

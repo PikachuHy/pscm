@@ -253,8 +253,8 @@ Cell unquote = new Macro("unquote", Label::APPLY_QUOTE);
 Cell apply = new Macro("builtin_apply", Label::APPLY_APPLY);
 
 Cell version(Cell) {
-  static String ver(UString(VersionInfo::PSCM_VERSION) + " (" +
-                    UString(VersionInfo::GIT_BRANCH) + "@" + UString(VersionInfo::GIT_HASH) + ")");
+  static String ver(UString(VersionInfo::PSCM_VERSION) + " (" + UString(VersionInfo::GIT_BRANCH) + "@" +
+                    UString(VersionInfo::GIT_HASH) + ")");
   return &ver;
 }
 
@@ -528,7 +528,7 @@ void Scheme::eval_all(const UString& code, SourceLocation loc) {
 bool Scheme::load(const UString& filename) {
   std::cout << "load: " << filename << std::endl;
   auto res = read_file(filename);
-  if (!std::holds_alternative<UString>(res)){
+  if (!std::holds_alternative<UString>(res)) {
     return false;
   }
   auto code = std::get<UString>(res);
@@ -695,7 +695,7 @@ void Scheme::load_module(const UString& filename, Cell module_name) {
   auto old_module = current_module_;
   std::cout << "load: " << filename << std::endl;
   auto res = read_file(filename);
-  if (!std::holds_alternative<UString>(res)){
+  if (!std::holds_alternative<UString>(res)) {
     PSCM_THROW_EXCEPTION("load module error: " + Cell(module_name).to_string());
   }
   auto code = std::get<UString>(res);

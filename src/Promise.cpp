@@ -5,9 +5,9 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Promise.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Procedure.h"
+#include "pscm/Promise.h"
 #include "pscm/SchemeProxy.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
@@ -15,7 +15,8 @@ import fmt;
 #endif
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Promise");
-UString Promise::to_string() const{
+
+UString Promise::to_string() const {
   UString out;
   out += "#";
   out += "<";

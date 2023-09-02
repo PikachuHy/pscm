@@ -5,9 +5,9 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/HashTable.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Function.h"
+#include "pscm/HashTable.h"
 #include "pscm/Number.h"
 #include "pscm/SchemeProxy.h"
 #include "pscm/SymbolTable.h"
@@ -251,7 +251,7 @@ void HashTable::for_each_handle(std::function<void(Cell)> func) {
   }
 }
 
-UString HashTable::to_string() const{
+UString HashTable::to_string() const {
   UString os;
   os += '#';
   os += '<';

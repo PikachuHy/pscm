@@ -5,8 +5,8 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/SchemeProxy.h"
 #include "pscm/Scheme.h"
+#include "pscm/SchemeProxy.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"

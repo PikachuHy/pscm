@@ -14,7 +14,7 @@ import fmt;
 #include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
-#include "pscm/logger/Logger.hpp"
+#include "pscm/logger/Logger.h"
 #include "pscm/scm_utils.h"
 #include <spdlog/fmt/fmt.h>
 #include <tuple>

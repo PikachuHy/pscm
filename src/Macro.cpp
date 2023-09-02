@@ -8,16 +8,16 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Macro.h"
 #include "pscm/ApiManager.h"
+#include "pscm/Macro.h"
 #include "pscm/Module.h"
 #include "pscm/Procedure.h"
 #include "pscm/Scheme.h"
 #include "pscm/SchemeProxy.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
-#include "pscm/scm_utils.h"
 #include "pscm/misc/ICUCompat.h"
+#include "pscm/scm_utils.h"
 #include "unicode/ustream.h"
 #endif
 namespace pscm {
@@ -50,7 +50,7 @@ Cell Macro::call(Cell args) {
   return (*f)(args);
 }
 
-UString Macro::to_string() const{
+UString Macro::to_string() const {
   UString out;
   out += "#<";
   if (is_proc()) {
