@@ -571,7 +571,7 @@ Cell Parser::parse_literal() {
       expr = cdr(expr);
       vec.push_back(e);
     }
-    return { new Cell::Vec(move(vec)) };
+    return { new Cell::Vec(std::move(vec)) };
   }
   default: {
   }
