@@ -62,9 +62,6 @@ class StandardPort : public Port {
 public:
   StandardPort(bool is_input)
       : is_input_(is_input) {
-    UErrorCode err;
-    conv_ = ucnv_open(nullptr, &err);
-    PSCM_ASSERT(!U_FAILURE(err));
   }
 
   ~StandardPort() {
@@ -80,7 +77,7 @@ public:
   }
 
   void close() override {
-    ucnv_close(conv_);
+    // do nothing
   }
 
   UChar32 read_char() override {
@@ -139,9 +136,6 @@ public:
   }
 
   bool is_input_;
-
-private:
-  UConverter *conv_;
 };
 
 class StringReadPort : public Port {
