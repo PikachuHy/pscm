@@ -28,7 +28,7 @@ concept Displayable = requires(T a) {
 };
 
 template <typename T>
-  requires Displayable<T> && (!requires(T a, std::ostream s) { s << a; })
+  requires Displayable<T> && (!(std::convertible_to<T, char *> || std::same_as<T, char>))
 std::ostream& operator<<(std::ostream& out, const T& obj) {
   return out << pscm::to_string(obj);
 }
