@@ -35,7 +35,7 @@ filegroup(
 configure_make(
     name = "icu",
     configure_command = select({
-        "@platforms//cpu:wasm32": "/Users/pikachu/emsdk/upstream/emscripten/emconfigure",
+        "@platforms//cpu:wasm32": "icu4c/source/configure",
         "//conditions:default": "icu4c/source/configure",
     }),
     # configure_command = "configure",
@@ -53,22 +53,22 @@ configure_make(
     }),
     configure_options =
         select({
-            "@platforms//cpu:wasm32": ["icu4c/source/configure"],
+            "@platforms//cpu:wasm32": [],
             "//conditions:default": [],
         }) +
         [
             "--enable-debug",
             # "MacOSX",
-            # "--enable-option-checking",
+            "--enable-option-checking",
             "--enable-static",
-            # "--enable-tools",  # needed to build data
-            # "--disable-shared",
-            # "--disable-dyload",
-            # "--disable-extras",
-            # "--disable-plugins",
-            # "--disable-tests",
-            # "--disable-samples",
-            # "--with-data-packaging=static",
+            "--enable-tools",  # needed to build data
+            "--disable-shared",
+            "--disable-dyload",
+            "--disable-extras",
+            "--disable-plugins",
+            "--disable-tests",
+            "--disable-samples",
+            "--with-data-packaging=static",
         ],
     lib_source = "@icu//:all",
     out_static_libs = [
