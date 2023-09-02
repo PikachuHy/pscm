@@ -143,6 +143,7 @@ public:
     else {
       return num;
     }
+    return std::nullopt;
   }
 
   Number parse_complex() {
