@@ -51,14 +51,24 @@ PSCM_INLINE_LOG_DECLARE("pscm.core.Module");
     return ustr;
   }
 
-  std::variant<double, ParseStatus> double_from_string(const UString& str){
+  std::variant<double, std::int64_t, ParseStatus> double_from_string(const UString& str){
     PSCM_ASSERT(U_SUCCESS(formatter_stat));
     U_ICU_NAMESPACE::Formattable ress;
     UErrorCode stat = U_ZERO_ERROR;
     formatter->parse(str, ress, stat);
     if (U_SUCCESS(stat))
     {
-      return ress.getDouble();
+      switch (ress.getType() )
+      {
+      case U_ICU_NAMESPACE::Formattable::kDouble:
+        return ress.getDouble();
+      case U_ICU_NAMESPACE::Formattable::kLong:
+        return ress.getLong();
+      case U_ICU_NAMESPACE::Formattable::kInt64:
+        return ress.getInt64();
+      default:
+        return ParseStatus::FORMAT_ERROR;
+      }
     }else
     {
       if (stat == U_INVALID_FORMAT_ERROR)
@@ -74,11 +84,12 @@ PSCM_INLINE_LOG_DECLARE("pscm.core.Module");
   void open_fstream(
     std::fstream& stream,
     UString path,
-    std::ios_base::openmode
+    std::ios_base::openmode mode
   ){
     std::string path_utf8;
     path.toUTF8String(path_utf8);
-    stream.open(path_utf8);
+    stream.open(path_utf8, mode);
+    PSCM_INFO("path: {0}, file opened: {1}", path, stream.is_open())
   }
 
   bool if_file_exists(UString fname){
@@ -115,22 +126,21 @@ PSCM_INLINE_LOG_DECLARE("pscm.core.Module");
 } // namespace pscm
 
 namespace U_ICU_NAMESPACE  {
-  UChar32 operator*(StringCharacterIterator iter){
+  UChar32 operator*(const StringCharacterIterator& iter){
     return iter.current32();
   }
 
-  StringCharacterIterator & operator++(StringCharacterIterator iter){
+  StringCharacterIterator & operator++(StringCharacterIterator& iter){
     iter.next32();
     return iter;
   }
 
-  bool operator!=(StringCharacterIterator iter, ICUBoundries){
+  bool operator!=(const StringCharacterIterator& iter, ICUBoundries){
     return iter.current32() != DONE;
   }
 
-  StringCharacterIterator & begin(UnicodeString str){
-    StringCharacterIterator siter(str);
-    return siter;
+  StringCharacterIterator begin(UnicodeString str){
+    return StringCharacterIterator(str);
   }
   ICUBoundries end(UnicodeString iter){
     return ICUBoundries::DONE;

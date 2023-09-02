@@ -46,20 +46,20 @@ namespace pscm {
 
   const UString to_string(int integer);
   const UString to_string(const void* pointer);
-  std::variant<double, ParseStatus> double_from_string(const UString& str);
+  std::variant<double, std::int64_t, ParseStatus> double_from_string(const UString& str);
 } // namespace pscm
 
 namespace U_ICU_NAMESPACE  {
   enum ICUBoundries {
     DONE = ForwardCharacterIterator::DONE
   };
-  UChar32 operator*(StringCharacterIterator iter);
+  UChar32 operator*(const StringCharacterIterator& iter);
 
-  StringCharacterIterator & operator++(StringCharacterIterator iter);
+  StringCharacterIterator & operator++(StringCharacterIterator& iter);
 
-  bool operator!=(StringCharacterIterator iter, ICUBoundries);
+  bool operator!=(const StringCharacterIterator& iter, ICUBoundries);
 
-  StringCharacterIterator & begin(UnicodeString str);
+  StringCharacterIterator begin(UnicodeString str);
   ICUBoundries end(UnicodeString iter);
 };
 

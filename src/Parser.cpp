@@ -132,7 +132,14 @@ public:
     if (has_point || has_e) {
       UString numstr;
       data_.extractBetween(pos, new_pos, numstr);
-      return convert_str_to_float(numstr);
+      auto res = convert_str_to_float(numstr);
+      if (std::holds_alternative<double>(res))
+      {
+        return std::get<double>(res);
+      }else if (std::holds_alternative<std::int64_t>(res))
+      {
+        return std::get<std::int64_t>(res);
+      }
     }
     else {
       return num;
@@ -198,7 +205,7 @@ public:
     }
   }
 
-  bool has_sign_after(UIterator& iter) {
+  bool has_sign_after(UIterator iter) {
     while (iter.hasNext()) {
       if (is_sign(iter)) {
         return true;
@@ -217,13 +224,16 @@ public:
     return u_isdigit(iter_.current32());
   }
 
-  double convert_str_to_float(const UString& str) {
+  std::variant<double, std::int64_t> convert_str_to_float(const UString& str) {
     PSCM_INFO("str: {0}", str);
     errno = 0;
     double x;
     auto res = double_from_string(str);
     if (std::holds_alternative<double>(res)) {
-      return std::get<double>(res);
+            return std::get<double>(res);
+    }
+    else if (std::holds_alternative<std::int64_t>(res)){
+      return std::get<std::int64_t>(res);
     }
     else{
       PSCM_THROW_EXCEPTION(loc_.to_string() + ", Invalid Number: " + data_);
@@ -455,7 +465,7 @@ Cell Parser::parse_literal() {
   }
   case Token::BACK_SLASH: {
     // hack: #\ = #\Space
-    if (peek_char() == ' ') {
+    if (u_isspace(peek_char())) {
       next_char();
       return Char::from(' ');
     }
