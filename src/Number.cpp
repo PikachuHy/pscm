@@ -8,8 +8,8 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Number.h"
 #include "pscm/Exception.h"
+#include "pscm/Number.h"
 #include "pscm/common_def.h"
 #include "pscm/misc/ICUCompat.h"
 #include <numeric>
@@ -22,7 +22,7 @@ using namespace std::string_literals;
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Number");
 
-UString Complex::to_string() const{
+UString Complex::to_string() const {
   UString out;
   out += pscm::to_string(real_part_);
   if (imag_part_ > 0) {
@@ -33,7 +33,7 @@ UString Complex::to_string() const{
   return out;
 }
 
-UString Rational::to_string() const{
+UString Rational::to_string() const {
   UString out;
   out += pscm::to_string(numerator_);
   out += "/";
@@ -300,7 +300,7 @@ void Number::display() const {
   }
 }
 
-UString Number::to_string() const{
+UString Number::to_string() const {
   PSCM_ASSERT(!std::holds_alternative<std::monostate>(data_));
   if (std::holds_alternative<int64_t>(data_)) {
     return pscm::to_string(std::get<int64_t>(data_));
@@ -317,7 +317,6 @@ UString Number::to_string() const{
   else {
     PSCM_THROW_EXCEPTION("Invalid number type: not supported now, " + to_string());
   }
-
 }
 
 bool Number::is_zero() const {
