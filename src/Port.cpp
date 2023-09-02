@@ -64,7 +64,7 @@ public:
       : is_input_(is_input) {
     UErrorCode err;
     conv_ = ucnv_open(nullptr, &err);
-    PSCM_ASSERT(U_SUCCESS(err));
+    PSCM_ASSERT(!U_FAILURE(err));
   }
 
   ~StandardPort() {
