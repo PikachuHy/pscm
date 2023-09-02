@@ -9,6 +9,7 @@
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include <cassert>
+#include <climits>
 #include <charconv>
 #include <fstream>
 #include <numbers>
