@@ -7,7 +7,6 @@
 #include "pscm/common_def.h"
 #include "unicode/unistr.h"
 #include "unicode/numfmt.h"
-#include <charconv>
 #if PSCM_STD_COMPAT
 #include <ghc/filesystem.hpp>
 namespace fs = ghc::filesystem;
@@ -43,12 +42,29 @@ PSCM_INLINE_LOG_DECLARE("pscm.core.Module");
     return res;
   }
 
-  const UString to_string(const void* integer){
+  const UString to_string(std::int64_t integer){
     PSCM_ASSERT(U_SUCCESS(formatter_stat));
-    char buf[16];
-    auto res = std::to_chars(buf, buf + 16, reinterpret_cast<int64_t>(integer), 16);
-    UString ustr(buf, res.ptr - buf, UString::EInvariant::kInvariant);
-    return ustr;
+    UString res;
+    formatter->format(integer, res);
+    return res;
+  }
+
+  const UString to_string(std::size_t integer){
+    PSCM_ASSERT(U_SUCCESS(formatter_stat));
+    UString res;
+    formatter->format(static_cast<std::int64_t>(integer), res);
+    return res;
+  }
+
+  const UString to_string(double num){
+    PSCM_ASSERT(U_SUCCESS(formatter_stat));
+    UString res;
+    formatter->format(num, res);
+    return res;
+  }
+
+  const UString to_string(const void* ptr){
+    return to_programmatic_string<std::int64_t, 16>(reinterpret_cast<std::int64_t>(ptr));
   }
 
   std::variant<double, std::int64_t, ParseStatus> double_from_string(const UString& str){

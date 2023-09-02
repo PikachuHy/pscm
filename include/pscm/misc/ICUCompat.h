@@ -8,7 +8,10 @@
 #include "unicode/uniset.h"
 #include "unicode/unistr.h"
 #include "unicode/msgfmt.h"
+#include <cassert>
+#include <charconv>
 #include <fstream>
+#include <numbers>
 #include <string>
 #include <variant>
 
@@ -44,7 +47,23 @@ namespace pscm {
   const std::variant<UString, FileStatus> read_file(
     const UString& filename);
 
+
+  template <std::integral inttype, int radix = 10>
+  /**
+   * Format integer to string, omit locale settings. This function should only
+   * be used to print techinique numbers such line number or pointer value.
+  */
+  const UString to_programmatic_string(inttype integer){
+    constexpr std::size_t buf_size = (sizeof(inttype) * CHAR_BIT) / (std::numbers::ln10_v<float> / std::numbers::ln2_v<float>) + 1;
+    char buf[buf_size];
+    auto res = std::to_chars(buf, buf + buf_size, integer, radix);
+    assert(res.ec == std::errc());
+    return UString(buf, res.ptr - buf, UString::EInvariant::kInvariant);
+  }
+  const UString to_string(double num);
   const UString to_string(int integer);
+  const UString to_string(std::int64_t integer);
+  const UString to_string(std::size_t integer);
   const UString to_string(const void* pointer);
   std::variant<double, std::int64_t, ParseStatus> double_from_string(const UString& str);
 } // namespace pscm

@@ -25,4 +25,12 @@ namespace pscm {
   concept Displayable = requires(T a) {
     {pscm::to_string(a)} -> std::same_as<const UString>;
   };
+
+  template <typename T>
+    requires Displayable<T> && (!requires(T a, std::ostream s) {
+    s << a;
+  })
+  std::ostream& operator<<(std::ostream& out, const T& obj){
+    return out << pscm::to_string(obj);
+  }
 } // namespace pscm

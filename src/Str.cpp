@@ -22,10 +22,6 @@ void String::display(Port& port) const {
   }
 }
 
-std::ostream& operator<<(std::ostream& os, const String& s) {
-  return os << s.to_string();
-}
-
 UString String::to_string() const{
   UString data(data_);
   data.findAndReplace("\"", "\\\"");

@@ -12,7 +12,7 @@ UString SourceLocation::to_string() const {
   auto pos = _name.lastIndexOf('/');
   auto name = UString(filename);
   _name.extractBetween(pos + 1, _name.length(), name);
-  return name + ":" + pscm::to_string(linenum); // + " " + UString(funcname);
+  return name + ":" + pscm::to_programmatic_string(linenum); // + " " + UString(funcname);
 }
 
 } // namespace pscm

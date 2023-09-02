@@ -135,7 +135,6 @@ public:
 
   void display() const;
   [[nodiscard]] UString to_string() const;
-  friend std::ostream& operator<<(std::ostream& out, const Number& num);
   Number operator-(const Number& num);
   Number operator/(const Number& num);
   bool operator<(const Number& num) const;

@@ -22,25 +22,6 @@ using namespace std::string_literals;
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Number");
 
-std::ostream& operator<<(std::ostream& out, const Number& num) {
-  if (num.data_.index() == 1) {
-    return out << std::get<1>(num.data_);
-  }
-  else if (num.data_.index() == 2) {
-    return out << std::get<2>(num.data_);
-  }
-  else if (num.data_.index() == 3) {
-    return out << std::get<3>(num.data_);
-  }
-  else if (num.data_.index() == 4) {
-    return out << std::get<4>(num.data_);
-  }
-  else {
-    PSCM_THROW_EXCEPTION("invalid number index: " + pscm::to_string(num.data_.index()) + ", update needed");
-  }
-  return out;
-}
-
 UString Complex::to_string() const{
   UString out;
   out += pscm::to_string(real_part_);

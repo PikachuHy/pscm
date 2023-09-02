@@ -3,6 +3,7 @@
 #ifdef PSCM_USE_CXX20_MODULES
 import pscm;
 #else
+#include <pscm/Displayable.h>
 #include <pscm/Number.h>
 #include <pscm/Pair.h>
 #include <pscm/Parser.h>
@@ -16,13 +17,6 @@ using namespace doctest;
 using namespace pscm;
 using namespace std::string_literals;
 using namespace doctest;
-
-namespace pscm{
-doctest::String toString(const Cell& value) {
-  std::string str;
-  value.to_string().toUTF8String(str);
-  return {str.data(), static_cast<doctest::String::size_type>(str.size())};
-}}
 
 TEST_CASE("testing acons") {
   auto f = [](Scheme& scm) {

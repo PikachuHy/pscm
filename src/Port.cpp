@@ -137,10 +137,6 @@ public:
     return Type::STANDARD_PORT;
   }
 
-  friend std::ostream& operator<<(std::ostream& out, const StandardPort& port) {
-    return out << port.to_string();
-  }
-
   bool is_input_;
 private:
   UConverter* conv_;
@@ -360,10 +356,6 @@ public:
 
   Type type() const override {
     return Type::FILE_PORT;
-  }
-
-  friend std::ostream& operator<<(std::ostream& out, const FilePort& port) {
-    return out << port.to_string();
   }
 
 private:

@@ -8,6 +8,7 @@ import pscm;
 #else
 #include "unicode/ustream.h"
 #include <pscm/Cell.h>
+#include <pscm/Displayable.h>
 #include <pscm/Number.h>
 #include <pscm/Pair.h>
 #include <pscm/Procedure.h>

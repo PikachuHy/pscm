@@ -3,6 +3,7 @@
 #include "doctest/doctest.h"
 #include <fstream>
 #include <pscm/Char.h>
+#include <pscm/Displayable.h>
 #include <pscm/Number.h>
 #include <pscm/Pair.h>
 #include <pscm/Parser.h>

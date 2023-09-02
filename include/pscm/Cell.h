@@ -86,7 +86,6 @@ enum class Label {
   TODO
 };
 const UString to_string(Label label);
-std::ostream& operator<<(std::ostream& out, const Label& pos);
 
 class SmallObject {
 public:

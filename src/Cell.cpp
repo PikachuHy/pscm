@@ -44,7 +44,7 @@ UString SmallObject::to_string() const{
   out += '<';
   out += "smob";
   out += ' ';
-  out += pscm::to_string(tag);
+  out += pscm::to_string(static_cast<int64_t>(tag));
   out += ' ';
   out += pscm::to_string(data);
   out += '>';
@@ -444,10 +444,6 @@ bool operator==(const Cell& lhs, const String& rhs) {
   auto val = static_cast<String *>(lhs.data_);
   PSCM_ASSERT(val);
   return *val == rhs;
-}
-
-std::ostream& operator<<(std::ostream& out, const Label& pos) {
-  return out << to_string(pos);
 }
 
 const UString to_string(Label label) {

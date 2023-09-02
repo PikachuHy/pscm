@@ -34,10 +34,6 @@ Symbol Symbol::load = Symbol("load");
 Symbol Symbol::quasiquote = Symbol("quasiquote");
 Symbol Symbol::unquote_splicing = Symbol("unquote-splicing");
 
-std::ostream& operator<<(std::ostream& out, const Symbol& sym) {
-  return out << sym.to_string();
-}
-
 UString Symbol::to_string() const{
   if (name_.indexOf(' ') != -1) {
     UString out("#{");
