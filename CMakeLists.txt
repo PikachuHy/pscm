@@ -88,6 +88,7 @@ target_sources(pscm PRIVATE
         src/logger/Logger.cpp
         src/logger/Appender.cpp
         src/misc/SourceLocation.cpp
+        src/misc/ICUCompat.cpp
 )
 if (PSCM_USE_CXX20_MODULES)
     target_compile_definitions(pscm PUBLIC PSCM_USE_CXX20_MODULES)
