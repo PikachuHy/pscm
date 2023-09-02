@@ -40,7 +40,7 @@ jobs:
 
       - name: Build
         run: |
-          xmake config --yes --mode=${{matrix.mode}} --arch=${{matrix.arch}}
+          xmake config -vD --yes --mode=${{matrix.mode}} --arch=${{matrix.arch}}
           xmake build --jobs=8
 
       - name: Test
