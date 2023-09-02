@@ -81,10 +81,10 @@ PSCM_INLINE_LOG_DECLARE("pscm.core.Evaluator");
 
 #define GOTO(label)                                                                                                    \
   pos_ = label;                                                                                                        \
-  PSCM_TRACE("GOTO label: {0}", pos_);                                                                                 \
+  PSCM_TRACE("GOTO label: {0}", to_string(pos_));                                                                      \
   break
 
-#define PRINT_STEP() PSCM_TRACE("[step: {0}] label: {1}", step_, pos_)
+#define PRINT_STEP() PSCM_TRACE("[step: {0}] label: {1}", step_, to_string(pos_))
 
 template <>
 class fmt::formatter<pscm::Label> {
@@ -2269,7 +2269,7 @@ void Evaluator::run() {
       GOTO(Label::EVAL);
     }
     default: {
-      PSCM_ERROR("Unsupported pos: {0}", pos_);
+      PSCM_ERROR("Unsupported pos: {0}", to_string(pos_));
       PSCM_THROW_EXCEPTION("Unsupported pos: " + to_string(pos_));
     }
     }

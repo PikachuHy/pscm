@@ -1,6 +1,7 @@
 //
 // Created by PikachuHy on 2023/4/5.
 //
+#include <unicode/ustream.h>
 #ifdef PSCM_USE_CXX20_MODULES
 import pscm;
 import std;
@@ -8,7 +9,6 @@ import std;
 #include <iostream>
 #include <pscm/Scheme.h>
 #include <string>
-#include <unicode/ustream.h>
 #endif
 using namespace std::string_literals;
 using namespace pscm;
