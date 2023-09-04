@@ -71,8 +71,8 @@ local integrated_tests = {
     {"test/r4rs/load.scm", "DIRENT"},
     {"test/r5rs/r5rstest.scm", "DIRENT"},
     {"test/r5rs/r5rstest.scm", "REGISTER_MACHINE"},
-    {"test/r5rs/r5rs_load.scm", "DIRENT"},
-    {"test/r5rs/r5rs_load.scm", "REGISTER_MACHINE"},
+    {"test/r5rs/load.scm", "DIRENT"},
+    {"test/r5rs/load.scm", "REGISTER_MACHINE"},
     {"test/module/r5rs_test.scm", "DIRENT"},
     {"test/module/texmacs/init.scm", "DIRENT"},
 }
