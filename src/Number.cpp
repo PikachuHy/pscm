@@ -24,20 +24,20 @@ PSCM_INLINE_LOG_DECLARE("pscm.core.Number");
 
 UString Complex::to_string() const {
   UString out;
-  out += pscm::to_string(real_part_);
+  out += pscm::to_programmatic_string(real_part_);
   if (imag_part_ > 0) {
     out += "+";
   }
-  out += pscm::to_string(imag_part_);
+  out += pscm::to_programmatic_string(imag_part_);
   out += "i";
   return out;
 }
 
 UString Rational::to_string() const {
   UString out;
-  out += pscm::to_string(numerator_);
+  out += pscm::to_programmatic_string(numerator_);
   out += "/";
-  out += pscm::to_string(denominator_);
+  out += pscm::to_programmatic_string(denominator_);
   return out;
 }
 
@@ -303,10 +303,10 @@ void Number::display() const {
 UString Number::to_string() const {
   PSCM_ASSERT(!std::holds_alternative<std::monostate>(data_));
   if (std::holds_alternative<int64_t>(data_)) {
-    return pscm::to_string(std::get<int64_t>(data_));
+    return pscm::to_programmatic_string(std::get<int64_t>(data_));
   }
   else if (std::holds_alternative<double>(data_)) {
-    return pscm::to_string(std::get<double>(data_));
+    return pscm::to_programmatic_string(std::get<double>(data_));
   }
   else if (std::holds_alternative<Rational>(data_)) {
     return std::get<Rational>(data_).to_string();

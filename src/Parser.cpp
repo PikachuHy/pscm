@@ -475,6 +475,15 @@ Cell Parser::parse_literal() {
     if (tok == Token::DOT) {
       return Char::from('.');
     }
+    else if (tok == Token::LEFT_PARENTHESES) {
+      return Char::from('(');
+    }
+    else if (tok == Token::BACK_SLASH) {
+      return new Char('\\');
+    }
+    else if (tok == Token::QUOTATION) {
+      return new Char('"');
+    }
     else if (tok == Token::SYMBOL) {
       auto key = last_symbol_->name();
       static std::unordered_map<UString, int> literal_map{
@@ -667,10 +676,7 @@ Parser::Token Parser::next_token() {
   UChar32 ch = next_char();
   switch (ch) {
   case EOF: {
-    if (is_file_ || use_stream_) {
-      return Token::END_OF_FILE;
-    }
-    return Token::NONE;
+    return Token::END_OF_FILE;
   }
   case '(': {
     return Token::LEFT_PARENTHESES;
@@ -734,6 +740,10 @@ Parser::Token Parser::next_token() {
       catch (...) {
       }
     }
+    if (s.length() == 0) {
+      return Token::END_OF_FILE;
+    }
+
     last_symbol_ = new Symbol(s, filename_, row, col);
     return Token::SYMBOL;
   }

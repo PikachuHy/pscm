@@ -37,16 +37,29 @@ bool if_file_exists(UString filename);
 void open_fstream(std::fstream& stream, UString path, std::ios_base::openmode = std::ios_base::in | std::ios_base::out);
 const std::variant<UString, FileStatus> read_file(const UString& filename);
 
-template <std::integral inttype, int radix = 10>
 /**
  * Format integer to string, omit locale settings. This function should only
  * be used to print techinique numbers such line number or pointer value.
  */
-const UString to_programmatic_string(inttype integer) {
+template <std::integral inttype>
+const UString to_programmatic_string(inttype integer, int radix = 10) {
   constexpr std::size_t buf_size =
-      (sizeof(inttype) * CHAR_BIT) / (std::numbers::ln10_v<float> / std::numbers::ln2_v<float>)+1;
+      (sizeof(inttype) * CHAR_BIT) + 1;
   char buf[buf_size];
   auto res = std::to_chars(buf, buf + buf_size, integer, radix);
+  assert(res.ec == std::errc());
+  return UString(buf, res.ptr - buf, UString::EInvariant::kInvariant);
+}
+
+/**
+ * Format integer to string, omit locale settings. This function should only
+ * be used to print techinique numbers such line number or pointer value.
+ */
+template <std::floating_point floattype>
+const UString to_programmatic_string(floattype integer) {
+  constexpr std::size_t buf_size = 256;
+  char buf[buf_size];
+  auto res = std::to_chars(buf, buf + buf_size, integer);
   assert(res.ec == std::errc());
   return UString(buf, res.ptr - buf, UString::EInvariant::kInvariant);
 }

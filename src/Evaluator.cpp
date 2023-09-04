@@ -1206,7 +1206,7 @@ Cell number_to_string(Cell args) {
   auto n = num->to_int();
   args = cdr(args);
   if (args.is_nil()) {
-    return new String(pscm::to_string(n));
+    return new String(pscm::to_programmatic_string(n));
   }
   arg = car(args);
   PSCM_ASSERT(arg.is_num());
@@ -1216,18 +1216,7 @@ Cell number_to_string(Cell args) {
   if (m < 2 || m > 36) {
     PSCM_THROW_EXCEPTION("Value out of range 2 to 36: " + pscm::to_string(m));
   }
-  UString s;
-  static std::string alphabet = "abcdefghijklmnoprstuvwxyz";
-  while (n != 0) {
-    auto item = n % m;
-    if (item < 10) {
-      s.append(static_cast<UChar>('0' + item));
-    }
-    else {
-      s.append(alphabet.at(item - 10));
-    }
-    n /= m;
-  }
+  UString s = pscm::to_programmatic_string(n, m);
   return new String(s);
 }
 

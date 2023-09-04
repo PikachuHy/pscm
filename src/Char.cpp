@@ -108,7 +108,7 @@ Cell Char::from(UChar32 ch) {
     return new Char(ch);
   }
   else {
-    PSCM_THROW_EXCEPTION("unsupported char: "_u + ch);
+    PSCM_THROW_EXCEPTION("unsupported char: "_u + ch + "(" + pscm::to_string(ch) + ")");
   }
 }
 

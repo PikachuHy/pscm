@@ -33,22 +33,36 @@ namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Port");
 
 std::tuple<UChar32, uint8_t> read_utf8(std::istream& stream) {
-  char charbuf[5];
+  char charbuf[5] = {};
   char *charbufbegin = charbuf;
   char& first = charbuf[0];
-  stream.read(charbufbegin, 1);
-  if (U8_IS_SINGLE(first)) {
+  if (stream.eof() || stream.fail()) {
+    return std::make_tuple(EOF, 0);
+  }
+  stream.read(charbuf, 1);
+  if (stream.fail()) {
+    return std::make_tuple(EOF, stream.gcount());
+  }
+  else if (U8_IS_SINGLE(first)) {
+    PSCM_ASSERT(first != 0);
     return std::make_tuple(first, 1);
   }
   else if (U8_IS_LEAD(first)) {
     uint8_t length = U8_COUNT_TRAIL_BYTES_UNSAFE(first);
     stream.read(&charbuf[1], length);
+    if (stream.fail()) {
+      PSCM_THROW_EXCEPTION("uncomplete utf-8 codepoint in stream"_u);
+    }
+
     UChar32 ch;
     U8_GET_OR_FFFD(reinterpret_cast<uint8_t *>(charbufbegin), 0, 0, 5, ch);
+    if (ch == 0xFFFD) {
+      PSCM_WARN("corrupted character, buffer content: {0}", UString(charbuf))
+    }
     return std::make_tuple(ch, length + 1);
   }
   else {
-    PSCM_THROW_EXCEPTION("incorrect position of stdin"_u);
+    PSCM_THROW_EXCEPTION("incorrect position of stream"_u);
   }
 }
 
@@ -97,7 +111,7 @@ public:
     PSCM_ASSERT(!is_input_);
     uint8_t charbuf[5];
     uint8_t offset = 0;
-    uint8_t length = U8_LENGTH(charbuf[0]);
+    uint8_t length = U8_LENGTH(ch);
     bool isError = false;
     U8_APPEND(charbuf, offset, 5, ch, isError);
     PSCM_ASSERT(!isError);
@@ -314,7 +328,7 @@ void FilePort::write_char(UChar32 ch) {
   PSCM_ASSERT(is_output_port());
   uint8_t charbuf[5];
   uint8_t offset = 0;
-  uint8_t length = U8_LENGTH(charbuf[0]);
+  uint8_t length = U8_LENGTH(ch);
   bool isError = false;
   U8_APPEND(charbuf, offset, 5, ch, isError);
   PSCM_ASSERT(!isError);
@@ -347,7 +361,7 @@ Cell FilePort::read() {
 }
 
 void FilePort::write(Cell obj) {
-  PSCM_INFO("object written: {0}", obj.to_string())
+  PSCM_INFO("object written: `{0}`", obj.to_string())
   f_ << obj.to_string();
 }
 

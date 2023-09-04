@@ -16,7 +16,7 @@ namespace fs = std::filesystem;
 
 namespace pscm {
 
-PSCM_INLINE_LOG_DECLARE("pscm.core.Module");
+PSCM_INLINE_LOG_DECLARE("pscm.core.ICU");
 
 static UErrorCode formatter_stat = U_ZERO_ERROR;
 static const auto locale = U_ICU_NAMESPACE::Locale::getDefault();
@@ -64,7 +64,7 @@ const UString to_string(double num) {
 }
 
 const UString to_string(const void *ptr) {
-  return to_programmatic_string<std::int64_t, 16>(reinterpret_cast<std::int64_t>(ptr));
+  return to_programmatic_string<std::int64_t>(reinterpret_cast<std::int64_t>(ptr));
 }
 
 std::variant<double, std::int64_t, ParseStatus> double_from_string(const UString& str) {
@@ -98,6 +98,7 @@ void open_fstream(std::fstream& stream, UString path, std::ios_base::openmode mo
   std::string path_utf8;
   path.toUTF8String(path_utf8);
   stream.open(path_utf8, mode);
+  stream.seekg(0, std::ios_base::beg);
   PSCM_INFO("path: {0}, file opened: {1}", path, stream.is_open())
 }
 
@@ -129,7 +130,8 @@ const std::variant<UString, FileStatus> read_file(const UString& filename) {
   std::string code;
   code.resize(sz);
   ifs.read((char *)code.data(), sz);
-  UString res(code.data(), sz);
+  // last series of codepoint in buffer may be NUL, so let icu detect size
+  UString res(code.data());
   return res;
 }
 } // namespace pscm
