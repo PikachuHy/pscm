@@ -52,14 +52,14 @@ const UString to_programmatic_string(inttype integer, int radix = 10) {
 }
 
 /**
- * Format integer to string, omit locale settings. This function should only
+ * Format float number to string, omit locale settings. This function should only
  * be used to print techinique numbers such line number or pointer value.
  */
-template <std::floating_point floattype>
-const UString to_programmatic_string(floattype integer) {
+template <std::floating_point floattype = double>
+const UString to_programmatic_string(floattype floating) {
   constexpr std::size_t buf_size = 256;
   char buf[buf_size];
-  auto res = std::to_chars(buf, buf + buf_size, integer);
+  auto res = std::to_chars(buf, buf + buf_size, floating);
   assert(res.ec == std::errc());
   return UString(buf, res.ptr - buf, UString::EInvariant::kInvariant);
 }
