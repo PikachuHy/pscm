@@ -67,6 +67,14 @@ const UString to_string(const void *ptr) {
   return to_programmatic_string<std::int64_t>(reinterpret_cast<std::int64_t>(ptr));
 }
 
+const UString to_programmatic_string(double floating) {
+  constexpr std::size_t buf_size = 256;
+  char buf[buf_size];
+  auto res = std::to_chars(buf, buf + buf_size, floating);
+  assert(res.ec == std::errc());
+  return UString(buf, res.ptr - buf, UString::EInvariant::kInvariant);
+}
+
 std::variant<double, std::int64_t, ParseStatus> double_from_string(const UString& str) {
   PSCM_ASSERT(U_SUCCESS(formatter_stat));
   U_ICU_NAMESPACE::Formattable ress;
