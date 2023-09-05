@@ -10,7 +10,9 @@ jobs:
   build_with_xmake_and_gcc:
     strategy:
       matrix:
-        gcc_version: [ 10, 11, 12 ]
+        # to_chars() support in gcc 10 is broken, remove this version. see:
+        # https://github.com/wwmm/easyeffects/issues/1510
+        gcc_version: [ 11, 12 ]
         mode: [ Release, Debug ]
     runs-on: ubuntu-22.04
 
@@ -32,7 +34,7 @@ jobs:
     
       - uses: xmake-io/github-action-setup-xmake@v1
         with:
-          xmake-version: v2.7.7
+          xmake-version: v2.8.2
           actions-cache-folder: '.xmake-cache'
 
       - name: Build
