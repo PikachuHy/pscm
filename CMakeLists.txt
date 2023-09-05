@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.26)
+SET(CMAKE_OSX_DEPLOYMENT_TARGET "13.3" CACHE STRING "Minimum OS X deployment version" FORCE)
 project(pscm VERSION 0.3.0 LANGUAGES CXX)
 option(PSCM_USE_CXX20_MODULES "enable c++20 modules" OFF)
 if (WIN32)
