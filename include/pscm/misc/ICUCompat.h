@@ -27,13 +27,13 @@ concept std_to_chars = requires(floattype f, char *const str) { std::to_chars(st
 template <typename floattype>
   requires std::floating_point<floattype> && std_to_chars<floattype>
 std::to_chars_result to_chars(char *const str, char *const end, floattype f) {
-  std::to_chars(str, end, f);
+  return std::to_chars(str, end, f);
 };
 
 template <typename floattype>
   requires(std::floating_point<floattype> && !std_to_chars<floattype>)
 std::to_chars_result to_chars(char *const str, char *const end, floattype f) {
-  msstl::to_chars(str, end, f);
+  return msstl::to_chars(str, end, f);
 };
 } // namespace charconv
 

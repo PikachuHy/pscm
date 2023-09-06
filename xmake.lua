@@ -27,8 +27,8 @@ target("pscm") do
     set_languages("cxx20")
     add_includedirs("include", {public = true})
     add_headerfiles("include/**.h")
-    add_packages({"spdlog","universal_stacktrace", "mscharconv","cpp-linenoise"})
-    add_packages({"icu4c"}, {public = true})
+    add_packages({"spdlog", "universal_stacktrace", "cpp-linenoise"})
+    add_packages({"icu4c", "mscharconv"}, {public = true})
     add_files({
         "src/**.cpp",
         "$(buildir)/version.cpp"})
