@@ -1,6 +1,5 @@
 add_subdirectory(doctest)
 add_subdirectory(spdlog)
-add_subdirectory(mscharconv)
 # add_subdirectory(glob)
 
 add_library(glob
