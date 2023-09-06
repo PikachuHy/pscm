@@ -45,6 +45,13 @@ new_git_repository(
     remote = "https://github.com/gulrak/filesystem.git",
 )
 
+new_git_repository(
+    name = "mscharconv",
+    build_file = "@dev_pscm//3rd:mscharconv.bazel",
+    commit = "5d2e3a6e9663a41207561c9510ad1e3d557b5c5e",
+    remote = "https://github.com/iboB/mscharconv.git",
+)
+
 http_archive(
     name = "doctest",
     sha256 = "6745e17682d6e2be1ea31ec8bf1814a3d7cb17d61d120e5f2ee5a075926634ad",

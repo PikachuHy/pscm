@@ -68,6 +68,7 @@ cc_library(
         "@cpp-linenoise",
         "@ust",
         "@icu",
+        "@mscharconv",
         # compat c++14
         # "@filesystem",
         # "@optional",
