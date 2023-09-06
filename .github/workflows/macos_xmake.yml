@@ -8,7 +8,7 @@ on:
 
 jobs:
   build_with_xmake_on_macos:
-    runs-on: macos-13
+    runs-on: macos-11
     strategy:
       matrix:
         mode: [ Release, Debug ]
