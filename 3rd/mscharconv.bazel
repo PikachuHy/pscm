@@ -1,6 +1,6 @@
 cc_library(
     name = "mscharconv",
-    hdrs = ["include/msstl/charconv.hpp"],
+    hdrs = ["include/msstl/charconv.hpp", "include/msstl/charconv_fwd.hpp", "include/msstl/charconv_impl.inl"],
     visibility = ["//visibility:public"],
     includes = ["include"],
 )
