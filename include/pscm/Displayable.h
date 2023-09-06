@@ -5,7 +5,10 @@
 #pragma once
 #include "pscm/misc/ICUCompat.h"
 #include "unicode/unistr.h"
+#if defined(WASM_PLATFORM)
+#else
 #include "unicode/ustream.h"
+#endif
 #include <iostream>
 #include <type_traits>
 #include <utility>
@@ -27,9 +30,12 @@ concept Displayable = requires(T a) {
   { pscm::to_string(a) } -> std::same_as<const UString>;
 };
 
+#if defined(WASM_PLATFORM)
+#else
 template <typename T>
   requires Displayable<T> && (!(std::convertible_to<T, char *> || std::same_as<T, char>))
 std::ostream& operator<<(std::ostream& out, const T& obj) {
   return out << pscm::to_string(obj);
 }
+#endif
 } // namespace pscm

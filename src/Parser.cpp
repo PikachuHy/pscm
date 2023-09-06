@@ -20,7 +20,10 @@ import fmt;
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
 #include "unicode/uchar.h"
+#if defined(WASM_PLATFORM)
+#else
 #include "unicode/ustream.h"
+#endif
 #include <cctype>
 #include <cmath>
 #include <cstdint>
@@ -374,6 +377,8 @@ Cell Parser::parse_token(pscm::Parser::Token token) {
       break;
     }
     default: {
+#if defined(WASM_PLATFORM)
+#else
       // TODO:
       if (is_file_) {
         PSCM_ASSERT(row_ < lines_.size());
@@ -384,6 +389,7 @@ Cell Parser::parse_token(pscm::Parser::Token token) {
         }
         std::cout << "^" << std::endl;
       }
+#endif
       PSCM_ERROR("Unsupported token: {0}", int(token));
       PSCM_THROW_EXCEPTION("Unsupported token: " + last_token_);
     }

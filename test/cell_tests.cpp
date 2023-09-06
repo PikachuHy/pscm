@@ -6,7 +6,6 @@
 #ifdef PSCM_USE_CXX20_MODULES
 import pscm;
 #else
-#include "unicode/ustream.h"
 #include <pscm/Cell.h>
 #include <pscm/Displayable.h>
 #include <pscm/Number.h>

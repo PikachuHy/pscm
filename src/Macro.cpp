@@ -18,7 +18,6 @@ import fmt;
 #include "pscm/common_def.h"
 #include "pscm/misc/ICUCompat.h"
 #include "pscm/scm_utils.h"
-#include "unicode/ustream.h"
 #endif
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Macro");

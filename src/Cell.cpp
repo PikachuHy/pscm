@@ -28,7 +28,6 @@ import fmt;
 #include "pscm/logger/Logger.h"
 #include "pscm/misc/ICUCompat.h"
 #include "unicode/schriter.h"
-#include "unicode/ustream.h"
 #include <cassert>
 #include <cstring>
 #include <spdlog/fmt/fmt.h>

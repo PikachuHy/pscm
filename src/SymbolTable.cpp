@@ -13,7 +13,10 @@ import fmt;
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/misc/ICUCompat.h"
+#if defined(WASM_PLATFORM)
+#else
 #include "unicode/ustream.h"
+#endif
 #include <iostream>
 #include <spdlog/fmt/fmt.h>
 #include <string>
@@ -100,13 +103,25 @@ void SymbolTable::use(const SymbolTable& env) {
 void SymbolTable::dump(SourceLocation loc) const {
   auto p = this;
   while (p) {
+#if defined(WASM_PLATFORM)
+    std::string loc_utf8;
+    loc.to_string().toUTF8String(loc_utf8);
+    std::cout << "[" << loc_utf8 << "]";
+#else
     std::cout << "[" << loc.to_string() << "]";
+#endif
     std::cout << " ";
     std::cout << (void *)p;
     std::cout << " ";
     std::cout << p->map_.size();
     std::cout << " ";
+#if defined(WASM_PLATFORM)
+    std::string name_utf8;
+    p->name_.toUTF8String(name_utf8);
+    std::cout << "[" << name_utf8 << "]";
+#else
     std::cout << p->name_;
+#endif
     std::cout << std::endl;
     p = p->parent_;
   }
