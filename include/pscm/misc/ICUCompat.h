@@ -33,7 +33,8 @@ std::to_chars_result to_chars(char *const str, char *const end, floattype f) {
 template <typename floattype>
   requires(std::floating_point<floattype> && !std_to_chars<floattype>)
 std::to_chars_result to_chars(char *const str, char *const end, floattype f) {
-  return msstl::to_chars(str, end, f);
+  auto [ptr, ec] = msstl::to_chars(str, end, f);
+  return { ptr, ec };
 };
 } // namespace charconv
 
