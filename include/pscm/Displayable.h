@@ -31,6 +31,13 @@ concept Displayable = requires(T a) {
 };
 
 #if defined(WASM_PLATFORM)
+template <typename T>
+  requires Displayable<T> && (!(std::convertible_to<T, char *> || std::same_as<T, char>))
+std::ostream& operator<<(std::ostream& out, const T& obj) {
+  std::string utf8;
+  pscm::to_string(obj).toUTF8String(utf8);
+  return out << utf8;
+}
 #else
 template <typename T>
   requires Displayable<T> && (!(std::convertible_to<T, char *> || std::same_as<T, char>))

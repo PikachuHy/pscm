@@ -134,6 +134,14 @@ const std::variant<UString, FileStatus> read_file(const UString& filename) {
   UString res(code.data());
   return res;
 }
+
+#if defined(WASM_PLATFORM)
+std::ostream& operator<<(std::ostream& f_, const UString& obj){
+  std::string utf8;
+  obj.toUTF8String(utf8);
+  f_ << utf8;
+}
+#endif
 } // namespace pscm
 
 namespace U_ICU_NAMESPACE {

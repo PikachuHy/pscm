@@ -90,6 +90,10 @@ const UString to_string(std::int64_t integer);
 const UString to_string(std::size_t integer);
 const UString to_string(const void *pointer);
 std::variant<double, std::int64_t, ParseStatus> double_from_string(const UString& str);
+// polyfill missing ustream.h on wasm
+#if defined(WASM_PLATFORM)
+std::ostream& operator<<(std::ostream& out, const UString& obj);
+#endif
 } // namespace pscm
 
 namespace U_ICU_NAMESPACE {

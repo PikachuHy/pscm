@@ -145,13 +145,7 @@ public:
   }
 
   void write(Cell obj) override {
-#if defined(WASM_PLATFORM)
-    std::string utf8;
-    obj.to_string().toUTF8String(utf8);
-    std::cout << utf8;
-#else
     std::cout << obj.to_string();
-#endif
   }
 
   Type type() const override {
@@ -371,13 +365,7 @@ Cell FilePort::read() {
 
 void FilePort::write(Cell obj) {
   PSCM_INFO("object written: `{0}`", obj.to_string())
-#if defined(WASM_PLATFORM)
-  std::string utf8;
-  obj.to_string().toUTF8String(utf8);
-  f_ << utf8;
-#else
   f_ << obj.to_string();
-#endif
 }
 
 Port::Type FilePort::type() const {
@@ -495,14 +483,8 @@ Cell write_char(Cell args) {
   auto port = cdr(args);
   auto ch = arg.to_char();
   if (port.is_nil()) {
-#if defined(WASM_PLATFORM)
-    std::string utf8;
-    ch->to_string().toUTF8String(utf8);
-    std::cout << utf8;
-#else
     UString str(ch->to_string());
     std::cout << str;
-#endif
   }
   else {
     port = car(port);
