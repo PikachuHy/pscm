@@ -104,11 +104,8 @@ Cell Char::from(UChar32 ch) {
   else if (u_isalnum(ch)) {
     return new Char(ch);
   }
-  else if (int(ch) <= 32) {
-    return new Char(ch);
-  }
   else {
-    PSCM_THROW_EXCEPTION("unsupported char: "_u + ch + "(" + pscm::to_string(ch) + ")");
+    return new Char(ch);
   }
 }
 

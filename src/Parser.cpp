@@ -478,11 +478,29 @@ Cell Parser::parse_literal() {
     else if (tok == Token::LEFT_PARENTHESES) {
       return Char::from('(');
     }
-    else if (tok == Token::BACK_SLASH) {
-      return new Char('\\');
+    else if (tok == Token::RIGHT_PARENTHESES) {
+      return Char::from(')');
+    }
+    else if (tok == Token::SHARP) {
+      return Char::from('#');
+    }
+    else if (tok == Token::QUOTE) {
+      return Char::from('\'');
+    }
+    else if (tok == Token::UNQUOTE) {
+      return Char::from(',');
+    }
+    else if (tok == Token::SEMICOLON) {
+      return Char::from(';');
     }
     else if (tok == Token::QUOTATION) {
-      return new Char('"');
+      return Char::from('"');
+    }
+    else if (tok == Token::QUASIQUOTE) {
+      return Char::from('`');
+    }
+    else if (tok == Token::BACK_SLASH) {
+      return Char::from('\\');
     }
     else if (tok == Token::SYMBOL) {
       auto key = last_symbol_->name();
