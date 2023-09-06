@@ -10,9 +10,7 @@ jobs:
   build_with_gcc:
     strategy:
       matrix:
-        # to_chars() support in gcc 10 is broken, remove this version. see:
-        # https://github.com/wwmm/easyeffects/issues/1510
-        gcc_version: [ 11, 12 ]
+        gcc_version: [ 10, 11, 12 ]
         mode: [ Release, Debug ]
     runs-on: ubuntu-22.04
 
