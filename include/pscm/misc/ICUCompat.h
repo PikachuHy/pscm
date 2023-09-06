@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "msstl/charconv.hpp"
 #include "unicode/chariter.h"
 #include "unicode/msgfmt.h"
 #include "unicode/schriter.h"
@@ -17,6 +18,25 @@
 #include <variant>
 
 namespace pscm {
+/* There is no overload for floatpoint on MacOS, so import polyfill from mscharconv.
+ */
+namespace charconv {
+template <typename floattype>
+concept std_to_chars = requires(floattype f, char *const str) { std::to_chars(str, str + 1, f); };
+
+template <typename floattype>
+  requires std::floating_point<floattype> && std_to_chars<floattype>
+std::to_chars_result to_chars(char *const str, char *const end, floattype f) {
+  std::to_chars(str, end, f);
+};
+
+template <typename floattype>
+  requires(std::floating_point<floattype> && !std_to_chars<floattype>)
+std::to_chars_result to_chars(char *const str, char *const end, floattype f) {
+  msstl::to_chars(str, end, f);
+};
+} // namespace charconv
+
 using UString = U_ICU_NAMESPACE::UnicodeString;
 using UIterator = U_ICU_NAMESPACE::StringCharacterIterator;
 using USet = U_ICU_NAMESPACE::UnicodeSet;
@@ -58,7 +78,7 @@ template <std::floating_point floattype>
 const UString to_programmatic_string(floattype integer) {
   constexpr std::size_t buf_size = 256;
   char buf[buf_size];
-  auto res = std::to_chars(buf, buf + buf_size, integer);
+  auto res = pscm::charconv::to_chars(buf, buf + buf_size, integer);
   assert(res.ec == std::errc());
   return UString(buf, res.ptr - buf, UString::EInvariant::kInvariant);
 }
