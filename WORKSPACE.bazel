@@ -232,12 +232,22 @@ load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_depende
 
 rules_foreign_cc_dependencies()
 
-git_repository(
+# git_repository(
+#     name = "icu",
+#     build_file = "@//:icu.bazel",
+#     commit = "d501225db2bfed4fee3049827d6e9076dae2d1ad",
+#     patch_args = ["apply"],
+#     patch_tool = "git",
+#     patches = ["@//:0001-remove-BUILD.bazel.patch"],
+#     remote = "https://github.com/unicode-org/icu.git",
+# )
+
+http_archive(
     name = "icu",
-    build_file = "@//:icu.bazel",
-    commit = "d501225db2bfed4fee3049827d6e9076dae2d1ad",
+    build_file = "@//:icu2.bazel",
     patch_args = ["apply"],
     patch_tool = "git",
-    patches = ["@//:0001-remove-BUILD.bazel.patch"],
-    remote = "https://github.com/unicode-org/icu.git",
+    patches = ["@//:0001-remove-BUILD.bazel.patch2"],
+    strip_prefix = "icu/source",
+    url = "https://github.com/unicode-org/icu/releases/download/release-73-2/icu4c-73_2-src.tgz",
 )
