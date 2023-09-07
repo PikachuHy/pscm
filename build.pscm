@@ -36,7 +36,7 @@
   )
  (hdrs
   (glob "include/**/*.h"))
- (includes "include" "3rd/UniversalStacktrace" "3rd/cpp-linenoise" "/usr/local/opt/icu4c/include")
+ (includes "include" "3rd/UniversalStacktrace" "3rd/cpp-linenoise" "/usr/local/opt/icu4c/include" "3rd/mscharconv/include/msstl" "3rd/mscharconv/include")
  (defines "PSCM_USE_CXX20_MODULES")
  (copts "-std=c++20" "-I" "build/generate")
  (deps ":fmt" ":std" ":glob" ":subprocess" ":linenoise"))
