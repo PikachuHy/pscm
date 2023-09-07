@@ -36,7 +36,7 @@ jobs:
           arch: ${{ matrix.arch }}
 
       - name: Generate Project
-        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -G Ninja
+        run: PKG_CONFIG_PATH=C:/vcpkg/packages/icu_x86-windows/lib/pkgconfig cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -G Ninja
 
       - name: Build
         run: cmake --build build --config ${{ matrix.mode }} --verbose
