@@ -57,7 +57,7 @@ jobs:
           ./cmake-3.26.5-macos-universal/CMake.app/Contents/bin/cmake --version
 
       - name: Configure CMake with C++20 Modules
-        run: CXX=/usr/local/opt/llvm/bin/clang++ CC=/usr/local/opt/llvm/bin/clang ./cmake-3.26.5-macos-universal/CMake.app/Contents/bin/cmake -B ${{github.workspace}}/build2 -DCMAKE_BUILD_TYPE=${{matrix.mode}} -DCMAKE_MAKE_PROGRAM=/usr/local/bin/ninja -G Ninja -DUSE_CCACHE=ON -DPSCM_USE_CXX20_MODULES=ON
+        run: PKG_CONFIG_PATH=/usr/local/opt/icu4c/lib/pkgconfig  CXX=/usr/local/opt/llvm/bin/clang++ CC=/usr/local/opt/llvm/bin/clang ./cmake-3.26.5-macos-universal/CMake.app/Contents/bin/cmake -B ${{github.workspace}}/build2 -DCMAKE_BUILD_TYPE=${{matrix.mode}} -DCMAKE_MAKE_PROGRAM=/usr/local/bin/ninja -G Ninja -DUSE_CCACHE=ON -DPSCM_USE_CXX20_MODULES=ON
 
       - name: Build with C++20 Modules
         run: ./cmake-3.26.5-macos-universal/CMake.app/Contents/bin/cmake --build ${{github.workspace}}/build2 --config ${{matrix.mode}} --verbose -j
