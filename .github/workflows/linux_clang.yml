@@ -16,6 +16,24 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Install LLVM16
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 16
+      - name: Use LLVM16
+        run: |
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-16 100
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-16 100
+          sudo update-alternatives --config cc
+      - name: Check LLVM
+        run: |
+          clang --version
+
+      - name: Check CMake
+        run: |
+          cmake --version
+          
       - name: deps
         run: |
           sudo apt-get install -y build-essential
@@ -41,5 +59,16 @@ jobs:
 
       - name: Test
         working-directory: ${{github.workspace}}/build/test
+        run: ctest -C ${{matrix.mode}} --output-on-failure
+      
+
+      - name: Configure CMake with C++20 Modules
+        run: CXX=clang++ CC=clang cmake -B ${{github.workspace}}/build2 -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON -DPSCM_USE_CXX20_MODULES=ON
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build2 --config ${{matrix.mode}} -j --verbose
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build2/test
         run: ctest -C ${{matrix.mode}} --output-on-failure
       
