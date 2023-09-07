@@ -22,7 +22,8 @@ jobs:
           sudo ./llvm.sh 16
       - name: Install clang-format
         run: |
-          sudo apt install -y clang-format-16
+          sudo apt-get install -y clang-format-16
+          sudo apt-get remove -y clang-format
           sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-16 100
           clang-format --version
       - name: check-diff
