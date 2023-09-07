@@ -7,7 +7,6 @@
 import pscm;
 #else
 #include <pscm/Char.h>
-#include <pscm/Displayable.h>
 #include <pscm/Number.h>
 #include <pscm/Pair.h>
 #include <pscm/Parser.h>
@@ -15,6 +14,7 @@ import pscm;
 #include <pscm/Scheme.h>
 #include <pscm/Str.h>
 #include <pscm/Symbol.h>
+#include <pscm/icu/Displayable.h>
 #include <pscm/scm_utils.h>
 #include <sstream>
 #include <string>

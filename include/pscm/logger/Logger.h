@@ -3,8 +3,8 @@
 //
 
 #pragma once
-#include "pscm/Displayable.h"
 #include "pscm/Exception.h"
+#include "pscm/icu/Displayable.h"
 #include "pscm/misc/SourceLocation.h"
 #include <cassert>
 #include <optional>

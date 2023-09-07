@@ -3,11 +3,11 @@
 #ifdef PSCM_USE_CXX20_MODULES
 import pscm;
 #else
-#include <pscm/Displayable.h>
 #include <pscm/Number.h>
 #include <pscm/Pair.h>
 #include <pscm/Scheme.h>
 #include <pscm/Symbol.h>
+#include <pscm/icu/Displayable.h>
 #include <pscm/scm_utils.h>
 #include <string>
 #endif

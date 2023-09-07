@@ -3,7 +3,7 @@
 //
 
 #pragma once
-#include "pscm/misc/ICUCompat.h"
+#include "pscm/icu/ICUCompat.h"
 #include "unicode/unistr.h"
 #if defined(WASM_PLATFORM)
 #else
@@ -42,6 +42,7 @@ std::ostream& operator<<(std::ostream& out, const T& obj) {
 template <typename T>
   requires Displayable<T> && (!(std::convertible_to<T, char *> || std::same_as<T, char>))
 std::ostream& operator<<(std::ostream& out, const T& obj) {
+  using U_ICU_NAMESPACE::operator<<;
   return out << pscm::to_string(obj);
 }
 #endif

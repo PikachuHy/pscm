@@ -9,7 +9,7 @@ import std;
 import fmt;
 #else
 #include "pscm/Continuation.h"
-#include "pscm/misc/ICUCompat.h"
+#include "pscm/icu/ICUCompat.h"
 #endif
 namespace pscm {
 UString Continuation::to_string() const {

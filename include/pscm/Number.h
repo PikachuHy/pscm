@@ -4,7 +4,7 @@
 
 #pragma once
 #include "compat.h"
-#include "pscm/misc/ICUCompat.h"
+#include "pscm/icu/ICUCompat.h"
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>

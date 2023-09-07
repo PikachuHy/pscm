@@ -28,6 +28,7 @@ module;
 #include "pscm/scm_utils.h"
 #include "pscm/version.h"
 export module pscm;
+export import pscm.icu;
 export import pscm.logger;
 export import pscm.misc;
 export import pscm.compat;

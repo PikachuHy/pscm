@@ -6,8 +6,8 @@
 #ifdef PSCM_USE_CXX20_MODULES
 import pscm;
 #else
-#include <pscm/Displayable.h>
 #include <pscm/Number.h>
+#include <pscm/icu/Displayable.h>
 #endif
 using namespace doctest;
 using namespace pscm;

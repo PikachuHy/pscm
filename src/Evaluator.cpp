@@ -12,7 +12,6 @@ import fmt;
 #else
 #include "pscm/Char.h"
 #include "pscm/Continuation.h"
-#include "pscm/Displayable.h"
 #include "pscm/Exception.h"
 #include "pscm/Expander.h"
 #include "pscm/Function.h"
@@ -30,7 +29,8 @@ import fmt;
 #include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
-#include "pscm/misc/ICUCompat.h"
+#include "pscm/icu/Displayable.h"
+#include "pscm/icu/ICUCompat.h"
 #include "pscm/scm_utils.h"
 #include "unicode/schriter.h"
 #include "unicode/unistr.h"

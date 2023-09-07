@@ -1,9 +1,14 @@
 //
 // Created by jingkaimori on 2023/8/16.
 //
-
-#include "pscm/misc/ICUCompat.h"
+#ifdef PSCM_USE_CXX20_MODULES
+#include "pscm/Logger.h"
 #include "pscm/common_def.h"
+import pscm.compat;
+import pscm.icu;
+#else
+#include "pscm/common_def.h"
+#include "pscm/icu/ICUCompat.h"
 #include "unicode/numfmt.h"
 #include "unicode/unistr.h"
 #if PSCM_STD_COMPAT
@@ -13,7 +18,7 @@ namespace fs = ghc::filesystem;
 #include <filesystem>
 namespace fs = std::filesystem;
 #endif
-
+#endif
 namespace pscm {
 
 PSCM_INLINE_LOG_DECLARE("pscm.core.ICU");
@@ -136,7 +141,7 @@ const std::variant<UString, FileStatus> read_file(const UString& filename) {
 }
 
 #if defined(WASM_PLATFORM)
-std::ostream& operator<<(std::ostream& f_, const UString& obj){
+std::ostream& operator<<(std::ostream& f_, const UString& obj) {
   std::string utf8;
   obj.toUTF8String(utf8);
   f_ << utf8;

@@ -25,8 +25,8 @@ import fmt;
 #include "pscm/Str.h"
 #include "pscm/Symbol.h"
 #include "pscm/common_def.h"
+#include "pscm/icu/ICUCompat.h"
 #include "pscm/logger/Logger.h"
-#include "pscm/misc/ICUCompat.h"
 #include "unicode/schriter.h"
 #include <cassert>
 #include <cstring>

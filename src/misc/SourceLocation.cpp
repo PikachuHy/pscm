@@ -3,7 +3,7 @@
 //
 
 #include "pscm/misc/SourceLocation.h"
-#include "pscm/misc/ICUCompat.h"
+#include "pscm/icu/ICUCompat.h"
 
 namespace pscm {
 

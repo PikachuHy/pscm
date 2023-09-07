@@ -16,7 +16,7 @@ import fmt;
 #include "pscm/SchemeProxy.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
-#include "pscm/misc/ICUCompat.h"
+#include "pscm/icu/ICUCompat.h"
 #include "pscm/scm_utils.h"
 #endif
 namespace pscm {

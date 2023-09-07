@@ -11,7 +11,6 @@ import fmt;
 import linenoise;
 #else
 #include "pscm/ApiManager.h"
-#include "pscm/Displayable.h"
 #include "pscm/Evaluator.h"
 #include "pscm/Exception.h"
 #include "pscm/Expander.h"
@@ -31,8 +30,9 @@ import linenoise;
 #include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
+#include "pscm/icu/Displayable.h"
+#include "pscm/icu/ICUCompat.h"
 #include "pscm/logger/Appender.h"
-#include "pscm/misc/ICUCompat.h"
 #include "pscm/scm_utils.h"
 #include "pscm/version.h"
 #include "spdlog/spdlog.h"

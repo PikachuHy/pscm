@@ -3,7 +3,7 @@
 //
 
 #pragma once
-#include "pscm/misc/ICUCompat.h"
+#include "pscm/icu/ICUCompat.h"
 #include <cstring>
 #include <exception>
 #include <string>
