@@ -20,6 +20,11 @@ jobs:
           wget https://apt.llvm.org/llvm.sh
           chmod +x llvm.sh
           sudo ./llvm.sh 16
+      - name: Install clang-format
+        run: |
+          sudo apt install -y clang-format-16
+          sudo update-alternatives --install /usr/bin/clang-format clang-format /usr/bin/clang-format-16 100
+          clang-format --version
       - name: check-diff
         run: |
           diff=`git-clang-format --diff HEAD^`
