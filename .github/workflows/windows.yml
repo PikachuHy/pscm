@@ -35,8 +35,13 @@ jobs:
         with:
           arch: ${{ matrix.arch }}
 
+      - name: Set PKG_CONFIG_PATH
+        run: setx PKG_CONFIG_PATH C:/vcpkg/packages/icu_x86-windows/lib/pkgconfig
+      - name: Check PKG_CONFIG_PATH
+        run: echo %PKG_CONFIG_PATH%
+
       - name: Generate Project
-        run: PKG_CONFIG_PATH=C:/vcpkg/packages/icu_x86-windows/lib/pkgconfig cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -G Ninja
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -G Ninja
 
       - name: Build
         run: cmake --build build --config ${{ matrix.mode }} --verbose
