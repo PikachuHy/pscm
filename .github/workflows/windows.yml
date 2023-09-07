@@ -23,6 +23,9 @@ jobs:
       - name: Clone Deps
         run: git submodule update --init
         working-directory: ${{github.workspace}}
+        
+      - name: Install icu
+        run: vcpkg install icu
 
       - name: Install ninja-build tool
         uses: seanmiddleditch/gha-setup-ninja@master
