@@ -63,7 +63,7 @@ jobs:
       
 
       - name: Configure CMake with C++20 Modules
-        run: CXX=clang++ CC=clang cmake -B ${{github.workspace}}/build2 -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON -DPSCM_USE_CXX20_MODULES=ON
+        run: CXX=clang++-16 CC=clang-16 cmake -B ${{github.workspace}}/build2 -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON -DPSCM_USE_CXX20_MODULES=ON
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build2 --config ${{matrix.mode}} -j --verbose
