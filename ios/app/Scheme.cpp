@@ -25,5 +25,7 @@ Scheme::~Scheme() {
 std::string Scheme::eval(const char *code) {
   std::cout << "eval: " << code << std::endl;
   auto ret = impl_->scm_.eval(code);
-  return ret.to_string();
+  std::string s;
+  ret.to_string().toUTF8String(s);
+  return s;
 }
