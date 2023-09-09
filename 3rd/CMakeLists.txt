@@ -1,3 +1,4 @@
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-literal-operator")
 add_subdirectory(doctest)
 add_subdirectory(spdlog)
 # add_subdirectory(glob)
