@@ -13,10 +13,26 @@
 #include <charconv>
 #include <climits>
 #include <fstream>
-#include <numbers>
+// #include <numbers>
 #include <string>
 #include <variant>
+#ifdef __ANDROID__
+namespace std {
+template <class _Tp>
+concept integral = is_integral_v<_Tp>;
 
+template <class _Tp>
+concept floating_point = is_floating_point_v<_Tp>;
+template <class _From, class _To>
+concept convertible_to = is_convertible_v<_From, _To> && requires { static_cast<_To>(std::declval<_From>()); };
+template <class _Tp, class _Up>
+concept __same_as_impl = _IsSame<_Tp, _Up>::value;
+
+template <class _Tp, class _Up>
+concept same_as = __same_as_impl<_Tp, _Up> && __same_as_impl<_Up, _Tp>;
+
+} // namespace std
+#endif
 namespace pscm {
 /* There is no overload for floatpoint on MacOS, so import polyfill from mscharconv.
  */
