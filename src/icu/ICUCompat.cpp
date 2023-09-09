@@ -145,6 +145,7 @@ std::ostream& operator<<(std::ostream& f_, const UString& obj) {
   std::string utf8;
   obj.toUTF8String(utf8);
   f_ << utf8;
+  return f_;
 }
 #endif
 } // namespace pscm
