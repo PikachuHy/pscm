@@ -27,6 +27,12 @@ cc_library(
         ],
     ),
     hdrs = glob(["common/unicode/**"]),
+    copts = select({
+        "@platforms//cpu:wasm32": [
+            "-Wno-deprecated-declarations",
+        ],
+        "//conditions:default": [],
+    }),
     includes = ["common"],
     local_defines = ["U_COMMON_IMPLEMENTATION"],
     visibility = ["//visibility:public"],
@@ -39,6 +45,12 @@ cc_library(
         "i18n/*.h",
     ]),
     hdrs = glob(["i18n/unicode/**"]),
+    copts = select({
+        "@platforms//cpu:wasm32": [
+            "-Wno-deprecated-declarations",
+        ],
+        "//conditions:default": [],
+    }),
     includes = ["i18n"],
     local_defines = ["U_I18N_IMPLEMENTATION"],
     visibility = ["//visibility:public"],
@@ -72,7 +84,7 @@ cc_library(
     srcs = glob(["tools/toolutil/*.cpp"]),
     hdrs = glob(["tools/toolutil/*.h"]),
     includes = ["tools/toolutil"],
-    local_defines = ["U_TOOLUTIL_IMPLEMENTATION"],
+    local_defines = ["U_TOOLUTIL_IMPLEMENTATION", "U_ELF"],
     deps = [":i18n"],
 )
 
