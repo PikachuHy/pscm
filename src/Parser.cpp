@@ -230,7 +230,6 @@ public:
   std::variant<double, std::int64_t> convert_str_to_float(const UString& str) {
     PSCM_INFO("str: {0}", str);
     errno = 0;
-    double x;
     auto res = double_from_string(str);
     if (std::holds_alternative<double>(res)) {
       return std::get<double>(res);
