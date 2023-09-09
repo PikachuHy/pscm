@@ -80,28 +80,3 @@ for _, filepath in ipairs(os.files("test/**_tests.cpp")) do
         end
     end
 end
-
-
--- function add_test_cov(filepath)
---     local testname = path.basename(filepath) 
---     target(testname) do 
---         set_group("test_cov")
---         add_deps("pscm")
---         add_packages({"doctest","spdlog","universal_stacktrace"})
---         set_languages("cxx20")
-
---         add_cxxflags("-O0")
---         add_cxxflags("-fprofile-arcs")
---         add_cxxflags("-ftest-coverage")
---         add_ldflags("-coverage")
-
---         add_includedirs("include")
---         add_files(filepath)
---     end
--- end
-
--- for _, filepath in ipairs(os.files("test/**_tests.cpp")) do
---     if is_mode("coverage") then
---         add_test_cov(filepath)
---     end
--- end
