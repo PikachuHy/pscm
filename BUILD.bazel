@@ -32,16 +32,13 @@ cc_library(
     ),
     copts = select({
         # disable error: result of comparison of constant -1 with expression of type 'char' is always false
-        "@platforms//cpu:wasm32": [
-            "-Wno-tautological-constant-out-of-range-compare",
-            "-std=c++20",
-            "-Wno-unused-value",
-        ],
-        "//conditions:default": [
-            "-std=c++20",
-            "-Wno-unused-value",
-        ],
-    }),
+        "@platforms//cpu:wasm32": ["-Wno-tautological-constant-out-of-range-compare"],
+        "//conditions:default": [],
+    }) + [
+        "-Wno-sign-compare",
+        "-std=c++20",
+        "-Wno-unused-value",
+    ],
     defines = select({
         "@platforms//cpu:wasm32": ["WASM_PLATFORM"],
         "//conditions:default": [],
