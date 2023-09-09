@@ -24,9 +24,18 @@ target("pscm") do
     set_languages("cxx20")
     add_includedirs("include")
     add_packages({"spdlog","universal_stacktrace","cpp-linenoise"})
+
     add_files({
         "src/**.cpp",
         "$(buildir)/version.cpp"})
+    
+    if is_mode("coverage") then
+        add_cxxflags("-O0")
+        add_cxxflags("-fprofile-arcs")
+        add_cxxflags("-ftest-coverage")
+        add_ldflags("-coverage")
+    end
+    
     if has_config("cxx20-modules") then
         add_files({
             "src/**.cppm",
@@ -40,6 +49,17 @@ target("pscm") do
     end
 end
 
+---
+--- coverage:
+--- use `xmake f -m coverage` to enable coverage
+--- first `rm -rf build/` to clean build cache
+--- then `xmake build` to build
+--- then `xmake run --group=tests` to run tests for coverage
+--- run `lcov --directory . --capture --output-file cov/coverage.info`
+--- run `genhtml cov/coverage.info --output-directory cov/coverage`
+--- open `cov/coverage/index.html` in browser
+--- 
+
 for _, filepath in ipairs(os.files("test/**_tests.cpp")) do
     local testname = path.basename(filepath) 
     target(testname) do 
@@ -51,5 +71,37 @@ for _, filepath in ipairs(os.files("test/**_tests.cpp")) do
 
         add_includedirs("include")
         add_files(filepath)
+        
+        if is_mode ("coverage") then
+            add_cxxflags("-O0")
+            add_cxxflags("-fprofile-arcs")
+            add_cxxflags("-ftest-coverage")
+            add_ldflags("-coverage")
+        end
     end
 end
+
+
+-- function add_test_cov(filepath)
+--     local testname = path.basename(filepath) 
+--     target(testname) do 
+--         set_group("test_cov")
+--         add_deps("pscm")
+--         add_packages({"doctest","spdlog","universal_stacktrace"})
+--         set_languages("cxx20")
+
+--         add_cxxflags("-O0")
+--         add_cxxflags("-fprofile-arcs")
+--         add_cxxflags("-ftest-coverage")
+--         add_ldflags("-coverage")
+
+--         add_includedirs("include")
+--         add_files(filepath)
+--     end
+-- end
+
+-- for _, filepath in ipairs(os.files("test/**_tests.cpp")) do
+--     if is_mode("coverage") then
+--         add_test_cov(filepath)
+--     end
+-- end

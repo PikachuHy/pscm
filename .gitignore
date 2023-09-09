@@ -64,3 +64,6 @@ bazel-*
 .idea
 
 pscm-build-bin
+
+#coverage
+cov/
