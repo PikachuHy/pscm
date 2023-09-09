@@ -64,7 +64,8 @@ cc_library(
         "@spdlog",
         "@cpp-linenoise",
         "@ust",
-        "@icu",
+        "@icu//:io",
+        "@icu//:stubdata",
         "@mscharconv",
         # compat c++14
         # "@filesystem",
