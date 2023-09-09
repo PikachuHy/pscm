@@ -35,8 +35,12 @@ cc_library(
         "@platforms//cpu:wasm32": [
             "-Wno-tautological-constant-out-of-range-compare",
             "-std=c++20",
+            "-Wno-unused-value",
         ],
-        "//conditions:default": ["-std=c++20"],
+        "//conditions:default": [
+            "-std=c++20",
+            "-Wno-unused-value",
+        ],
     }),
     defines = select({
         "@platforms//cpu:wasm32": ["WASM_PLATFORM"],
