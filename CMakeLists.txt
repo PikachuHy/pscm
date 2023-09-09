@@ -7,7 +7,11 @@ if (WIN32)
 else ()
     if (PSCM_USE_CXX20_MODULES)
         if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-            set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
+            # CMake 3.26
+            # set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
+            # CMake 3.27
+            set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "aa1f7df0-828a-4fcd-9afc-2dc80491aca7")
+            # set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "ac01f462-0f5f-432a-86aa-acef252918a6")
             include(cxx_modules_rules_clang.cmake)
             set(CMAKE_CXX_STANDARD 20)
             set(CMAKE_CXX_EXTENSIONS OFF)
