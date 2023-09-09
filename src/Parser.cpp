@@ -43,8 +43,8 @@ class NumberParser {
 public:
   NumberParser(const UString& data, SourceLocation loc = {})
       : data_(data)
-      , loc_(loc)
-      , iter_(data) {
+      , iter_(data)
+      , loc_(loc) {
   }
 
   Number parse() {
