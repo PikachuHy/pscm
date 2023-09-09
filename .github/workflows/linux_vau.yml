@@ -1,10 +1,7 @@
 name: MacOS Vau
 
 on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+  workflow_dispatch
 
 jobs:
   build_vau_with_pscm:
