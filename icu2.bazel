@@ -27,12 +27,7 @@ cc_library(
         ],
     ),
     hdrs = glob(["common/unicode/**"]),
-    copts = select({
-        "@platforms//cpu:wasm32": [
-            "-Wno-deprecated-declarations",
-        ],
-        "//conditions:default": [],
-    }),
+    copts = ["-Wno-deprecated-declarations"],
     includes = ["common"],
     local_defines = ["U_COMMON_IMPLEMENTATION"],
     visibility = ["//visibility:public"],
@@ -45,12 +40,7 @@ cc_library(
         "i18n/*.h",
     ]),
     hdrs = glob(["i18n/unicode/**"]),
-    copts = select({
-        "@platforms//cpu:wasm32": [
-            "-Wno-deprecated-declarations",
-        ],
-        "//conditions:default": [],
-    }),
+    copts = ["-Wno-deprecated-declarations"],
     includes = ["i18n"],
     local_defines = ["U_I18N_IMPLEMENTATION"],
     visibility = ["//visibility:public"],
