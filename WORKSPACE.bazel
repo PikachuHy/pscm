@@ -254,6 +254,6 @@ rules_foreign_cc_dependencies()
 
 git_repository(
     name = "icu",
-    commit = "4e3bf6d82c67b9e1d68e9928d3c20d6d528e12ca",
+    commit = "38ae5c7d5e9e25ab8700ce7b76c899a3d40e4d70",
     remote = "https://github.com/PikachuHy/icu.bazel.git",
 )
