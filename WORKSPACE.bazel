@@ -242,12 +242,18 @@ rules_foreign_cc_dependencies()
 #     remote = "https://github.com/unicode-org/icu.git",
 # )
 
-http_archive(
+# http_archive(
+#     name = "icu",
+#     build_file = "@//:icu2.bazel",
+#     patch_args = ["apply"],
+#     patch_tool = "git",
+#     patches = ["@//:0001-remove-BUILD.bazel.patch2"],
+#     strip_prefix = "icu/source",
+#     url = "https://github.com/unicode-org/icu/releases/download/release-73-2/icu4c-73_2-src.tgz",
+# )
+
+git_repository(
     name = "icu",
-    build_file = "@//:icu2.bazel",
-    patch_args = ["apply"],
-    patch_tool = "git",
-    patches = ["@//:0001-remove-BUILD.bazel.patch2"],
-    strip_prefix = "icu/source",
-    url = "https://github.com/unicode-org/icu/releases/download/release-73-2/icu4c-73_2-src.tgz",
+    commit = "4e3bf6d82c67b9e1d68e9928d3c20d6d528e12ca",
+    remote = "https://github.com/PikachuHy/icu.bazel.git",
 )
