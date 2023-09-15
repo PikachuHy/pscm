@@ -65,7 +65,6 @@ cc_library(
         "@spdlog",
         "@cpp-linenoise",
         "@ust",
-        "@icu",
         # "@icu//:io",
         # "@icu//:stubdata",
         "@mscharconv",
@@ -74,7 +73,11 @@ cc_library(
         # "@optional",
         # "@string-view-lite",
         # "@variant",
-    ],
+    ] + select({
+        # FIXME: build icu4c for android
+        "@platforms//os:linux": ["@icu//:fake_icu"],
+        "//conditions:default": ["@icu"],
+    }),
 )
 
 cc_binary(
