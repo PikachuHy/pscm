@@ -11,6 +11,7 @@ import pscm.icu;
 #include "pscm/icu/ICUCompat.h"
 #include "unicode/numfmt.h"
 #include "unicode/unistr.h"
+#include <iostream>
 #if PSCM_STD_COMPAT
 #include <ghc/filesystem.hpp>
 namespace fs = ghc::filesystem;
@@ -23,10 +24,43 @@ namespace pscm {
 
 PSCM_INLINE_LOG_DECLARE("pscm.core.ICU");
 
-static UErrorCode formatter_stat = U_ZERO_ERROR;
-static const auto locale = U_ICU_NAMESPACE::Locale::getDefault();
-static auto formatter =
-    U_ICU_NAMESPACE::NumberFormat::createInstance(locale, UNumberFormatStyle::UNUM_DECIMAL, formatter_stat);
+namespace icu {
+class Formatter {
+public:
+  static auto& instance() {
+    static Formatter formatter;
+    return formatter;
+  }
+
+  auto format(const auto& val, auto& res) {
+    formatter_->format(val, res);
+  }
+
+  auto parse(auto& str, auto& ress, auto& stat) {
+    formatter_->parse(str, ress, stat);
+  }
+
+private:
+  Formatter() {
+    const auto locale = U_ICU_NAMESPACE::Locale::getDefault();
+    formatter_ =
+        U_ICU_NAMESPACE::NumberFormat::createInstance(locale, UNumberFormatStyle::UNUM_DECIMAL, formatter_stat);
+    if (!(U_SUCCESS(formatter_stat))) {
+      std::string msg = u_errorName(formatter_stat);
+      std::cout << msg << std::endl;
+    }
+    PSCM_ASSERT(U_SUCCESS(formatter_stat));
+  }
+
+  UErrorCode formatter_stat = U_ZERO_ERROR;
+  U_ICU_NAMESPACE::NumberFormat *formatter_;
+};
+} // namespace icu
+
+// static UErrorCode formatter_stat = U_ZERO_ERROR;
+// static const auto locale = U_ICU_NAMESPACE::Locale::getDefault();
+// static auto formatter =
+//     U_ICU_NAMESPACE::NumberFormat::createInstance(locale, UNumberFormatStyle::UNUM_DECIMAL, formatter_stat);
 
 const UString operator""_u(const char *arg, std::size_t len) {
   return UString::fromUTF8(U_ICU_NAMESPACE::StringPiece(arg, len));
@@ -41,30 +75,30 @@ UChar32 operator""_u(char16_t arg) {
 }
 
 const UString to_string(int integer) {
-  PSCM_ASSERT(U_SUCCESS(formatter_stat));
+  // PSCM_ASSERT(U_SUCCESS(formatter_stat));
   UString res;
-  formatter->format(integer, res);
+  icu::Formatter::instance().format(integer, res);
   return res;
 }
 
 const UString to_string(std::int64_t integer) {
-  PSCM_ASSERT(U_SUCCESS(formatter_stat));
+  // PSCM_ASSERT(U_SUCCESS(formatter_stat));
   UString res;
-  formatter->format(integer, res);
+  icu::Formatter::instance().format(integer, res);
   return res;
 }
 
 const UString to_string(std::size_t integer) {
-  PSCM_ASSERT(U_SUCCESS(formatter_stat));
+  // PSCM_ASSERT(U_SUCCESS(formatter_stat));
   UString res;
-  formatter->format(static_cast<std::int64_t>(integer), res);
+  icu::Formatter::instance().format(static_cast<std::int64_t>(integer), res);
   return res;
 }
 
 const UString to_string(double num) {
-  PSCM_ASSERT(U_SUCCESS(formatter_stat));
+  // PSCM_ASSERT(U_SUCCESS(formatter_stat));
   UString res;
-  formatter->format(num, res);
+  icu::Formatter::instance().format(num, res);
   return res;
 }
 
@@ -73,10 +107,10 @@ const UString to_string(const void *ptr) {
 }
 
 std::variant<double, std::int64_t, ParseStatus> double_from_string(const UString& str) {
-  PSCM_ASSERT(U_SUCCESS(formatter_stat));
+  // PSCM_ASSERT(U_SUCCESS(formatter_stat));
   U_ICU_NAMESPACE::Formattable ress;
   UErrorCode stat = U_ZERO_ERROR;
-  formatter->parse(str, ress, stat);
+  icu::Formatter::instance().parse(str, ress, stat);
   if (U_SUCCESS(stat)) {
     switch (ress.getType()) {
     case U_ICU_NAMESPACE::Formattable::kDouble:
