@@ -23,10 +23,10 @@ jobs:
             ${{ runner.os }}-bazel-
 
       - name: Build
-        run: bazel build \:all
+        run: bazel build \:all --config=macos
 
       - name: Test
-        run: bazel test \:all --test_output=errors
+        run: bazel test \:all --config=macos --test_output=errors
 
       - name: Build ios App
         # build with c++20
