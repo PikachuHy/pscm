@@ -24,5 +24,5 @@ extern "C" JNIEXPORT jstring JNICALL Java_dev_pscm_android_MainActivity_evalSche
   pscm::UString s(c_str, len);
   auto ret = _scm->eval(s);
   auto s3 = ret.to_string();
-  return env->NewString(static_cast<const jchar *>(s3.getBuffer()), s3.length());
+  return env->NewString(reinterpret_cast<const jchar *>(s3.getBuffer()), s3.length());
 }
