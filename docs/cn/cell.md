@@ -21,8 +21,8 @@ class Cell {
 - `EXCEPTION`: 暂时用来存放C++代码中出现的异常
 - `NIL`: 空列表
 - `BOOL`: 布尔值, `true` or `false`
-- `STRING`: 字符串类型，目前只是在 `std::string` 上糊了一下
-- `CHAR`: 字符类型，底下是一个 `std::string` ，因为一个 `char` 放不了中文字符，暂时也不想用 `wchar` 之类的
+- `STRING`: 字符串类型，内部采用ICU4C框架的`icu::UnicodeString`类
+- `CHAR`: 字符类型，底下是一个 `UChar32` 
 - `NUMBER`: 数类型，目前对 `int` 和 `float` 做了简单支持
 - `SYMBOL`: 符号类型，表示 pscm 代码中的一个符号
 - `PAIR`: pscm中的list是由一个又一个 `PAIR` 嵌套起来表达的

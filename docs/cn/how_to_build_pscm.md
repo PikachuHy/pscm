@@ -11,6 +11,8 @@ make -j
 
 ## xmake
 
+目前Windows下，推荐使用xmake进行构建。xmake可以管理icu等依赖，无需同步git子模块
+
 ```shell
 xmake config --yes --mode=Release
 xmake build --jobs=4

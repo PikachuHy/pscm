@@ -60,17 +60,21 @@ pscm 不局限于 Scheme 语言/语法，它更多是我学习编译原理的一
 
 - 内存问题
 
-暂时没管，有意向使用 [Boehm garbage collector](https://github.com/ivmai/bdwgc)
+  暂时没管，有意向使用 [Boehm garbage collector](https://github.com/ivmai/bdwgc)
 
 - 代码风格
 
-通过GitHub CI就可以了
+  通过GitHub CI就可以了
 
 - 什么时候开始弄MSVC版本的TeXmacs
 
-预计对接完LLVM后，会考虑这个事情。具体得看情况
+  预计对接完LLVM后，会考虑这个事情。具体得看情况
+
+- 为什么用C++编写pscm
+
+  `v0`采用的是C++，而作者熟悉原来的代码，所以没有换语言。
 
 - Exception occurred here: evaluator terminate due to reach max step
 
-我做了一个最大计算步的设计，主要是为了debug实现错误死循环的情况。
-当然，对于本身就不会结束的程序（比如阴阳谜题），跑到一定的step就会抛异常停止。
+  我做了一个最大计算步的设计，主要是为了debug实现错误死循环的情况。
+  当然，对于本身就不会结束的程序（比如阴阳谜题），跑到一定的step就会抛异常停止。
