@@ -13,30 +13,30 @@ class Procedure;
 
 class Macro {
 public:
-  Macro(std::string name, Label pos)
+  Macro(UString name, Label pos)
       : name_(std::move(name))
       , pos_(pos) {
   }
 
-  Macro(std::string name, Label pos, Cell::ScmMacro f)
+  Macro(UString name, Label pos, Cell::ScmMacro f)
       : name_(std::move(name))
       , pos_(pos)
       , f_(f) {
   }
 
-  Macro(std::string name, Label pos, Cell::ScmMacro2 f)
+  Macro(UString name, Label pos, Cell::ScmMacro2 f)
       : name_(std::move(name))
       , pos_(pos)
       , f_(f) {
   }
 
-  Macro(std::string name, Cell::ScmFunc f)
+  Macro(UString name, Cell::ScmFunc f)
       : name_(std::move(name))
       , pos_(Label::APPLY_MACRO)
       , f_(f) {
   }
 
-  Macro(std::string name, Procedure *proc)
+  Macro(UString name, Procedure *proc)
       : name_(std::move(name))
       , pos_(Label::APPLY_MACRO)
       , f_(proc) {
@@ -61,14 +61,14 @@ public:
     return std::get<3>(f_);
   }
 
-  std::string name() const {
+  UString name() const {
     return name_;
   }
 
-  friend std::ostream& operator<<(std::ostream& out, const Macro& macro);
+  UString to_string() const;
 
 private:
-  std::string name_;
+  UString name_;
   Label pos_;
   std::variant<std::monostate, Cell::ScmMacro, Cell::ScmFunc, Procedure *, Cell::ScmMacro2> f_;
 };

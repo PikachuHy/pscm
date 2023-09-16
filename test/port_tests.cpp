@@ -6,9 +6,11 @@
 #include <pscm/Number.h>
 #include <pscm/Pair.h>
 #include <pscm/Parser.h>
+#include <pscm/Port.h>
 #include <pscm/Scheme.h>
 #include <pscm/Str.h>
 #include <pscm/Symbol.h>
+#include <pscm/icu/Displayable.h>
 #include <pscm/scm_utils.h>
 #include <sstream>
 #include <string>
@@ -39,10 +41,8 @@ TEST_CASE("testing call-with-output-file") {
             (newline port)))
 )");
     CHECK(fs::exists("tmp.txt"));
-    std::fstream fin;
-    fin.open("tmp.txt", std::ios::in);
-    REQUIRE(fin.is_open());
-    Parser parser(&fin);
+    FilePort fp("tmp.txt", std::ios::in);
+    Parser parser(&fp);
     ret = parser.next();
     CHECK(ret == 1);
   };
@@ -96,9 +96,8 @@ TEST_CASE("testing write \"") {
 )");
     CHECK(fs::exists("tmp2.txt"));
     std::fstream fin;
-    fin.open("tmp2.txt", std::ios::in);
-    REQUIRE(fin.is_open());
-    Parser parser(&fin);
+    FilePort fp("tmp2.txt", std::ios::in);
+    Parser parser(&fp);
     ret = parser.next();
     CHECK(ret == "te \" \" st"_str);
   };

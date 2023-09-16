@@ -10,9 +10,11 @@ import pscm;
 #include <pscm/Number.h>
 #include <pscm/Pair.h>
 #include <pscm/Parser.h>
+#include <pscm/Port.h>
 #include <pscm/Scheme.h>
 #include <pscm/Str.h>
 #include <pscm/Symbol.h>
+#include <pscm/icu/Displayable.h>
 #include <pscm/scm_utils.h>
 #include <sstream>
 #include <string>
@@ -33,9 +35,9 @@ TEST_CASE("testing parse .") {
 }
 
 TEST_CASE("testing parse stream") {
-  std::stringstream ss;
-  ss << "(a b . (c d))";
-  Parser parser((std::istream *)&ss);
+  UString str("(a b . (c d))");
+  UIterator iter(str);
+  Parser parser(&iter);
   auto ret = parser.parse();
   auto a = "a"_sym;
   auto b = "b"_sym;
@@ -45,9 +47,9 @@ TEST_CASE("testing parse stream") {
 }
 
 TEST_CASE("testing parse stream 2") {
-  std::stringstream ss;
-  ss << "a b c d";
-  Parser parser((std::istream *)&ss);
+  UString str("a b c d");
+  UIterator iter(str);
+  Parser parser(&iter);
 
   auto a = "a"_sym;
   auto b = "b"_sym;

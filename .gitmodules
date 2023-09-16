@@ -34,3 +34,6 @@
 [submodule "3rd/json"]
 	path = 3rd/json
 	url = https://github.com/nlohmann/json.git
+[submodule "3rd/mscharconv"]
+	path = 3rd/mscharconv
+	url = https://github.com/iboB/mscharconv.git

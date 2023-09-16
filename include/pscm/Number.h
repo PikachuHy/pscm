@@ -4,6 +4,7 @@
 
 #pragma once
 #include "compat.h"
+#include "pscm/icu/ICUCompat.h"
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
@@ -30,7 +31,7 @@ public:
     return imag_part_;
   }
 
-  friend std::ostream& operator<<(std::ostream& out, const Complex& num);
+  UString to_string() const;
 
 private:
   double real_part_;
@@ -62,7 +63,7 @@ public:
     return 1.0 * numerator_ / denominator_;
   }
 
-  friend std::ostream& operator<<(std::ostream& out, const Rational& num);
+  UString to_string() const;
 
 private:
   int64_t numerator_;
@@ -133,8 +134,7 @@ public:
   }
 
   void display() const;
-  [[nodiscard]] std::string to_string() const;
-  friend std::ostream& operator<<(std::ostream& out, const Number& num);
+  [[nodiscard]] UString to_string() const;
   Number operator-(const Number& num);
   Number operator/(const Number& num);
   bool operator<(const Number& num) const;

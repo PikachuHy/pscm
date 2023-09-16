@@ -8,13 +8,14 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Symbol.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Cell.h"
 #include "pscm/Pair.h"
 #include "pscm/SchemeProxy.h"
+#include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
+#include "pscm/icu/ICUCompat.h"
 #include "pscm/scm_utils.h"
 #include <fstream>
 #include <iostream>
@@ -33,22 +34,16 @@ Symbol Symbol::load = Symbol("load");
 Symbol Symbol::quasiquote = Symbol("quasiquote");
 Symbol Symbol::unquote_splicing = Symbol("unquote-splicing");
 
-std::ostream& operator<<(std::ostream& out, const Symbol& sym) {
-  auto name = sym.name_;
-  if (name.find(' ') != std::string::npos) {
-    out << "#";
-    out << "{";
-    for (auto ch : name) {
-      if (ch == ' ') {
-        out << "\\";
-      }
-      out << ch;
-    }
-    out << "}";
-    out << "#";
+UString Symbol::to_string() const {
+  if (name_.indexOf(' ') != -1) {
+    UString out("#{");
+    out.append(name_).findAndReplace(" ", "\\ ").append("}#");
     return out;
   }
-  return out << name;
+  else {
+    UString out(name_);
+    return out;
+  }
 }
 
 bool Symbol::operator==(const Symbol& sym) const {
@@ -56,22 +51,18 @@ bool Symbol::operator==(const Symbol& sym) const {
 }
 
 HashCodeType Symbol::hash_code() const {
-  HashCodeType code = 0;
-  for (char ch : name_) {
-    code = int(ch) + code * 37;
-  }
-  return code;
+  return name_.hashCode();
 }
 
 void Symbol::print_debug_info() {
-  if (filename_.empty()) {
+  if (filename_.isEmpty()) {
     return;
   }
   std::cout << name_ << " from " << filename_ << ":" << row_ << ":" << col_ << std::endl;
   std::fstream in;
-  in.open(filename_);
+  open_fstream(in, filename_);
   if (!in.is_open()) {
-    PSCM_ERROR("open file error: {}", filename_);
+    PSCM_ERROR("open file error: {0}", filename_);
   }
   std::string line;
   for (size_t i = 0; i < row_; i++) {
@@ -85,12 +76,12 @@ void Symbol::print_debug_info() {
 }
 
 Symbol operator""_sym(const char *data, std::size_t len) {
-  return Symbol(std::string(data, len));
+  return Symbol(UString(data, len));
 }
 
 Symbol *gensym() {
   static int index = 0;
-  auto sym = new Symbol(" g" + std::to_string(index++));
+  auto sym = new Symbol(" g" + pscm::to_string(index++));
   return sym;
 }
 

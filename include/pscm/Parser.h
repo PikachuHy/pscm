@@ -4,9 +4,12 @@
 
 #pragma once
 #include "pscm/Cell.h"
+#include "unicode/chariter.h"
+#include "unicode/schriter.h"
 #include <iosfwd>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 namespace pscm {
@@ -14,9 +17,10 @@ class Number;
 
 class Parser {
 public:
-  Parser(std::string code);
-  Parser(std::string code, StringView filename);
-  Parser(std::istream *in);
+  Parser(const UString& code);
+  Parser(UIteratorP in);
+  Parser(const UString& code, const UString& filename);
+  Parser(Port *in);
   Cell parse();
   Cell next();
 
@@ -26,8 +30,6 @@ private:
   Cell parse_string();
   void skip_empty();
   void skip_line();
-  void eat(char ch);
-  bool is_eof() const;
   enum class Token {
     NONE,              //
     END_OF_FILE,       // end of file
@@ -46,16 +48,15 @@ private:
     SYMBOL             //
   };
   Token next_token();
-  Cell parse_token(Token token, std::size_t start);
-  void advance();
-  char next_char();
-  char peek_char();
-  void read_until(std::string& s, StringView end);
+  Cell parse_token(Token token);
+  void advance(UChar32 curchar);
+  UChar32 next_char();
+  UChar32 peek_char();
+  void read_until(UString& s, const USet& end);
 
 private:
-  std::string code_;
-  std::size_t pos_{};
-  std::istream *in_ = nullptr;
+  std::variant<UIterator, UIteratorP, Port *> code_;
+  UString last_token_;
   bool use_stream_ = false;
   bool has_parsed_ = false;
   Number *last_num_ = nullptr;
@@ -64,8 +65,8 @@ private:
   bool is_file_ = false;
   std::size_t row_ = 0;
   std::size_t col_ = 0;
-  std::vector<StringView> lines_;
-  StringView filename_;
+  std::vector<UString> lines_;
+  const UString filename_;
 };
 
 } // namespace pscm

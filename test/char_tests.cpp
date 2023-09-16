@@ -11,6 +11,7 @@ import pscm;
 #include <pscm/Pair.h>
 #include <pscm/Scheme.h>
 #include <pscm/Symbol.h>
+#include <pscm/icu/Displayable.h>
 #include <pscm/scm_utils.h>
 #include <string>
 #endif

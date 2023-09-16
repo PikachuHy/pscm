@@ -121,6 +121,8 @@ public:
   }
 
   auto format(const pscm::Cell& cell, format_context& ctx) const {
-    return format_to(ctx.out(), "{}", cell.to_string());
+    std::string str;
+    cell.to_string().toUTF8String(str);
+    return format_to(ctx.out(), "{}", str);
   }
 };

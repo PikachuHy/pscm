@@ -21,7 +21,7 @@ public:
     return proc_;
   }
 
-  friend std::ostream& operator<<(std::ostream& out, const Promise& proc);
+  UString to_string() const;
 
 private:
   Procedure *proc_;

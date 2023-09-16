@@ -5,7 +5,6 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Port.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Cell.h"
 #include "pscm/Char.h"
@@ -13,13 +12,21 @@ import fmt;
 #include "pscm/Macro.h"
 #include "pscm/Pair.h"
 #include "pscm/Parser.h"
+#include "pscm/Port.h"
 #include "pscm/Procedure.h"
 #include "pscm/SchemeProxy.h"
 #include "pscm/Str.h"
 #include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
+#include "pscm/icu/ICUCompat.h"
 #include "pscm/scm_utils.h"
+#include "unicode/ucnv.h"
+#if defined(WASM_PLATFORM)
+#else
+#include "unicode/ustream.h"
+#endif
+#include "unicode/utf8.h"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -28,10 +35,54 @@ import fmt;
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Port");
 
+std::tuple<UChar32, uint8_t> read_utf8(std::istream& stream) {
+  char charbuf[5] = {};
+  char *charbufbegin = charbuf;
+  char& first = charbuf[0];
+  if (stream.eof() || stream.fail()) {
+    return std::make_tuple(EOF, 0);
+  }
+  stream.read(charbuf, 1);
+  if (stream.fail()) {
+    return std::make_tuple(EOF, stream.gcount());
+  }
+  else if (U8_IS_SINGLE(first)) {
+    PSCM_ASSERT(first != 0);
+    return std::make_tuple(first, 1);
+  }
+  else if (U8_IS_LEAD(first)) {
+    uint8_t length = U8_COUNT_TRAIL_BYTES_UNSAFE(first);
+    stream.read(&charbuf[1], length);
+    if (stream.fail()) {
+      PSCM_THROW_EXCEPTION("uncomplete utf-8 codepoint in stream"_u);
+    }
+
+    UChar32 ch;
+    U8_GET_OR_FFFD(reinterpret_cast<uint8_t *>(charbufbegin), 0, 0, 5, ch);
+    if (ch == 0xFFFD) {
+      PSCM_WARN("corrupted character, buffer content: {0}", UString(charbuf))
+    }
+    return std::make_tuple(ch, length + 1);
+  }
+  else {
+    PSCM_THROW_EXCEPTION("incorrect position of stream"_u);
+  }
+}
+
+void unget_utf8(std::istream& stream, std::tuple<UChar32, uint8_t>& res) {
+  for (uint8_t i = 0; i < std::get<1>(res); i++) {
+    stream.unget();
+  }
+}
+
 class StandardPort : public Port {
 public:
   StandardPort(bool is_input)
       : is_input_(is_input) {
+  }
+
+  ~StandardPort() {
+    close();
   }
 
   bool is_input_port() const override {
@@ -46,246 +97,280 @@ public:
     // do nothing
   }
 
-  char read_char() override {
+  UChar32 read_char() override {
     PSCM_ASSERT(is_input_);
-    char ch;
-    std::cin >> ch;
-    return ch;
+    auto res = read_utf8(std::cin);
+    return std::get<0>(res);
   }
 
-  char peek_char() override {
+  UChar32 peek_char() override {
     PSCM_ASSERT(is_input_);
-    char ch;
-    ch = std::cin.peek();
-    return ch;
+    auto res = read_utf8(std::cin);
+    unget_utf8(std::cin, res);
+    return std::get<0>(res);
   }
 
-  void write_char(int ch) override {
+  void write_char(UChar32 ch) override {
     PSCM_ASSERT(!is_input_);
-    char c = ch;
-    std::cout << c;
+    uint8_t charbuf[5];
+    uint8_t offset = 0;
+    uint8_t length = U8_LENGTH(ch);
+    bool isError = false;
+    U8_APPEND(charbuf, offset, 5, ch, isError);
+    PSCM_ASSERT(!isError);
+    std::cout.write(reinterpret_cast<char *>(charbuf), length);
   }
 
-  std::string to_string() const override {
-    std::stringstream ss;
-    ss << *this;
-    return ss.str();
+  UString to_string() const override {
+    UString out;
+    out += "#";
+    out += "<";
+    if (is_input_port()) {
+      out += "input: standard input";
+    }
+    else if (is_output_port()) {
+      out += "output: standard output";
+    }
+    else {
+      PSCM_ASSERT("Invalid port");
+    }
+    out += ">";
+    return out;
   }
 
   Cell read() override {
-    Parser parser((std::istream *)&std::cin);
+    Parser parser(this);
     auto expr = parser.parse();
     return expr;
   }
 
   void write(Cell obj) override {
-    std::cout << obj;
+    std::cout << obj.to_string();
   }
 
   Type type() const override {
     return Type::STANDARD_PORT;
   }
 
-  friend std::ostream& operator<<(std::ostream& out, const StandardPort& port) {
-    out << "#";
-    out << "<";
-    if (port.is_input_port()) {
-      out << "input: standard input";
-    }
-    else if (port.is_output_port()) {
-      out << "output: standard output";
-    }
-    else {
-      PSCM_ASSERT("Invalid port");
-    }
-    out << ">";
-    return out;
-  }
-
   bool is_input_;
 };
 
-class StringPort : public Port {
+class StringReadPort : public Port {
 public:
-  StringPort(std::ios_base::openmode mode)
-      : mode_(mode) {
-  }
-
-  StringPort(std::string s, std::ios_base::openmode mode)
-      : mode_(mode) {
-    ss_ << s;
+  StringReadPort(const UString& s)
+      : iter_(s) {
   }
 
   bool is_input_port() const override {
-    return mode_ & std::ios::in;
+    return true;
   }
 
   bool is_output_port() const override {
-    return mode_ & std::ios::out;
+    return false;
   }
 
   void close() override {
     // do nothing
   }
 
-  char read_char() override {
-    PSCM_ASSERT(is_input_port());
-    if (ss_.eof()) {
+  UChar32 read_char() override {
+    UChar32 ch = iter_.next32PostInc();
+    if (ch != UIteratorDone) {
+      return ch;
+    }
+    else {
       return EOF;
     }
-    char ch;
-    ss_.read(&ch, 1);
-    return ch;
   }
 
-  char peek_char() override {
-    PSCM_ASSERT(is_input_port());
-    char ch;
-    ch = ss_.peek();
-    return ch;
+  UChar32 peek_char() override {
+    return iter_.current32();
   }
 
-  void write_char(int ch) override {
-    PSCM_ASSERT(is_output_port());
-    ss_.write((const char *)&ch, 1);
+  void write_char(UChar32 ch) override {
+    PSCM_ASSERT(false);
   }
 
-  std::string to_string() const override {
-    std::stringstream ss;
-    ss << *this;
-    return ss.str();
+  UString to_string() const override {
+    UString out;
+    out += "#";
+    out += "<";
+    out += "input";
+    out += ": ";
+    out += "string ";
+    out += pscm::to_string(this);
+    out += ">";
+    return out;
   }
 
   Cell read() override {
-    Parser parser((std::istream *)&ss_);
+    Parser parser(&iter_);
     auto expr = parser.parse();
     return expr;
   }
 
   void write(Cell obj) override {
-    ss_ << obj;
+    PSCM_ASSERT(false);
   }
 
   Type type() const override {
     return Type::STRING_PORT;
   }
 
-  std::string str() const {
-    return ss_.str();
-  }
-
-  friend std::ostream& operator<<(std::ostream& out, const StringPort& port) {
-    out << "#";
-    out << "<";
-    if (port.is_input_port()) {
-      out << "input";
-    }
-    else if (port.is_output_port()) {
-      out << "output";
-    }
-    else {
-      PSCM_ASSERT("Invalid port");
-    }
-    out << ": ";
-    out << "string ";
-    out << (void *)&port;
-    out << ">";
-    return out;
-  }
-
 private:
-  std::stringstream ss_;
-  std::ios_base::openmode mode_;
+  UIterator iter_;
 };
 
-class FilePort : public Port {
+class StringOutputPort : public Port {
 public:
-  FilePort(StringView filename, std::ios_base::openmode mode)
-      : filename_(filename)
-      , mode_(mode) {
-    f_.open(filename_, mode);
-    if (!f_.is_open()) {
-      PSCM_THROW_EXCEPTION("open file failed: " + filename_);
-    }
+  StringOutputPort() {
   }
 
   bool is_input_port() const override {
-    return mode_ & std::ios::in;
+    return false;
   }
 
   bool is_output_port() const override {
-    return mode_ & std::ios::out;
+    return true;
   }
 
   void close() override {
-    f_.close();
+    // do nothing
   }
 
-  char read_char() override {
-    PSCM_ASSERT(is_input_port());
-    if (f_.eof()) {
-      return EOF;
+  UChar32 read_char() override {
+    PSCM_ASSERT(false);
+    return EOF;
+  }
+
+  UChar32 peek_char() override {
+    PSCM_ASSERT(false);
+    return EOF;
+  }
+
+  void write_char(UChar32 ch) override {
+    s_.append(ch);
+  }
+
+  UString to_string() const override {
+    UString out;
+    out += "#";
+    out += "<";
+    if (is_input_port()) {
+      out += "input";
     }
-    char ch;
-    f_.read(&ch, 1);
-    return ch;
-  }
-
-  char peek_char() override {
-    PSCM_ASSERT(is_input_port());
-    char ch;
-    ch = f_.peek();
-    return ch;
-  }
-
-  void write_char(int ch) override {
-    PSCM_ASSERT(is_output_port());
-    f_.write((const char *)&ch, 1);
-  }
-
-  std::string to_string() const override {
-    std::stringstream ss;
-    ss << *this;
-    return ss.str();
-  }
-
-  Cell read() override {
-    Parser parser((std::istream *)&f_);
-    auto expr = parser.parse();
-    return expr;
-  }
-
-  void write(Cell obj) override {
-    f_ << obj;
-  }
-
-  Type type() const override {
-    return Type::FILE_PORT;
-  }
-
-  friend std::ostream& operator<<(std::ostream& out, const FilePort& port) {
-    out << "#";
-    out << "<";
-    if (port.is_input_port()) {
-      out << "input";
-    }
-    else if (port.is_output_port()) {
-      out << "output";
+    else if (is_output_port()) {
+      out += "output";
     }
     else {
       PSCM_ASSERT("Invalid port");
     }
-    out << ": ";
-    out << port.filename_;
-    out << ">";
+    out += ": ";
+    out += "string ";
+    out += pscm::to_string(this);
+    out += ">";
     return out;
   }
 
+  Cell read() override {
+    PSCM_ASSERT(false);
+    return Cell::nil();
+  }
+
+  void write(Cell obj) override {
+    s_ += obj.to_string();
+  }
+
+  Type type() const override {
+    return Type::STRING_PORT;
+  }
+
+  UString str() const {
+    return s_;
+  }
+
 private:
-  std::string filename_;
-  std::fstream f_;
-  std::ios_base::openmode mode_;
+  UString s_;
 };
+
+FilePort::FilePort(const UString& filename, std::ios_base::openmode mode)
+    : filename_(filename)
+    , mode_(mode) {
+  open_fstream(f_, filename_, mode);
+  if (!f_.is_open()) {
+    PSCM_THROW_EXCEPTION("open file failed: " + filename_);
+  }
+}
+
+bool FilePort::is_input_port() const {
+  return mode_ & std::ios::in;
+}
+
+bool FilePort::is_output_port() const {
+  return mode_ & std::ios::out;
+}
+
+void FilePort::close() {
+  f_.close();
+}
+
+UChar32 FilePort::read_char() {
+  PSCM_ASSERT(is_input_port());
+  auto res = read_utf8(f_);
+  return std::get<0>(res);
+}
+
+UChar32 FilePort::peek_char() {
+  PSCM_ASSERT(is_input_port());
+  auto res = read_utf8(f_);
+  unget_utf8(f_, res);
+  return std::get<0>(res);
+}
+
+void FilePort::write_char(UChar32 ch) {
+  PSCM_ASSERT(is_output_port());
+  uint8_t charbuf[5];
+  uint8_t offset = 0;
+  uint8_t length = U8_LENGTH(ch);
+  bool isError = false;
+  U8_APPEND(charbuf, offset, 5, ch, isError);
+  PSCM_ASSERT(!isError);
+  f_.write(reinterpret_cast<char *>(charbuf), length);
+}
+
+UString FilePort::to_string() const {
+  UString out;
+  out += "#";
+  out += "<";
+  if (is_input_port()) {
+    out += "input";
+  }
+  else if (is_output_port()) {
+    out += "output";
+  }
+  else {
+    PSCM_ASSERT("Invalid port");
+  }
+  out += ": ";
+  out += filename_;
+  out += ">";
+  return out;
+}
+
+Cell FilePort::read() {
+  Parser parser(this);
+  auto expr = parser.parse();
+  return expr;
+}
+
+void FilePort::write(Cell obj) {
+  PSCM_INFO("object written: `{0}`", obj.to_string())
+  f_ << obj.to_string();
+}
+
+Port::Type FilePort::type() const {
+  return Type::FILE_PORT;
+}
 
 Cell is_input_port(Cell args) {
   PSCM_ASSERT(args.is_pair());
@@ -398,7 +483,8 @@ Cell write_char(Cell args) {
   auto port = cdr(args);
   auto ch = arg.to_char();
   if (port.is_nil()) {
-    std::cout << char(ch->to_int());
+    UString str(ch->to_string());
+    std::cout << str;
   }
   else {
     port = car(port);
@@ -469,14 +555,14 @@ Cell write(Cell args) {
 
 Cell builtin_create_string_port(Cell args) {
   if (args.is_nil()) {
-    auto port = new StringPort(std::ios::out);
+    auto port = new StringOutputPort();
     return Cell(port);
   }
   else {
     auto arg = car(args);
     PSCM_ASSERT(arg.is_str());
     auto str = arg.to_str();
-    auto port = new StringPort(str->str(), std::ios::in);
+    auto port = new StringReadPort(str->str());
     return Cell(port);
   }
 }
@@ -486,8 +572,8 @@ Cell builtin_string_port_to_string(Cell args) {
   auto arg = car(args);
   PSCM_ASSERT(arg.is_port());
   auto port = arg.to_port();
-  PSCM_ASSERT(port->type() == Port::Type::STRING_PORT);
-  auto sp = (StringPort *)port;
+  PSCM_ASSERT(port->type() == Port::Type::STRING_PORT && port->is_output_port());
+  auto sp = dynamic_cast<StringOutputPort *>(port);
   auto s = sp->str();
   return new String(s);
 }
@@ -505,7 +591,7 @@ Procedure *Procedure::create_call_with_output_string(SymbolTable *env) {
   auto port_sym = new Symbol("port");
   auto call_proc = list(new Symbol("apply"), proc, list(new Symbol("list"), port_sym));
   Cell body = list(new Symbol("let"), list(list(port_sym, list(func_create))), call_proc, list(func_str, port_sym));
-  PSCM_DEBUG("call-with-output-string body: {}", body.pretty_string());
+  PSCM_DEBUG("call-with-output-string body: {0}", body.pretty_string());
   Cell args = list(proc);
   body = cons(body, nil);
   return new Procedure(name, args, body, env);
@@ -523,7 +609,7 @@ Procedure *Procedure::create_call_with_input_string(SymbolTable *env) {
   auto port_sym = new Symbol("port");
   auto call_proc = list(new Symbol("apply"), proc, list(new Symbol("list"), port_sym));
   Cell body = list(new Symbol("let"), list(list(port_sym, list(func_create, str))), call_proc);
-  PSCM_DEBUG("call-with-input-string body: {}", body.pretty_string());
+  PSCM_DEBUG("call-with-input-string body: {0}", body.pretty_string());
   Cell args = list(str, proc);
   body = cons(body, nil);
   return new Procedure(name, args, body, env);
@@ -538,7 +624,7 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(Port, "load", Label::APPLY_LOAD, "(filena
   PSCM_ASSERT(val.is_str());
   auto s = val.to_str();
   auto filename = s->str();
-  bool ok = scm.load(std::string(filename).c_str());
+  bool ok = scm.load(filename);
   return Cell(ok);
 }
 

@@ -4,7 +4,8 @@
 
 #include "pscm/logger/Logger.h"
 #include "pscm/logger/Appender.h"
-#include "pscm/logger/Event.h"
+#include "unicode/msgfmt.h"
+#include <cassert>
 #include <mutex>
 #include <unordered_map>
 #include <utility>
@@ -12,7 +13,7 @@
 namespace pscm {
 namespace logger {
 
-Logger::Logger(std::string name, pscm::logger::Logger::Level level, pscm::logger::Logger *parent)
+Logger::Logger(std::string name, pscm::logger::Level level, pscm::logger::Logger *parent)
     : name_(std::move(name))
     , level_(level)
     , parent_(parent) {
@@ -53,7 +54,7 @@ Logger *Logger::get_logger(std::string name) {
   return ret;
 }
 
-void Logger::log(Logger::Level level, std::string msg, SourceLocation loc) {
+void Logger::log(Level level, UString msg, SourceLocation loc) {
   Event event;
   event.level = level;
   event.msg = std::move(msg);
@@ -81,5 +82,49 @@ bool Logger::is_level_enabled(Level level) const {
   }
   return level <= level_;
 }
+
+void _setup_formattable(UFormattable& res, const std::string& txt) {
+  res.setString(UString::fromUTF8(txt));
+};
+
+void _setup_formattable(UFormattable& res, std::string_view txt) {
+  res.setString(UString::fromUTF8(std::string(txt)));
+};
+
+void _setup_formattable(UFormattable& res, const std::vector<std::string>& txt) {
+  if (txt.empty()) {
+    res.setString("[]");
+    return;
+  }
+  std::string msg;
+  msg.append("[");
+  for (int i = 0; i < txt.size() - 1; i++) {
+    msg.append(txt[i]);
+    msg.append(", ");
+  }
+  msg.resize(msg.size() - 2);
+  msg.append("]");
+  res.setString(UString::fromUTF8(msg));
+};
+
+void _setup_formattable(UFormattable& res, const UString& txt) {
+  res.setString(txt);
+};
+
+void _setup_formattable(UFormattable& res, const void *ptr) {
+  res.setString(pscm::to_string(ptr));
+};
+
+void _setup_formattable(UFormattable& res, std::int64_t num) {
+  res.setInt64(num);
+};
+
+void _setup_formattable(UFormattable& res, std::int32_t num) {
+  res.setLong(num);
+};
+
+void _setup_formattable(UFormattable& res, const Exception& txt) {
+  res.setString(UString(txt.what()));
+};
 } // namespace logger
 } // namespace pscm

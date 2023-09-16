@@ -19,45 +19,26 @@ gen_pscm_version_info(
 )
 
 cc_library(
-    name = "pscm.misc",
-    srcs = glob(["src/misc/*.cpp"]),
-    hdrs = glob(["include/pscm/misc/*.h"]),
-    copts = ["-std=c++20"],
-    strip_include_prefix = "include",
-)
-
-cc_library(
-    name = "pscm.logger",
-    srcs = glob(["src/logger/*.cpp"]),
-    hdrs = glob(["include/pscm/logger/*.h"]),
-    copts = ["-std=c++20"],
-    strip_include_prefix = "include",
-    deps = [
-        ":pscm.misc",
-        "@spdlog",
-    ],
-)
-
-cc_library(
     name = "pscm",
     srcs = glob(
         [
-            "src/*.cpp",
+            "src/**/*.cpp",
         ],
     ) + [
         ":src/version.cpp",
     ],
     hdrs = glob(
-        ["include/pscm/*.h"],
+        ["include/pscm/**/*.h"],
     ),
     copts = select({
         # disable error: result of comparison of constant -1 with expression of type 'char' is always false
-        "@platforms//cpu:wasm32": [
-            "-Wno-tautological-constant-out-of-range-compare",
-            "-std=c++20",
-        ],
-        "//conditions:default": ["-std=c++20"],
-    }),
+        "@platforms//cpu:wasm32": ["-Wno-tautological-constant-out-of-range-compare"],
+        "//conditions:default": [],
+    }) + [
+        "-Wno-sign-compare",
+        "-std=c++20",
+        "-Wno-unused-value",
+    ],
     defines = select({
         "@platforms//cpu:wasm32": ["WASM_PLATFORM"],
         "//conditions:default": [],
@@ -81,9 +62,13 @@ cc_library(
     }),
     visibility = ["//visibility:public"],
     deps = [
-        ":pscm.logger",
+        "@spdlog",
         "@cpp-linenoise",
         "@ust",
+        "@icu",
+        # "@icu//:io",
+        # "@icu//:stubdata",
+        "@mscharconv",
         # compat c++14
         # "@filesystem",
         # "@optional",

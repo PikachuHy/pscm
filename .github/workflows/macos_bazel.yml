@@ -8,7 +8,7 @@ on:
 
 jobs:
   build_with_bazel:
-    runs-on: macos-12
+    runs-on: macos-13
 
     steps:
       - uses: actions/checkout@v3
@@ -23,15 +23,15 @@ jobs:
             ${{ runner.os }}-bazel-
 
       - name: Build
-        run: bazel build \:all
+        run: bazel build \:all --config=macos
 
       - name: Test
-        run: bazel test \:all --test_output=errors
+        run: bazel test \:all --config=macos --test_output=errors
 
       - name: Build ios App
         # build with c++20
         # workaround from https://github.com/bazelbuild/bazel/issues/12716#issuecomment-1113754835
-        run: bazel build //ios/app:ios-app "--per_file_copt=.*\.mm\$@-std=c++20" "--per_file_copt=.*\.cpp\$@-std=c++20"
+        run: bazel build //ios/app:ios-app "--per_file_copt=.*\.mm\$@-std=c++20" "--per_file_copt=.*\.cpp\$@-std=c++20" --config=macos
 
       - name: Upload ios ipa
         uses: actions/upload-artifact@v3

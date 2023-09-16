@@ -8,10 +8,15 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/SymbolTable.h"
 #include "pscm/Exception.h"
 #include "pscm/Symbol.h"
+#include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
+#include "pscm/icu/ICUCompat.h"
+#if defined(WASM_PLATFORM)
+#else
+#include "unicode/ustream.h"
+#endif
 #include <iostream>
 #include <spdlog/fmt/fmt.h>
 #include <string>
@@ -34,7 +39,7 @@ bool SymbolTable::contains(Symbol *sym) const {
 
 void SymbolTable::insert(Symbol *sym, Cell cell) {
   PSCM_ASSERT(sym);
-  map_[sym->name()] = new Entry{ .data = cell };
+  map_[UString(sym->name())] = new Entry{ .data = cell };
 }
 
 bool SymbolTable::remove(Symbol *sym) {
@@ -44,14 +49,14 @@ bool SymbolTable::remove(Symbol *sym) {
 
 Cell SymbolTable::get(Symbol *sym, SourceLocation loc) const {
   PSCM_ASSERT(sym);
-  auto name = sym->name();
+  const auto name = sym->name();
   if (map_.find(name) != map_.end()) {
     return map_.at(name)->data;
   }
   if (parent_) {
     return parent_->get(sym, loc);
   }
-  PSCM_THROW_EXCEPTION(loc.to_string() + ", Unbound variable: "s + std::string(sym->name()));
+  PSCM_THROW_EXCEPTION(loc.to_string() + ", Unbound variable: " + sym->name());
 }
 
 Cell SymbolTable::get_or(Symbol *sym, Cell default_value, SourceLocation loc) const {
@@ -63,7 +68,7 @@ Cell SymbolTable::get_or(Symbol *sym, Cell default_value, SourceLocation loc) co
     return parent_->get_or(sym, default_value, loc);
   }
   sym->print_debug_info();
-  PSCM_THROW_EXCEPTION(loc.to_string() + ", Unbound variable: "s + std::string(sym->name()));
+  PSCM_THROW_EXCEPTION(loc.to_string() + ", Unbound variable: " + sym->name());
 }
 
 void SymbolTable::set(Symbol *sym, Cell value, SourceLocation loc) {
@@ -77,7 +82,7 @@ void SymbolTable::set(Symbol *sym, Cell value, SourceLocation loc) {
     parent_->set(sym, value, loc);
   }
   else {
-    PSCM_THROW_EXCEPTION(loc.to_string() + ", Unbound variable: "s + std::string(sym->name()));
+    PSCM_THROW_EXCEPTION(loc.to_string() + ", Unbound variable: " + sym->name());
   }
 }
 

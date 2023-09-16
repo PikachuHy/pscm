@@ -40,14 +40,14 @@ std::optional<std::string> find_repo() {
 int build_target(std::string_view repo_path, Label label) {
   std::string filename = fmt::format("{}/{}/build.pscm", repo_path, label.package());
   if (!fs::exists(filename)) {
-    PSCM_ERROR("no such file: {}", filename);
+    PSCM_ERROR("no such file: {0}", filename);
     std::exit(1);
   }
-  PSCM_INFO("load {}", filename);
+  PSCM_INFO("load {0}", filename);
   std::fstream ifs;
   ifs.open(filename, std::ios::in);
   if (!ifs.is_open()) {
-    PSCM_ERROR("open {} failed", filename);
+    PSCM_ERROR("open {0} failed", filename);
     return 2;
   }
 
@@ -61,23 +61,23 @@ int build_target(std::string_view repo_path, Label label) {
   using namespace pscm;
   try {
     RuleContext ctx(repo_path, label.repo(), label.package());
-    Parser parser(code, filename);
+    Parser parser(UString::fromUTF8(code), UString::fromUTF8(filename));
     Cell expr = parser.next();
     while (!expr.is_none()) {
       if (expr.is_pair() && car(expr).is_sym()) {
         auto rule_name = car(expr);
         if (rule_name == "cpp_library"_sym) {
           auto rule = _cpp_library_impl(ctx, cdr(expr));
-          PSCM_INFO("parse {} {}", rule_name, rule->name());
+          PSCM_INFO("parse {0} {1}", rule_name, rule->name());
           rule_map[pscm::build::Label(label.repo(), label.package(), rule->name())] = rule;
         }
         else if (rule_name == "cpp_binary"_sym || rule_name == "cpp_test"_sym) {
           auto rule = _cpp_binary_impl(ctx, cdr(expr));
-          PSCM_INFO("parse {} {}", rule_name, rule->name());
+          PSCM_INFO("parse {0} {1}", rule_name, rule->name());
           rule_map[pscm::build::Label(label.repo(), label.package(), rule->name())] = rule;
         }
         else {
-          PSCM_INFO("rule {} not supported now", rule_name);
+          PSCM_INFO("rule {0} not supported now", rule_name);
         }
       }
       expr = parser.next();
@@ -87,7 +87,7 @@ int build_target(std::string_view repo_path, Label label) {
   }
 
   catch (Exception& ex) {
-    PSCM_ERROR("load file {} error", filename);
+    PSCM_ERROR("load file {0} error", filename);
   }
   return 0;
 }
@@ -109,12 +109,17 @@ export int main(int argc, char **argv) {
     PSCM_ERROR("repo.pscm not found");
     std::exit(1);
   }
-  PSCM_INFO("find repo: {}", repo_path);
+  if (repo_path.has_value()) {
+    PSCM_INFO("find repo: {0}", repo_path.value());
+  }
+  else {
+    PSCM_ERROR("repo not found");
+  }
   std::string target;
   if (argc >= 2) {
     if (argv[1] == "clean"s) {
       auto build_path = repo_path.value() + "/pscm-build-bin"s;
-      PSCM_INFO("clean build directory: {}", build_path);
+      PSCM_INFO("clean build directory: {0}", build_path);
       fs::remove_all(build_path);
       return 0;
     }
@@ -128,13 +133,13 @@ export int main(int argc, char **argv) {
       while (arg_idx < argc) {
         if (std::string_view(argv[arg_idx]) == "-s") {
           arg_idx++;
-          pscm::logger::Logger::get_logger("pscm.build.Action")->set_level(pscm::logger::Logger::Level::DEBUG_);
+          pscm::logger::Logger::get_logger("pscm.build.Action")->set_level(pscm::logger::Level::DEBUG_);
         }
         else {
           target = argv[arg_idx];
           label = Label::parse(target);
           if (!label.has_value()) {
-            PSCM_ERROR("bad target: {}", target);
+            PSCM_ERROR("bad target: {0}", target);
             return -1;
           }
           std::string package;
@@ -146,7 +151,7 @@ export int main(int argc, char **argv) {
               return 1;
             }
             package = std::string(fs::path(filename).parent_path().c_str()).substr(repo_path->size());
-            PSCM_INFO("package: {}", package);
+            PSCM_INFO("package: {0}", package);
             label = Label(label->repo(), package, label->name());
           }
           arg_idx++;
@@ -160,7 +165,7 @@ export int main(int argc, char **argv) {
       return 0;
     }
     else {
-      PSCM_ERROR("invalid subcommand: {}, only support clean, build now", argv[1]);
+      PSCM_ERROR("invalid subcommand: {0}, only support clean, build now", argv[1]);
       show_usage();
       return 0;
     }

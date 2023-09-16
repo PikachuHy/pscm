@@ -67,3 +67,4 @@ pscm-build-bin
 
 #coverage
 cov/
+/build-*

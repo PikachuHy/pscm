@@ -12,7 +12,7 @@ public:
     size_ = 0;
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const HashTable& hash_table);
+  UString to_string() const;
   Cell set(Cell key, Cell value, Cell::ScmCmp cmp_func = Cell::is_equal);
   Cell get(Cell key, Cell::ScmCmp cmp_func = Cell::is_equal);
   Cell remove(Cell key, Cell::ScmCmp cmp_func = Cell::is_equal);

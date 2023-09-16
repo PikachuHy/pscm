@@ -25,7 +25,7 @@ public:
 
   void export_symbol(Symbol *sym);
   void use_module(Module *m, bool use_all = false);
-  friend std::ostream& operator<<(std::ostream& os, const Module& m);
+  UString to_string() const;
 
 private:
   Cell name_;

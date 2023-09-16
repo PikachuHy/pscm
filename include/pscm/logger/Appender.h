@@ -3,7 +3,6 @@
 //
 
 #pragma once
-#include "pscm/logger/Event.h"
 #include "pscm/logger/Logger.h"
 #include "pscm/misc/SourceLocation.h"
 #include <string>

@@ -2,9 +2,9 @@ name: Linux Clang
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   build_with_clang:
@@ -16,6 +16,26 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Install LLVM16
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 16
+          sudo apt-get install clang-tools-16
+      - name: Use LLVM16
+        run: |
+          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-16 100
+          sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-16 100
+          sudo update-alternatives --install /usr/bin/clang-scan-deps clang-scan-deps /usr/bin/clang-scan-deps-16 100
+          sudo update-alternatives --config cc
+      - name: Check LLVM
+        run: |
+          clang --version
+
+      - name: Check CMake
+        run: |
+          cmake --version
+          
       - name: deps
         run: |
           sudo apt-get install -y build-essential
@@ -27,6 +47,8 @@ jobs:
 
       - name: Install ninja-build tool
         uses: seanmiddleditch/gha-setup-ninja@master
+        with:
+          version: "1.11.1"
 
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
@@ -34,12 +56,23 @@ jobs:
           key: ${{ github.job }}-${{ matrix.mode}}
 
       - name: Configure CMake
-        run: CXX=clang++ CC=clang cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON
+        run: CXX=clang++-16 CC=clang-16 cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --config ${{matrix.mode}} -j --verbose
 
       - name: Test
         working-directory: ${{github.workspace}}/build/test
+        run: ctest -C ${{matrix.mode}} --output-on-failure
+      
+
+      - name: Configure CMake with C++20 Modules
+        run: CXX=clang++-16 CC=clang-16 cmake -B ${{github.workspace}}/build2 -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON -DPSCM_USE_CXX20_MODULES=ON
+
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build2 --config ${{matrix.mode}} -j --verbose
+
+      - name: Test
+        working-directory: ${{github.workspace}}/build2/test
         run: ctest -C ${{matrix.mode}} --output-on-failure
       

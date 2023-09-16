@@ -5,8 +5,8 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/SchemeProxy.h"
 #include "pscm/Scheme.h"
+#include "pscm/SchemeProxy.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
@@ -26,7 +26,7 @@ Cell SchemeProxy::eval(SymbolTable *env, Cell expr) {
   return scm_.eval(env, expr);
 }
 
-bool SchemeProxy::load(const char *filename) {
+bool SchemeProxy::load(const UString& filename) {
   return scm_.load(filename);
 }
 
@@ -47,7 +47,7 @@ Module *SchemeProxy::get_module(Cell module_name) const {
   return scm_.module_map_.at(module_name);
 }
 
-void SchemeProxy::load_module(const std::string& filename, Cell module_name) {
+void SchemeProxy::load_module(const UString& filename, Cell module_name) {
   scm_.load_module(filename, module_name);
 }
 

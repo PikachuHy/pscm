@@ -5,9 +5,9 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Promise.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Procedure.h"
+#include "pscm/Promise.h"
 #include "pscm/SchemeProxy.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
@@ -15,15 +15,17 @@ import fmt;
 #endif
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Promise");
-std::ostream& operator<<(std::ostream& out, const Promise& promise) {
-  out << "#";
-  out << "<";
-  out << "promise";
-  out << " ";
-  auto proc = promise.proc();
-  PSCM_ASSERT(proc);
-  out << *proc;
-  out << ">";
+
+UString Promise::to_string() const {
+  UString out;
+  out += "#";
+  out += "<";
+  out += "promise";
+  out += " ";
+  auto proc_ = proc();
+  PSCM_ASSERT(proc_);
+  out += proc_->to_string();
+  out += ">";
   return out;
 }
 

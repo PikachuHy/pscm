@@ -38,8 +38,9 @@ const char *EMSCRIPTEN_KEEPALIVE eval(void *scm, const char *code) {
   auto p = (Scheme *)scm;
   std::cout << "eval: " << code << std::endl;
   auto ret = p->eval(code);
-  std::cout << "--> " << ret << std::endl;
-  auto s = ret.to_string();
+  std::string s;
+  ret.to_string().toUTF8String(s);
+  std::cout << "--> " << s << std::endl;
   char *str = new char[s.size() + 1];
   std::memcpy(str, s.data(), s.size());
   str[s.size()] = '\0';
@@ -52,7 +53,9 @@ int EMSCRIPTEN_KEEPALIVE main() {
   spdlog::set_level(spdlog::level::err);
   Scheme scm;
   auto version = scm.eval("(version)");
+  std::string version_str;
+  version.to_string().toUTF8String(version_str);
   std::cout << "Welcome to PikachuHy's Scheme" << std::endl;
-  std::cout << "version: " << version << std::endl;
+  std::cout << "version: " << version_str << std::endl;
   return 0;
 }

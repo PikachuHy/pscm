@@ -1,3 +1,5 @@
 build --incompatible_strict_action_env
 build --verbose_failures
 build --workspace_status_command "python3 workspace_status.py"
+build:macos --define client_type=macos
+build:android --define client_type=android

@@ -5,8 +5,8 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Keyword.h"
 #include "pscm/ApiManager.h"
+#include "pscm/Keyword.h"
 #include "pscm/Pair.h"
 #include "pscm/Symbol.h"
 #include "pscm/common_def.h"
@@ -15,11 +15,12 @@ import fmt;
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Keyword");
 
-std::ostream& operator<<(std::ostream& os, const Keyword& keyword) {
-  PSCM_ASSERT(keyword.sym_);
-  os << '#';
-  os << keyword.sym_->name();
-  return os;
+UString Keyword::to_string() const {
+  PSCM_ASSERT(sym_);
+  UString res;
+  res += '#';
+  res += sym_->name();
+  return res;
 }
 
 bool operator==(const Keyword& lhs, const Keyword& rhs) {

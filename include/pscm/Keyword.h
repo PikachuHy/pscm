@@ -7,9 +7,9 @@ public:
       : sym_(sym) {
   }
 
-  friend std::ostream& operator<<(std::ostream& os, const Keyword& keyword);
   friend bool operator==(const Keyword& lhs, const Keyword& rhs);
   HashCodeType hash_code() const;
+  UString to_string() const;
 
   Symbol *sym() const {
     return sym_;

@@ -13,8 +13,10 @@ import fmt;
 #include <spdlog/fmt/chrono.h>
 #include <spdlog/fmt/fmt.h>
 #endif
+
+namespace fmt {
 template <>
-class fmt::formatter<pscm::logger::Logger::Level> {
+class formatter<pscm::logger::Level> {
 public:
   constexpr auto parse(format_parse_context& ctx) {
     // PSCM_THROW_EXCEPTION("not supported now");
@@ -22,24 +24,24 @@ public:
     return i;
   }
 
-  auto format(const pscm::logger::Logger::Level level, format_context& ctx) const {
+  auto format(const pscm::logger::Level level, format_context& ctx) const {
     switch (level) {
-    case pscm::logger::Logger::Level::NONE:
+    case pscm::logger::Level::NONE:
       break;
-    case pscm::logger::Logger::Level::FATAL:
-      return format_to(ctx.out(), "{}{}{}{}", on_red, white, "FATAL", reset, reset);
-    case pscm::logger::Logger::Level::ERROR_:
-      return format_to(ctx.out(), "{}{}{}", red, "ERROR", reset);
-    case pscm::logger::Logger::Level::WARN:
-      return format_to(ctx.out(), "{}{}{}", yellow, "WARN", reset);
-    case pscm::logger::Logger::Level::INFO:
-      return format_to(ctx.out(), "{}{}{}", green, "INFO", reset);
-    case pscm::logger::Logger::Level::DEBUG_:
-      return format_to(ctx.out(), "{}{}{}", cyan, "DEBUG", reset);
-    case pscm::logger::Logger::Level::TRACE:
-      return format_to(ctx.out(), "{}", "TRACE");
+    case pscm::logger::Level::FATAL:
+      return fmt::format_to(ctx.out(), "{}{}{}{}", on_red, white, "FATAL", reset, reset);
+    case pscm::logger::Level::ERROR_:
+      return fmt::format_to(ctx.out(), "{}{}{}", red, "ERROR", reset);
+    case pscm::logger::Level::WARN:
+      return fmt::format_to(ctx.out(), "{}{}{}", yellow, "WARN", reset);
+    case pscm::logger::Level::INFO:
+      return fmt::format_to(ctx.out(), "{}{}{}", green, "INFO", reset);
+    case pscm::logger::Level::DEBUG_:
+      return fmt::format_to(ctx.out(), "{}{}{}", cyan, "DEBUG", reset);
+    case pscm::logger::Level::TRACE:
+      return fmt::format_to(ctx.out(), "{}", "TRACE");
     }
-    return format_to(ctx.out(), "{}", "");
+    return fmt::format_to(ctx.out(), "{}", "");
   }
 
   // Formatting codes
@@ -78,11 +80,29 @@ public:
   const std::string bold_on_red = "\033[1m\033[41m";
 };
 
+template <>
+class formatter<pscm::UString> {
+public:
+  constexpr auto parse(format_parse_context& ctx) {
+    // PSCM_THROW_EXCEPTION("not supported now");
+    auto i = ctx.begin();
+    return i;
+  }
+
+  auto format(const pscm::UString& str, format_context& ctx) const {
+    std::string utf8;
+    str.toUTF8String(utf8);
+    return fmt::format_to(ctx.out(), "{}", utf8);
+  }
+};
+
+} // namespace fmt
+
 namespace pscm {
 namespace logger {
 
 int ConsoleAppender::append(Event& event) {
-  if (event.level == Logger::Level::NONE) {
+  if (event.level == Level::NONE) {
     return 0;
   }
   auto now = std::chrono::system_clock::now();
