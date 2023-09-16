@@ -19,7 +19,7 @@ public:
       , env_(env) {
   }
 
-  friend std::ostream& operator<<(std::ostream& out, const Procedure& proc);
+  UString to_string() const;
 
   Symbol *name() const {
     return name_;

@@ -7,6 +7,7 @@
 import pscm;
 #else
 #include <pscm/Number.h>
+#include <pscm/icu/Displayable.h>
 #endif
 using namespace doctest;
 using namespace pscm;

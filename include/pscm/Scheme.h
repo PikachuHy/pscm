@@ -15,16 +15,16 @@ class Scheme {
 public:
   Scheme(bool use_register_machine = false);
   ~Scheme();
-  Cell eval(const char *code);
-  void eval_all(const char *code, SourceLocation loc = {});
+  Cell eval(const UString& code);
+  void eval_all(const UString& code, SourceLocation loc = {});
   Cell eval(Cell expr);
-  bool load(const char *filename);
+  bool load(const UString& filename);
   void add_func(Symbol *sym, Function *func);
   void repl();
 
 private:
   [[nodiscard]] Cell eval(SymbolTable *env, Cell expr);
-  Cell eval_internal(SymbolTable *env, const char *code);
+  Cell eval_internal(SymbolTable *env, const UString code);
   [[nodiscard]] Cell eval_args(SymbolTable *env, Cell args, SourceLocation loc = {});
   [[nodiscard]] Cell lookup(SymbolTable *env, Cell expr, SourceLocation loc = {});
   [[nodiscard]] Cell call_proc(SymbolTable *& env, Procedure *proc, Cell args, SourceLocation loc = {});
@@ -34,7 +34,7 @@ private:
     return current_module_;
   };
 
-  void load_module(const std::string& filename, Cell module_name);
+  void load_module(const UString& filename, Cell module_name);
   friend Cell debug_set(Scheme& scm, SymbolTable *env, Cell args);
   friend class QuasiQuotationExpander;
   friend class Macro;

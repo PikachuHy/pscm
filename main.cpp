@@ -1,6 +1,7 @@
 //
 // Created by PikachuHy on 2023/4/5.
 //
+#include <unicode/ustream.h>
 #ifdef PSCM_USE_CXX20_MODULES
 import pscm;
 import std;
@@ -31,13 +32,13 @@ int main(int argc, char **argv) {
   Scheme scm;
   auto version = scm.eval("(version)");
   std::cout << "Welcome to PikachuHy's Scheme" << std::endl;
-  std::cout << "version: " << version << std::endl;
+  std::cout << "version: " << version.to_string() << std::endl;
   bool use_register_machine = false;
   int index = 1;
   while (index < argc) {
     std::string arg = argv[index];
     if (arg == "-v" || arg == "--version") {
-      std::cout << "PikachuHy's Scheme " << version << std::endl;
+      std::cout << "PikachuHy's Scheme " << version.to_string() << std::endl;
       std::cout << "Copyright (c) 2023 PikachuHy" << std::endl;
       return 0;
     }

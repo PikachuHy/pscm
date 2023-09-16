@@ -14,6 +14,12 @@ public:
   // :foo
   static std::optional<Label> parse(std::string_view s);
 
+  static std::optional<Label> parse(const UString& s) {
+    std::string converted;
+    s.toUTF8String(converted);
+    return parse(converted);
+  }
+
   Label() {
   }
 

@@ -14,6 +14,7 @@ import fmt;
 #include "pscm/scm_utils.h"
 #include <spdlog/fmt/fmt.h>
 #include <string>
+#include <unicode/uchar.h>
 #endif
 using namespace std::string_literals;
 
@@ -28,7 +29,7 @@ static Char ch_minus("-");
 static Char ch_semicolon(";");
 static Char ch_point(".");
 
-Cell Char::from(char ch) {
+Cell Char::from(UChar32 ch) {
   if (ch == '@') {
     return &ch_at;
   }
@@ -98,43 +99,30 @@ Cell Char::from(char ch) {
     return &tmp;
   }
   else if (ch == EOF) {
-    std::string s;
-    s.resize(1);
-    s[0] = ch;
-    return new Char(std::move(s));
+    return new Char(EOF);
   }
-  else if (std::isalnum(ch)) {
-    std::string s;
-    s.resize(1);
-    s[0] = ch;
-    return new Char(std::move(s));
-  }
-  else if (int(ch) <= 32) {
-    std::string s;
-    s.resize(1);
-    s[0] = ch;
-    return new Char(std::move(s));
+  else if (u_isalnum(ch)) {
+    return new Char(ch);
   }
   else {
-    PSCM_THROW_EXCEPTION("unsupported char: "s + ch);
+    return new Char(ch);
   }
 }
 
-std::ostream& operator<<(std::ostream& out, const Char& ch) {
-  PSCM_ASSERT(!ch.ch_.empty());
-  if (ch.ch_.size() == 1) {
-    switch (ch.ch_.at(0)) {
-    case '\n': {
-      out << "#\\newline";
-      return out;
-    }
-    case ' ': {
-      out << "#\\space";
-      return out;
-    }
-    }
+UString Char::to_string() const {
+  switch (ch_) {
+  case '\n': {
+    return "#\\newline";
   }
-  return out << "#\\" << ch.ch_;
+  case ' ': {
+    return "#\\space";
+  }
+  default: {
+    UString out("#\\");
+    out += ch_;
+    return out;
+  }
+  }
 }
 
 bool Char::operator==(const Char& rhs) const {
@@ -158,48 +146,34 @@ bool Char::operator>=(const Char& rhs) const {
 }
 
 void Char::display(Port& port) const {
-  PSCM_ASSERT(!ch_.empty());
-  for (auto ch : ch_) {
-    port.write_char(ch);
-  }
+  port.write_char(ch_);
 }
 
 bool Char::is_alphabetic() const {
-  return ch_.size() == 1 && std::isalpha(ch_[0]);
+  return u_isalpha(ch_);
 }
 
 bool Char::is_numeric() const {
-  return ch_.size() == 1 && std::isalnum(ch_[0]) && !std::isalpha(ch_[0]);
+  return u_isdigit(ch_);
 }
 
 bool Char::is_whitespace() const {
-  return ch_.size() == 1 && std::isspace(ch_[0]);
+  return u_isWhitespace(ch_);
 }
 
 bool Char::is_eof() const {
-  return ch_.size() == 1 && ch_[0] == EOF;
+  return ch_ == EOF;
 }
 
 Char Char::to_downcase() const {
-  std::string str;
-  str.resize(ch_.size());
-  for (size_t i = 0; i < ch_.size(); i++) {
-    str[i] = std::tolower(ch_[i]);
-  }
-  return Char(std::move(str));
+  return Char(u_tolower(ch_));
 }
 
 Char Char::to_upcase() const {
-  std::string str;
-  str.resize(ch_.size());
-  for (size_t i = 0; i < ch_.size(); i++) {
-    str[i] = std::toupper(ch_[i]);
-  }
-  return Char(std::move(str));
+  return Char(u_toupper(ch_));
 }
 
-std::int64_t Char::to_int() const {
-  PSCM_ASSERT(ch_.size() == 1);
-  return int(ch_[0]);
+UChar32 Char::to_int() const {
+  return int(ch_);
 }
 } // namespace pscm

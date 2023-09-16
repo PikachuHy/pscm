@@ -11,6 +11,7 @@ import pscm;
 #include <pscm/Pair.h>
 #include <pscm/Procedure.h>
 #include <pscm/Symbol.h>
+#include <pscm/icu/Displayable.h>
 #endif
 using namespace pscm;
 using namespace doctest;

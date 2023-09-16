@@ -5,9 +5,9 @@ import pscm;
 import std;
 import fmt;
 #else
-#include "pscm/Module.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Macro.h"
+#include "pscm/Module.h"
 #include "pscm/Procedure.h"
 #include "pscm/SchemeProxy.h"
 #include "pscm/Str.h"
@@ -49,45 +49,47 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(Module, "set-current-module", Label::APPL
   return Cell::none();
 }
 
-std::string check_module(Cell name, const std::vector<std::string>& load_path_vec) {
-  std::string path;
+UString check_module(Cell name, const std::vector<UString>& load_path_vec) {
+  UString path;
   for_each(
       [&path](Cell expr, auto) {
         PSCM_ASSERT(expr.is_sym());
         auto name = expr.to_sym()->name();
-        path += std::string(name);
+        path += name;
         path += '/';
       },
       name);
-  if (path.empty()) {
+  if (path.isEmpty()) {
     PSCM_THROW_EXCEPTION("bad module name: " + name.to_string());
   }
-  path.resize(path.size() - 1);
+  path.truncate(path.length() - 1);
   path += ".scm";
-  std::string fullname;
+  UString fullname;
+  std::string fullname_u8;
   bool module_found = false;
   for (int i = 0; i < load_path_vec.size(); ++i) {
     auto load_path = load_path_vec.at(i);
-    if (load_path.back() != '/') {
+    if (!load_path.endsWith('/')) {
       load_path += '/';
     }
     fullname = load_path + path;
-    if (fs::exists(fullname)) {
+    fullname.toUTF8String(fullname_u8);
+    if (fs::exists(fullname_u8)) {
       module_found = true;
       break;
     }
   }
   if (!module_found) {
-    PSCM_ERROR("file not exist: {}", fullname);
+    PSCM_ERROR("file not exist: {0}", fullname);
     PSCM_THROW_EXCEPTION("module not found: " + name.to_string());
   }
   return fullname;
 }
 
-std::vector<std::string> get_load_path(SymbolTable *env) {
+std::vector<UString> get_load_path(SymbolTable *env) {
   auto load_path = "%load-path"_sym;
   auto load_path_list = env->get_or(&load_path, nil);
-  std::vector<std::string> load_path_vec;
+  std::vector<UString> load_path_vec;
   for_each(
       [&load_path_vec](Cell expr, auto) {
         PSCM_ASSERT(expr.is_str());
@@ -98,10 +100,9 @@ std::vector<std::string> get_load_path(SymbolTable *env) {
     load_path_vec.push_back(".");
   }
   auto c_env_load_path = getenv("PSCM_LOAD_PATH");
-  std::string env_load_path;
   if (c_env_load_path) {
-    env_load_path = c_env_load_path;
-    PSCM_INFO("PSCM_LOAD_PATH: {}", env_load_path);
+    UString env_load_path(c_env_load_path);
+    PSCM_INFO("PSCM_LOAD_PATH: {0}", env_load_path);
     load_path_vec.push_back(env_load_path);
   }
   return load_path_vec;
@@ -111,11 +112,11 @@ PSCM_DEFINE_BUILTIN_MACRO(Module, "resolve-module", Label::APPLY_RESOLVE_MODULE)
   PSCM_ASSERT(args.is_pair());
   auto arg = car(args);
   auto name = scm.eval(env, arg);
-  PSCM_INFO("module name: {}", name);
+  PSCM_INFO("module name: {0}", name);
   PSCM_ASSERT(name.is_pair());
   auto load_path_vec = get_load_path(env);
   auto path = check_module(name, load_path_vec);
-  PSCM_INFO("resolve module: {} from {}", name, path);
+  PSCM_INFO("resolve module: {0} from {1}", name, path);
   if (!scm.has_module(name)) {
     scm.load_module(path, name);
     if (!scm.has_module(name)) {
@@ -134,7 +135,7 @@ PSCM_DEFINE_BUILTIN_MACRO(Module, "use-modules", Label::APPLY_USE_MODULES) {
         PSCM_ASSERT(expr.is_pair());
         // TODO: use module
         auto path = check_module(expr, load_path_vec);
-        PSCM_INFO("use module: {} from {}", expr, path);
+        PSCM_INFO("use module: {0} from {1}", expr, path);
         if (!scm.has_module(expr)) {
           scm.load_module(path, expr);
           if (!scm.has_module(expr)) {
@@ -183,18 +184,16 @@ PSCM_DEFINE_BUILTIN_MACRO(Module, "export", Label::APPLY_EXPORT) {
   return Cell::none();
 }
 
-std::ostream& operator<<(std::ostream& os, const Module& m) {
-  os << '#';
-  os << '<';
-  os << "module";
-  os << ' ';
-  if (!m.name_.is_none()) {
-    os << m.name_;
+UString Module::to_string() const {
+  UString res;
+  res += "#<module ";
+  if (!name_.is_none()) {
+    res += name_.to_string();
   }
-  os << ' ';
-  os << &m;
-  os << '>';
-  return os;
+  res += ' ';
+  res += pscm::to_string(this);
+  res += '>';
+  return res;
 }
 
 void Module::export_symbol(Symbol *sym) {
@@ -202,7 +201,7 @@ void Module::export_symbol(Symbol *sym) {
     PSCM_THROW_EXCEPTION(Cell(sym).to_string() + "has already exported");
   }
   export_sym_list_.insert(sym);
-  PSCM_INFO("export symbol: {}", sym->name());
+  PSCM_INFO("export symbol: {0}", sym->name());
 }
 
 void Module::use_module(Module *m, bool use_all) {
@@ -255,7 +254,7 @@ PSCM_DEFINE_BUILTIN_MACRO_PROC_WRAPPER(Module, "module-map", Label::APPLY_APPLY,
   PSCM_ASSERT(arg2.is_sym());
   arg1 = env->get(arg1.to_sym());
   arg2 = env->get(arg2.to_sym());
-  PSCM_INFO("args: {}, {}", arg1.to_string(), arg2.to_string());
+  PSCM_INFO("args: {0}, {1}", arg1.to_string(), arg2.to_string());
   PSCM_ASSERT(arg1.is_proc());
   // auto proc = arg1.to_proc();
   auto ret = cons(nil, nil);

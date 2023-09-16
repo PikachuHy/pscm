@@ -32,7 +32,7 @@ ios_application(
     ],
     infoplists = [":Info.plist"],
     launch_storyboard = ":Base.lproj/LaunchScreen.storyboard",
-    minimum_os_version = "15.0",
+    minimum_os_version = "16.2",
     # provisioning_profile = "<your_profile_name>.mobileprovision", # Uncomment and set your own profile.
     visibility = ["//visibility:public"],
     deps = [":demo"],

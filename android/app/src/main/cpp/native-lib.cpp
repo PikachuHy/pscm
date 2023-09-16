@@ -23,5 +23,8 @@ extern "C" JNIEXPORT jstring JNICALL Java_dev_pscm_android_MainActivity_evalSche
   auto len = env->GetStringUTFLength(code);
   std::string s = std::string((char *)c_str, len);
   auto ret = _scm->eval(s.c_str());
-  return env->NewStringUTF(ret.to_string().c_str());
+  std::string s2;
+  auto s3 = ret.to_string();
+  s3.toUTF8String(s2);
+  return env->NewStringUTF(s2.c_str());
 }

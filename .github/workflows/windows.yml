@@ -1,10 +1,7 @@
 name: Windows
 
 on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+  workflow_dispatch
 
 jobs:
   build_on_windows:
@@ -23,6 +20,9 @@ jobs:
       - name: Clone Deps
         run: git submodule update --init
         working-directory: ${{github.workspace}}
+        
+      - name: Install icu
+        run: vcpkg install icu
 
       - name: Install ninja-build tool
         uses: seanmiddleditch/gha-setup-ninja@master
@@ -33,7 +33,7 @@ jobs:
           arch: ${{ matrix.arch }}
 
       - name: Generate Project
-        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -G Ninja
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{ matrix.mode }} -DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -G Ninja
 
       - name: Build
         run: cmake --build build --config ${{ matrix.mode }} --verbose

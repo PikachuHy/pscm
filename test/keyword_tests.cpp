@@ -12,6 +12,7 @@ import pscm;
 #include <pscm/Scheme.h>
 #include <pscm/Str.h>
 #include <pscm/Symbol.h>
+#include <pscm/icu/Displayable.h>
 #include <pscm/scm_utils.h>
 #include <sstream>
 #include <string>

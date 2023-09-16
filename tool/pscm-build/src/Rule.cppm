@@ -79,6 +79,7 @@ protected:
 protected:
   std::vector<std::string> srcs_;
   std::vector<std::string> copts_;
+  std::vector<std::string> linkopts_;
 };
 
 class CppLibraryRule : public CppRuleBase {

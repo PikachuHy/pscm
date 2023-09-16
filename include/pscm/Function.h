@@ -4,6 +4,7 @@
 
 #pragma once
 #include "pscm/Cell.h"
+#include "pscm/icu/ICUCompat.h"
 #include <functional>
 #include <string>
 #include <variant>
@@ -14,25 +15,25 @@ class Function {
 public:
   typedef Cell (*ScmFunc2)(Cell, SourceLocation);
 
-  Function(std::string name, Cell::ScmFunc f)
+  Function(UString name, Cell::ScmFunc f)
       : name_(std::move(name))
       , f_(f) {
   }
 
-  Function(std::string name, ScmFunc2 f)
+  Function(UString name, ScmFunc2 f)
       : name_(std::move(name))
       , f_(f) {
   }
 
   Cell call(Cell args, SourceLocation loc = {});
-  friend std::ostream& operator<<(std::ostream& out, const Function& func);
+  UString to_string() const;
 
-  StringView name() const {
-    return name_;
+  const UString name() const {
+    return get_const_string(name_);
   }
 
 private:
-  std::string name_;
+  UString name_;
   std::variant<std::monostate, Cell::ScmFunc, ScmFunc2> f_;
 };
 

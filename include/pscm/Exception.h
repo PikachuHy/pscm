@@ -3,6 +3,7 @@
 //
 
 #pragma once
+#include "pscm/icu/ICUCompat.h"
 #include <cstring>
 #include <exception>
 #include <string>
@@ -14,12 +15,22 @@ namespace pscm {
 class Exception : public std::exception {
 public:
 #if defined(WASM_PLATFORM) || defined(_MSC_VER) || defined(__ANDROID__)
-  Exception(std::string msg)
-      : msg_(std::move(msg)) {
+  Exception(UString msg) {
+    msg.toUTF8String(msg_);
   }
 #else
+  Exception(UString msg, ust::StackTrace stack_trace = ust::generate())
+      : stack_trace_(std::move(stack_trace)) {
+    msg.toUTF8String(msg_);
+  }
+
   Exception(std::string msg, ust::StackTrace stack_trace = ust::generate())
       : msg_(std::move(msg))
+      , stack_trace_(std::move(stack_trace)) {
+  }
+
+  Exception(const char *msg, ust::StackTrace stack_trace = ust::generate())
+      : msg_(msg)
       , stack_trace_(std::move(stack_trace)) {
   }
 #endif

@@ -64,3 +64,4 @@ bazel-*
 .idea
 
 pscm-build-bin
+/build-*

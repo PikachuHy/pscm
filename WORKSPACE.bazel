@@ -1,7 +1,7 @@
 workspace(name = "dev_pscm")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
 
 new_git_repository(
     name = "cpp-linenoise",
@@ -43,6 +43,13 @@ new_git_repository(
     build_file = "@dev_pscm//3rd:filesystem.bazel",
     commit = "72a76d774e4c7c605141fd6d11c33cc211209ed9",
     remote = "https://github.com/gulrak/filesystem.git",
+)
+
+new_git_repository(
+    name = "mscharconv",
+    build_file = "@dev_pscm//3rd:mscharconv.bazel",
+    commit = "5d2e3a6e9663a41207561c9510ad1e3d557b5c5e",
+    remote = "https://github.com/iboB/mscharconv.git",
 )
 
 http_archive(
@@ -209,4 +216,24 @@ rules_nodejs_dependencies()
 nodejs_register_toolchains(
     name = "nodejs",
     node_version = "20.4.0",
+)
+
+http_archive(
+    name = "rules_foreign_cc",
+    # TODO: Get the latest sha256 value from a bazel debug message or the latest
+    #       release on the releases page: https://github.com/bazelbuild/rules_foreign_cc/releases
+    #
+    # sha256 = "...",
+    strip_prefix = "rules_foreign_cc-60813d57a0e99be1a009c1a0e9627cdbe81fcd19",
+    url = "https://github.com/bazelbuild/rules_foreign_cc/archive/60813d57a0e99be1a009c1a0e9627cdbe81fcd19.tar.gz",
+)
+
+load("@rules_foreign_cc//foreign_cc:repositories.bzl", "rules_foreign_cc_dependencies")
+
+rules_foreign_cc_dependencies()
+
+git_repository(
+    name = "icu",
+    commit = "1c1933fa1ebadd6954fe9eff18e8bb0d018594ff",
+    remote = "https://github.com/PikachuHy/icu.bazel.git",
 )

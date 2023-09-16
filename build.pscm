@@ -36,7 +36,7 @@
   )
  (hdrs
   (glob "include/**/*.h"))
- (includes "include" "3rd/UniversalStacktrace" "3rd/cpp-linenoise")
+ (includes "include" "3rd/UniversalStacktrace" "3rd/cpp-linenoise" "/usr/local/opt/icu4c/include" "3rd/mscharconv/include/msstl" "3rd/mscharconv/include")
  (defines "PSCM_USE_CXX20_MODULES")
  (copts "-std=c++20" "-I" "build/generate")
  (deps ":fmt" ":std" ":glob" ":subprocess" ":linenoise"))
@@ -45,12 +45,14 @@
   (name "pscm-main")
   (srcs "main.cpp")
   (copts "-std=c++20")
+  (linkopts "-L/usr/local/opt/icu4c/lib" "-licudata" "-licui18n" "-licuuc" "-licuio")
   (deps ":pscm"))
 
 
 (cpp_library
   (name "doctest")
   (hdrs "3rd/doctest/doctest/doctest.h")
+  (linkopts "-L/usr/local/opt/icu4c/lib" "-licudata" "-licui18n" "-licuuc" "-licuio")
   (includes "3rd/doctest"))
 
 
@@ -58,12 +60,14 @@
   (name "apply_test")
   (srcs "test/apply_tests.cpp")
   (deps ":pscm" ":doctest")
+  (linkopts "-L/usr/local/opt/icu4c/lib" "-licudata" "-licui18n" "-licuuc" "-licuio")
   (copts "-std=c++20"))
 
 (cpp_test
   (name "cond_test")
   (srcs "test/cond_tests.cpp")
   (deps ":pscm" ":doctest")
+  (linkopts "-L/usr/local/opt/icu4c/lib" "-licudata" "-licui18n" "-licuuc" "-licuio")
   (copts "-std=c++20"))
 
 
@@ -71,60 +75,70 @@
   (name "map_test")
   (srcs "test/map_tests.cpp")
   (deps ":pscm" ":doctest")
+  (linkopts "-L/usr/local/opt/icu4c/lib" "-licudata" "-licui18n" "-licuuc" "-licuio")
   (copts "-std=c++20"))
 
 (cpp_test
   (name "do_test")
   (srcs "test/do_tests.cpp")
   (deps ":pscm" ":doctest")
+  (linkopts "-L/usr/local/opt/icu4c/lib" "-licudata" "-licui18n" "-licuuc" "-licuio")
   (copts "-std=c++20"))
 
 (cpp_test
   (name "number_test")
   (srcs "test/number_tests.cpp")
   (deps ":pscm" ":doctest")
+  (linkopts "-L/usr/local/opt/icu4c/lib" "-licudata" "-licui18n" "-licuuc" "-licuio")
   (copts "-std=c++20"))
 
 (cpp_test
   (name "callcc_test")
   (srcs "test/callcc_tests.cpp")
   (deps ":pscm" ":doctest")
+  (linkopts "-L/usr/local/opt/icu4c/lib" "-licudata" "-licui18n" "-licuuc" "-licuio")
   (copts "-std=c++20"))
 
 (cpp_test
   (name "for_each_test")
   (srcs "test/for_each_tests.cpp")
   (deps ":pscm" ":doctest")
+  (linkopts "-L/usr/local/opt/icu4c/lib" "-licudata" "-licui18n" "-licuuc" "-licuio")
   (copts "-std=c++20"))
 
 (cpp_test
   (name "parser_test")
   (srcs "test/parser_tests.cpp")
   (deps ":pscm" ":doctest")
+  (linkopts "-L/usr/local/opt/icu4c/lib" "-licudata" "-licui18n" "-licuuc" "-licuio")
   (copts "-std=c++20"))
 
 (cpp_test
   (name "cell_test")
   (srcs "test/cell_tests.cpp")
   (deps ":pscm" ":doctest")
+  (linkopts "-L/usr/local/opt/icu4c/lib" "-licudata" "-licui18n" "-licuuc" "-licuio")
   (copts "-std=c++20"))
 
 (cpp_test
   (name "list_test")
   (srcs "test/list_tests.cpp")
   (deps ":pscm" ":doctest")
+  (linkopts "-L/usr/local/opt/icu4c/lib" "-licudata" "-licui18n" "-licuuc" "-licuio")
   (copts "-std=c++20"))
 
 (cpp_test
   (name "port_test")
   (srcs "test/port_tests.cpp")
   (deps ":pscm" ":doctest")
+  (linkopts "-L/usr/local/opt/icu4c/lib" "-licudata" "-licui18n" "-licuuc" "-licuio")
   (copts "-std=c++20"))
 
 (cpp_test
   (name "r4rs_test")
   (srcs (glob "test/r4rs/*.cpp"))
   (deps ":pscm" ":doctest")
+  (linkopts "-L/usr/local/opt/icu4c/lib" "-licudata" "-licui18n" "-licuuc" "-licuio")
   (copts "-std=c++20"))
 
 (cpp_test
@@ -132,5 +146,6 @@
   (srcs
     (glob "test/sicp/*.cpp"))
   (deps ":pscm" ":doctest")
+  (linkopts "-L/usr/local/opt/icu4c/lib" "-licudata" "-licui18n" "-licuuc" "-licuio")
   (copts "-std=c++20"))
 

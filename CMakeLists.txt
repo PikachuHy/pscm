@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.26)
+SET(CMAKE_OSX_DEPLOYMENT_TARGET "13.3" CACHE STRING "Minimum OS X deployment version" FORCE)
 project(pscm VERSION 0.3.0 LANGUAGES CXX)
 option(PSCM_USE_CXX20_MODULES "enable c++20 modules" OFF)
 if (WIN32)
@@ -6,7 +7,11 @@ if (WIN32)
 else ()
     if (PSCM_USE_CXX20_MODULES)
         if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-            set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
+            # CMake 3.26
+            # set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
+            # CMake 3.27
+            set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "aa1f7df0-828a-4fcd-9afc-2dc80491aca7")
+            # set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "ac01f462-0f5f-432a-86aa-acef252918a6")
             include(cxx_modules_rules_clang.cmake)
             set(CMAKE_CXX_STANDARD 20)
             set(CMAKE_CXX_EXTENSIONS OFF)
@@ -14,13 +19,27 @@ else ()
             message(FATAL_ERROR "${CMAKE_CXX_COMPILER_ID} not support C++20 Modules now")
         endif ()
     else ()
-        set(CMAKE_CXX_STANDARD 14)
+        set(CMAKE_CXX_STANDARD 20)
     endif ()
 endif ()
 
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+add_library(pscm)
+if (EMSCRIPTEN)
+    target_link_options(pscm PUBLIC "-sUSE_ICU=1")
+    target_compile_options(pscm PUBLIC "-sUSE_ICU=1")
+elseif (WIN32)
+    find_package(icu REQUIRED i18n uc io)
+    target_link_libraries(pscm PUBLIC icu)
+else ()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules (ICU REQUIRED icu-i18n icu-uc icu-io IMPORTED_TARGET)
+    target_link_libraries(pscm PUBLIC PkgConfig::ICU)
+endif ()
+
 option(USE_CPP_STD_COMPAT "use c++14 std library compat" ON)
 find_package(Git REQUIRED)
 message(STATUS "Git: ${GIT_EXECUTABLE}")
@@ -64,11 +83,11 @@ if (USE_CCACHE)
     endif ()
 endif ()
 add_subdirectory(3rd)
-add_library(pscm)
 target_include_directories(pscm PUBLIC include)
 target_include_directories(pscm PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/generate)
 target_include_directories(pscm PUBLIC 3rd/UniversalStacktrace)
 target_include_directories(pscm PUBLIC 3rd/cpp-linenoise)
+target_include_directories(pscm PUBLIC 3rd/mscharconv/include)
 if (USE_CPP_STD_COMPAT)
     target_include_directories(pscm PUBLIC 3rd/variant/include)
     target_include_directories(pscm PUBLIC 3rd/optional/include)
@@ -83,11 +102,13 @@ target_sources(pscm PRIVATE
         src/logger/Logger.cpp
         src/logger/Appender.cpp
         src/misc/SourceLocation.cpp
+        src/icu/ICUCompat.cpp
 )
 if (PSCM_USE_CXX20_MODULES)
     target_compile_definitions(pscm PUBLIC PSCM_USE_CXX20_MODULES)
     target_sources(pscm PUBLIC
             FILE_SET cxx_modules TYPE CXX_MODULES FILES
+            src/icu/icu.cppm
             src/logger/logger.cppm
             src/misc/misc.cppm
             src/pscm.cppm

@@ -28,6 +28,7 @@ module;
 #include "pscm/scm_utils.h"
 #include "pscm/version.h"
 export module pscm;
+export import pscm.icu;
 export import pscm.logger;
 export import pscm.misc;
 export import pscm.compat;
@@ -49,11 +50,13 @@ using pscm::HashCodeType;
 using pscm::Parser;
 using pscm::Scheme;
 using pscm::SchemeProxy;
+using pscm::to_string;
 using pscm::operator<<;
 using pscm::Char;
 using pscm::Complex;
 using pscm::Continuation;
 using pscm::Exception;
+using pscm::FilePort;
 using pscm::Function;
 using pscm::gensym;
 using pscm::HashTable;

@@ -12,10 +12,10 @@ jobs:
 
     strategy:
       matrix:
-        # FIXME: Debug Assertion failed: string subscript out of range
-        # mode: [ Debug, Release ]
-        mode: [ Release ]
-        arch: [ x86, x64 ]
+        mode: [ Debug, Release ]
+        arch: [ x64 ]
+        # ICU4C is not supported on x86
+        # arch: [ x86, x64 ]
 
     steps:
       - uses: actions/checkout@v3
@@ -35,12 +35,12 @@ jobs:
           
       - uses: xmake-io/github-action-setup-xmake@v1
         with:
-          xmake-version: v2.7.7
+          xmake-version: v2.8.2
           actions-cache-folder: '.xmake-cache'
 
       - name: Build
         run: |
-          xmake config --yes --mode=${{matrix.mode}} --arch=${{matrix.arch}}
+          xmake config -vD --yes --mode=${{matrix.mode}} --arch=${{matrix.arch}}
           xmake build --jobs=8
 
       - name: Test

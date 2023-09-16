@@ -4,6 +4,7 @@
 
 #pragma once
 #include "Cell.h"
+#include "unicode/unistr.h"
 #include <ostream>
 #include <string>
 
@@ -12,47 +13,46 @@ class Port;
 
 class String {
 public:
-  String(std::string data)
+  String(UString data)
       : data_(std::move(data)) {
   }
 
-  String(std::size_t sz, char ch) {
-    data_.resize(sz);
-    std::fill(data_.begin(), data_.end(), ch);
+  String(std::size_t sz, UChar32 ch)
+      : data_(sz, ch, sz) {
   }
 
   [[nodiscard]] bool empty() const {
-    return data_.empty();
+    return data_.isEmpty();
   }
 
   void display(Port& port) const;
-  friend std::ostream& operator<<(std::ostream& os, const String& s);
   bool operator==(const String& rhs) const;
   bool operator<(const String& rhs) const;
   bool operator>(const String& rhs) const;
   bool operator<=(const String& rhs) const;
   bool operator>=(const String& rhs) const;
+  UString to_string() const;
 
-  const std::string& str() const {
+  const UString& str() const {
     return data_;
   }
 
   [[nodiscard]] std::size_t length() const {
-    return data_.size();
+    return data_.length();
   }
 
-  void set(std::size_t idx, char ch);
+  void set(std::size_t idx, UChar32 ch);
 
   [[nodiscard]] String to_downcase() const;
 
   [[nodiscard]] String substring(std::int64_t start, std::int64_t end) const;
 
-  void fill(char ch);
+  void fill(UChar32 ch);
 
   HashCodeType hash_code() const;
 
 private:
-  std::string data_;
+  UString data_;
 };
 
 String operator""_str(const char *data, std::size_t len);

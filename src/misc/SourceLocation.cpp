@@ -3,14 +3,16 @@
 //
 
 #include "pscm/misc/SourceLocation.h"
+#include "pscm/icu/ICUCompat.h"
 
 namespace pscm {
 
-std::string SourceLocation::to_string() const {
-  auto name = std::string(filename);
-  auto pos = name.find_last_of('/');
-  name = name.substr(pos + 1);
-  return name + ":" + std::to_string(linenum); // + " " + std::string(funcname);
+UString SourceLocation::to_string() const {
+  auto _name = UString(filename);
+  auto pos = _name.lastIndexOf('/');
+  auto name = UString(filename);
+  _name.extractBetween(pos + 1, _name.length(), name);
+  return name + ":" + pscm::to_programmatic_string(linenum); // + " " + UString(funcname);
 }
 
 } // namespace pscm
