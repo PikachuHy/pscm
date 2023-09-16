@@ -34,9 +34,10 @@ target("pscm") do
         "$(buildir)/version.cpp"})
     
     if is_mode("coverage") then
-        add_cxxflags("-O0")
-        add_cxxflags("-fprofile-arcs")
-        add_cxxflags("-ftest-coverage")
+        add_cxxflags({
+            "-O0",
+            "-fprofile-arcs",
+            "-ftest-coverage"})
         add_ldflags("-coverage")
     end
     
@@ -83,9 +84,10 @@ for _, filepath in ipairs(os.files("test/**_tests.cpp")) do
         add_files(filepath)
         
         if is_mode ("coverage") then
-            add_cxxflags("-O0")
-            add_cxxflags("-fprofile-arcs")
-            add_cxxflags("-ftest-coverage")
+            add_cxxflags({
+            "-O0",
+            "-fprofile-arcs",
+            "-ftest-coverage"})
             add_ldflags("-coverage")
         end
     end
