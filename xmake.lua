@@ -32,6 +32,15 @@ target("pscm") do
     add_files({
         "src/**.cpp",
         "$(buildir)/version.cpp"})
+    
+    if is_mode("coverage") then
+        add_cxxflags({
+            "-O0",
+            "-fprofile-arcs",
+            "-ftest-coverage"})
+        add_ldflags("-coverage")
+    end
+    
     if has_config("cxx20-modules") then
         add_files({
             "src/**.cppm",
@@ -52,6 +61,17 @@ target("repl") do
     add_files("main.cpp")
 end
 
+---
+--- coverage:
+--- use `xmake f -m coverage` to enable coverage
+--- first `rm -rf build/` to clean build cache
+--- then `xmake build` to build
+--- then `xmake run --group=tests` to run tests for coverage
+--- run `lcov --directory . --capture --output-file cov/coverage.info`
+--- run `genhtml cov/coverage.info --output-directory cov/coverage`
+--- open `cov/coverage/index.html` in browser
+--- 
+
 for _, filepath in ipairs(os.files("test/**_tests.cpp")) do
     local testname = path.basename(filepath) 
     target(testname) do 
@@ -62,6 +82,14 @@ for _, filepath in ipairs(os.files("test/**_tests.cpp")) do
         set_languages("cxx20")
 
         add_files(filepath)
+        
+        if is_mode ("coverage") then
+            add_cxxflags({
+            "-O0",
+            "-fprofile-arcs",
+            "-ftest-coverage"})
+            add_ldflags("-coverage")
+        end
     end
 end
 
