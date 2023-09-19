@@ -89,6 +89,10 @@ function sidebarGuideZh() {
           text: 'R4RS Support',
           link: '/cn/r4rs_support'
         },
+        {
+          text: 'Unicode Support',
+          link: '/cn/unicode_support'
+        },
       ]
     },
     {
