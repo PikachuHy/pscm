@@ -1,5 +1,27 @@
 # Build PikachuHy's Scheme
 
+## Preparation
+
+### Required toolchain
+
+if you build other projects under pscm repo
+
+```shell
+sudo apt-get install -y build-essential
+sudo apt-get install -y libsdl2-dev libsdl2-ttf-dev libsdl2-image-dev libsdl2-mixer-dev
+```
+
+### Required git submodule
+
+```shell
+git submodule update --init
+```
+
+### Required ninja (version >= 1.11.0)
+
+if you build pscm with C++20 Modules
+
+Ref: https://github.com/ninja-build/ninja/releases
 
 ## CMake (Recommanded)
 
