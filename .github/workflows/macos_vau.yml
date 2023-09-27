@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         mode: [ Debug ]
-    runs-on: [ macos-12 ]
+    runs-on: [ macos-13 ]
 
     steps:
       - uses: actions/checkout@v3
@@ -18,9 +18,18 @@ jobs:
           env HOMEBREW_NO_AUTO_UPDATE=1 brew install ghostscript
           env HOMEBREW_NO_AUTO_UPDATE=1 brew install freetype
 
+      - name: Install LLVM
+        run: env HOMEBREW_NO_AUTO_UPDATE=1 brew install llvm
+
+      - name: Install Ninja
+        run: env HOMEBREW_NO_AUTO_UPDATE=1 brew install ninja
+
       - name: Install SDL2
         run: env HOMEBREW_NO_AUTO_UPDATE=1 brew install sdl2 sdl2_image sdl2_mixer sdl2_ttf
   
+      - name: Install icu4c
+        run: env HOMEBREW_NO_AUTO_UPDATE=1 brew install icu4c
+
       - name: Clone Deps
         run: git submodule update --init
         working-directory: ${{github.workspace}}
@@ -33,16 +42,13 @@ jobs:
         run: ln -s ${{github.workspace}} pscm
         working-directory: ${{github.workspace}}/../vau
 
-      - name: Install ninja-build tool
-        uses: seanmiddleditch/gha-setup-ninja@master
-
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
         with:
           key: ${{ github.job }}-${{ matrix.mode}}
 
       - name: Configure CMake
-        run: CXX=clang++ CC=clang cmake -S ${{github.workspace}}/../vau -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON
+        run: PKG_CONFIG_PATH=/usr/local/opt/icu4c/lib/pkgconfig cmake -S ${{github.workspace}}/../vau -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --config ${{matrix.mode}} -j --verbose
