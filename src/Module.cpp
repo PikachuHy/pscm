@@ -65,7 +65,6 @@ UString check_module(Cell name, const std::vector<UString>& load_path_vec) {
   path.truncate(path.length() - 1);
   path += ".scm";
   UString fullname;
-  std::string fullname_u8;
   bool module_found = false;
   for (int i = 0; i < load_path_vec.size(); ++i) {
     auto load_path = load_path_vec.at(i);
@@ -73,6 +72,7 @@ UString check_module(Cell name, const std::vector<UString>& load_path_vec) {
       load_path += '/';
     }
     fullname = load_path + path;
+    std::string fullname_u8;
     fullname.toUTF8String(fullname_u8);
     if (fs::exists(fullname_u8)) {
       module_found = true;
