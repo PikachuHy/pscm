@@ -2,4 +2,6 @@ build --incompatible_strict_action_env
 build --verbose_failures
 build --workspace_status_command "python3 workspace_status.py"
 build:macos --define client_type=macos
+build:macos --cxxopt=-std=c++20 --host_cxxopt=-std=c++20
 build:android --define client_type=android
+common --noenable_bzlmod
