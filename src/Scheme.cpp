@@ -37,6 +37,9 @@ import linenoise;
 #include "pscm/version.h"
 #include "spdlog/spdlog.h"
 #include "unicode/schriter.h"
+
+#include "pscm/codegen/codegen.h"
+
 #include <fstream>
 #include <linenoise.hpp>
 #include <string>
@@ -469,6 +472,9 @@ Cell Scheme::eval(const UString& code) {
     }
     if (use_register_machine_) {
       ret = Evaluator(*this).eval(ret, current_module_->env());
+    }
+    else if (use_mlir_) {
+      ret = mlir_codegen_and_run_jit(ret);
     }
     else {
       ret = eval(ret);

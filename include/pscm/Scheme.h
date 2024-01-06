@@ -46,6 +46,7 @@ private:
   std::vector<Module *> module_list_;
   std::unordered_map<Cell, Module *> module_map_;
   bool use_register_machine_;
+  bool use_mlir_ = true;
   bool in_repl_ = false;
   friend class SchemeProxy;
 };

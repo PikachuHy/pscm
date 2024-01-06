@@ -75,6 +75,7 @@ cc_library(
         # "@optional",
         # "@string-view-lite",
         # "@variant",
+        ":pscm-ops-inc-gen",
         "@llvm-project//llvm:Core",
         "@llvm-project//llvm:OrcJIT",
         "@llvm-project//llvm:Support",
@@ -134,4 +135,29 @@ td_library(
         "@llvm-project//mlir:OpBaseTdFiles",
         "@llvm-project//mlir:SideEffectInterfacesTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "pscm-ops-inc-gen",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "Ops.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "Ops.cpp.inc",
+        ),
+        (
+            ["-gen-dialect-decls"],
+            "Dialect.h.inc",
+        ),
+        (
+            ["-gen-dialect-defs"],
+            "Dialect.cpp.inc",
+        ),
+    ],
+    tblgen = "@llvm-project//mlir:mlir-tblgen",
+    td_file = "include/pscm/Ops.td",
+    deps = [":pscm-ops-td-files"],
 )
