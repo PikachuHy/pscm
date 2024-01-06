@@ -110,6 +110,11 @@ cc_library(
         "@llvm-project//mlir:ToLLVMIRTranslation",
         "@llvm-project//mlir:TransformUtils",
         "@llvm-project//mlir:Transforms",
+
+        # clang
+        "@llvm-project//clang:driver",
+        "@llvm-project//clang:frontend",
+        "@llvm-project//clang:tooling",
     ],
 )
 

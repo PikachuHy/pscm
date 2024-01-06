@@ -35,7 +35,20 @@ using namespace mlir;
 
 #include "llvm/ADT/ScopedHashTable.h"
 
+#include "pscm/Number.h"
+#include "pscm/Symbol.h"
+#include "pscm/common_def.h"
+#include "pscm/scm_utils.h"
+
+#include <clang/Driver/Compilation.h>
+#include <clang/Driver/Driver.h>
+#include <clang/Frontend/TextDiagnosticPrinter.h>
+#include <clang/Tooling/Tooling.h>
+#include <llvm/IR/LegacyPassManager.h>
+#include <llvm/Support/Host.h>
+
 #include <iostream>
+PSCM_INLINE_LOG_DECLARE("pscm.codegen");
 
 namespace pscm {
 
@@ -44,6 +57,44 @@ mlir::Value create_i64(mlir::OpBuilder& builder, int64_t data) {
   auto dataAttr = builder.getI64IntegerAttr(data);
   auto dataValue = builder.create<ConstantOp>(builder.getUnknownLoc(), dataType, dataAttr);
   return dataValue;
+}
+
+int link_to_executable(llvm::LLVMContext& ctx) {
+  llvm::IntrusiveRefCntPtr<clang::DiagnosticOptions> opts = new clang::DiagnosticOptions;
+  clang::DiagnosticsEngine diags(new clang::DiagnosticIDs, opts,
+                                 new clang::TextDiagnosticPrinter(llvm::errs(), opts.get()));
+
+  clang::driver::Driver d("clang", llvm::sys::getDefaultTargetTriple(), diags, "pscm compiler");
+  std::vector<const char *> args = { "pscmc" };
+
+  args.push_back("output.o");
+  args.push_back("-o");
+  args.push_back("a.out");
+  args.push_back("-isysroot");
+  args.push_back("/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk");
+  args.push_back("-v");
+
+  d.setCheckInputsExist(false);
+
+  std::unique_ptr<clang::driver::Compilation> compilation;
+  compilation.reset(d.BuildCompilation(args));
+
+  if (!compilation) {
+    return 1;
+  }
+
+  llvm::SmallVector<std::pair<int, const clang::driver::Command *>> failCommand;
+  // compilation->ExecuteJobs(compilation->getJobs(), failCommand);
+
+  d.ExecuteCompilation(*compilation, failCommand);
+  if (failCommand.empty()) {
+    llvm::outs() << "Done!\n";
+  }
+  else {
+    llvm::errs() << "Linking failed!\n";
+    return -1;
+  }
+  return 0;
 }
 
 int run_jit(mlir::ModuleOp m) {
@@ -96,6 +147,20 @@ int run_jit(mlir::ModuleOp m) {
                  << "\n";
     return -1;
   }
+
+  std::error_code ec;
+  llvm::raw_fd_ostream dest("output.o", ec, llvm::sys::fs::OF_None);
+  llvm::legacy::PassManager pass;
+  auto fileType = llvm::CGFT_ObjectFile;
+  if (machine.get()->addPassesToEmitFile(pass, dest, nullptr, fileType)) {
+    llvm::errs() << "TheTargetMachine can't emit a file of this type";
+    return 1;
+  }
+
+  pass.run(*llvm_module);
+  machine.get()->getTargetTriple();
+  link_to_executable(ctx);
+  // engine.get()->dumpToObjectFile("pscm.jit.o");
   return 0;
 }
 
@@ -128,6 +193,38 @@ int create_mlir(mlir::MLIRContext& ctx, mlir::OwningOpRef<mlir::ModuleOp>& m) {
   return 0;
 }
 
+int create_mlir_add(mlir::MLIRContext& ctx, mlir::OwningOpRef<mlir::ModuleOp>& m, Cell a, Cell b) {
+  mlir::OpBuilder builder(&ctx);
+  llvm::ScopedHashTable<llvm::StringRef, mlir::Value> symbolTable;
+  m = mlir::ModuleOp::create(builder.getUnknownLoc());
+  builder.setInsertionPointToEnd(m->getBody());
+  llvm::SmallVector<mlir::Type, 4> argTypes;
+  argTypes.reserve(0);
+  auto mainFuncType = builder.getFunctionType(argTypes, std::nullopt);
+  auto mainFunc = builder.create<FuncOp>(builder.getUnknownLoc(), "main", mainFuncType);
+  mlir::Block& entryBlock = mainFunc.front();
+  builder.setInsertionPointToStart(&entryBlock);
+  PSCM_ASSERT(a.is_num());
+  PSCM_ASSERT(b.is_num());
+  auto num1 = a.to_num();
+  auto num2 = b.to_num();
+  auto lhs = create_i64(builder, num1->to_int());
+  auto rhs = create_i64(builder, num2->to_int());
+
+  auto ret = builder.create<AddOp>(builder.getUnknownLoc(), lhs, rhs);
+
+  builder.create<PrintOp>(builder.getUnknownLoc(), ret);
+
+  builder.create<ReturnOp>(builder.getUnknownLoc(), llvm::ArrayRef<mlir::Value>());
+
+  if (failed(mlir::verify(*m))) {
+    m->emitError("module verfification error");
+    return -1;
+  }
+
+  return 0;
+}
+
 Cell mlir_codegen_and_run_jit(Cell expr) {
   mlir::registerAsmPrinterCLOptions();
   mlir::registerMLIRContextCLOptions();
@@ -141,11 +238,23 @@ Cell mlir_codegen_and_run_jit(Cell expr) {
 
   mlir::OwningOpRef<mlir::ModuleOp> module;
 
-  if (auto err = create_mlir(context, module)) {
-    llvm::errs() << "create mlir error"
+  std::cout << "expr: " << expr.to_std_string() << std::endl;
+  if (expr.is_self_evaluated()) {
+    return expr;
+  }
+  if (car(expr).is_sym() && *car(expr).to_sym() == "+"_sym) {
+    if (auto err = create_mlir_add(context, module, cadr(expr), caddr(expr))) {
+      llvm::errs() << "create mlir error"
+                   << "\n";
+      return Cell::bool_false();
+    }
+  }
+  else {
+    llvm::errs() << "not supported now"
                  << "\n";
     return Cell::bool_false();
   }
+
   mlir::PassManager pm(module.get()->getName());
   if (mlir::failed(mlir::applyPassManagerCLOptions(pm))) {
     llvm::errs() << "applyPassManagerCLOptions error"

@@ -298,6 +298,13 @@ UString Cell::pretty_string() const {
   return to_string();
 }
 
+std::string Cell::to_std_string() const {
+  auto s = to_string();
+  std::string converted;
+  s.toUTF8String(converted);
+  return converted;
+}
+
 bool Cell::to_bool(SourceLocation loc PSCM_CXX20_MODULES_DEFAULT_ARG_COMPAT) const {
   PSCM_ASSERT_WITH_LOC(is_bool(), loc);
   return data_ != nullptr;
