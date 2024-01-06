@@ -125,7 +125,7 @@ collect_pscm_tests()
 td_library(
     name = "pscm-ops-td-files",
     srcs = [
-        "include/pscm/Ops.td",
+        "include/pscm/codegen/mlir/Ops.td",
     ],
     includes = ["include"],
     deps = [
@@ -158,6 +158,6 @@ gentbl_cc_library(
         ),
     ],
     tblgen = "@llvm-project//mlir:mlir-tblgen",
-    td_file = "include/pscm/Ops.td",
+    td_file = "include/pscm/codegen/mlir/Ops.td",
     deps = [":pscm-ops-td-files"],
 )
