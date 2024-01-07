@@ -159,7 +159,10 @@ int run_jit(mlir::ModuleOp m) {
 
   pass.run(*llvm_module);
   machine.get()->getTargetTriple();
-  link_to_executable(ctx);
+  // FIXME
+  // error: unable to execute command: Segmentation fault: 11
+  // error: linker command failed due to signal (use -v to see invocation)
+  // link_to_executable(ctx);
   // engine.get()->dumpToObjectFile("pscm.jit.o");
   return 0;
 }
