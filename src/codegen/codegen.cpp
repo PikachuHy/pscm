@@ -242,10 +242,24 @@ std::optional<Cell> mlir_codegen_and_run_jit(Cell expr) {
   mlir::OwningOpRef<mlir::ModuleOp> module;
 
   std::cout << "expr: " << expr.to_std_string() << std::endl;
-  if (expr.is_self_evaluated()) {
-    return expr;
+  if (!expr.is_pair()) {
+    return std::nullopt;
   }
+  // hardcode only suport (+ num1 num2)
   if (car(expr).is_sym() && *car(expr).to_sym() == "+"_sym) {
+    auto num1 = cadr(expr);
+    auto num2 = caddr(expr);
+    if (!cdddr(expr).is_nil()) {
+      return std::nullopt;
+    }
+    if (!num1.is_num() || !num2.is_num()) {
+      return std::nullopt;
+    }
+    auto n1 = num1.to_num();
+    auto n2 = num2.to_num();
+    if (!n1->is_int() || !n2->is_int()) {
+      return std::nullopt;
+    }
     if (auto err = create_mlir_add(context, module, cadr(expr), caddr(expr))) {
       llvm::errs() << "create mlir error"
                    << "\n";
