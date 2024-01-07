@@ -3,6 +3,11 @@ load("version.bzl", "gen_pscm_version_info")
 load("test.bzl", "collect_pscm_tests")
 load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
 
+config_setting(
+    name = "mlir_codegen",
+    values = {"define": "codegen=mlir"},
+)
+
 py_binary(
     name = "gen_cpp",
     srcs = ["gen_cpp.py"],
@@ -25,7 +30,11 @@ cc_library(
         [
             "src/**/*.cpp",
         ],
-    ) + [
+        exclude = ["src/codegen/**"],
+    ) + select({
+        ":mlir_codegen": glob(["src/codegen/**/*.cpp"]),
+        "//conditions:default": [],
+    }) + [
         ":src/version.cpp",
     ],
     hdrs = glob(
@@ -42,6 +51,9 @@ cc_library(
     ],
     defines = select({
         "@platforms//cpu:wasm32": ["WASM_PLATFORM"],
+        "//conditions:default": [],
+    }) + select({
+        ":mlir_codegen": ["PSCM_ENABLE_MLIR_CODEGEN"],
         "//conditions:default": [],
     }),
     features = select({
@@ -75,47 +87,51 @@ cc_library(
         # "@optional",
         # "@string-view-lite",
         # "@variant",
-        ":pscm-ops-inc-gen",
-        "@llvm-project//llvm:Core",
-        "@llvm-project//llvm:OrcJIT",
-        "@llvm-project//llvm:Support",
-        "@llvm-project//mlir:AffineDialect",
-        "@llvm-project//mlir:AffineToStandard",
-        "@llvm-project//mlir:AffineTransforms",
-        "@llvm-project//mlir:AllPassesAndDialects",
-        "@llvm-project//mlir:Analysis",
-        "@llvm-project//mlir:ArithDialect",
-        "@llvm-project//mlir:ArithToLLVM",
-        "@llvm-project//mlir:BuiltinToLLVMIRTranslation",
-        "@llvm-project//mlir:CastInterfaces",
-        "@llvm-project//mlir:ControlFlowToLLVM",
-        "@llvm-project//mlir:ExecutionEngine",
-        "@llvm-project//mlir:ExecutionEngineUtils",
-        "@llvm-project//mlir:FuncDialect",
-        "@llvm-project//mlir:FuncExtensions",
-        "@llvm-project//mlir:FuncToLLVM",
-        "@llvm-project//mlir:IR",
-        "@llvm-project//mlir:LLVMCommonConversion",
-        "@llvm-project//mlir:LLVMDialect",
-        "@llvm-project//mlir:LLVMIRTransforms",
-        "@llvm-project//mlir:LLVMToLLVMIRTranslation",
-        "@llvm-project//mlir:MemRefDialect",
-        "@llvm-project//mlir:MemRefToLLVM",
-        "@llvm-project//mlir:Parser",
-        "@llvm-project//mlir:Pass",
-        "@llvm-project//mlir:SCFDialect",
-        "@llvm-project//mlir:SCFToControlFlow",
-        "@llvm-project//mlir:SideEffectInterfaces",
-        "@llvm-project//mlir:Support",
-        "@llvm-project//mlir:ToLLVMIRTranslation",
-        "@llvm-project//mlir:TransformUtils",
-        "@llvm-project//mlir:Transforms",
+    ] + select({
+        ":mlir_codegen": [
+            ":pscm-ops-inc-gen",
+            "@llvm-project//llvm:Core",
+            "@llvm-project//llvm:OrcJIT",
+            "@llvm-project//llvm:Support",
+            "@llvm-project//mlir:AffineDialect",
+            "@llvm-project//mlir:AffineToStandard",
+            "@llvm-project//mlir:AffineTransforms",
+            "@llvm-project//mlir:AllPassesAndDialects",
+            "@llvm-project//mlir:Analysis",
+            "@llvm-project//mlir:ArithDialect",
+            "@llvm-project//mlir:ArithToLLVM",
+            "@llvm-project//mlir:BuiltinToLLVMIRTranslation",
+            "@llvm-project//mlir:CastInterfaces",
+            "@llvm-project//mlir:ControlFlowToLLVM",
+            "@llvm-project//mlir:ExecutionEngine",
+            "@llvm-project//mlir:ExecutionEngineUtils",
+            "@llvm-project//mlir:FuncDialect",
+            "@llvm-project//mlir:FuncExtensions",
+            "@llvm-project//mlir:FuncToLLVM",
+            "@llvm-project//mlir:IR",
+            "@llvm-project//mlir:LLVMCommonConversion",
+            "@llvm-project//mlir:LLVMDialect",
+            "@llvm-project//mlir:LLVMIRTransforms",
+            "@llvm-project//mlir:LLVMToLLVMIRTranslation",
+            "@llvm-project//mlir:MemRefDialect",
+            "@llvm-project//mlir:MemRefToLLVM",
+            "@llvm-project//mlir:Parser",
+            "@llvm-project//mlir:Pass",
+            "@llvm-project//mlir:SCFDialect",
+            "@llvm-project//mlir:SCFToControlFlow",
+            "@llvm-project//mlir:SideEffectInterfaces",
+            "@llvm-project//mlir:Support",
+            "@llvm-project//mlir:ToLLVMIRTranslation",
+            "@llvm-project//mlir:TransformUtils",
+            "@llvm-project//mlir:Transforms",
 
-        # clang
-        "@llvm-project//clang:driver",
-        "@llvm-project//clang:frontend",
-        "@llvm-project//clang:tooling",
-    ],
+            # clang
+            "@llvm-project//clang:driver",
+            "@llvm-project//clang:frontend",
+            "@llvm-project//clang:tooling",
+        ],
+        "//conditions:default": [],
+    }),
 )
 
 cc_binary(
