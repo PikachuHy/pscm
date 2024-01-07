@@ -149,6 +149,7 @@ td_library(
         "include/pscm/codegen/mlir/Ops.td",
     ],
     includes = ["include"],
+    tags = ["manual"],
     deps = [
         "@llvm-project//mlir:CallInterfacesTdFiles",
         "@llvm-project//mlir:CastInterfacesTdFiles",
@@ -160,6 +161,7 @@ td_library(
 
 gentbl_cc_library(
     name = "pscm-ops-inc-gen",
+    tags = ["manual"],
     tbl_outs = [
         (
             ["-gen-op-decls"],
