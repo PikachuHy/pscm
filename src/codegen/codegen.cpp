@@ -45,7 +45,7 @@ using namespace mlir;
 #include <clang/Frontend/TextDiagnosticPrinter.h>
 #include <clang/Tooling/Tooling.h>
 #include <llvm/IR/LegacyPassManager.h>
-#include <llvm/Support/Host.h>
+#include <llvm/TargetParser/Host.h>
 
 #include <iostream>
 PSCM_INLINE_LOG_DECLARE("pscm.codegen");
@@ -272,6 +272,7 @@ std::optional<Cell> mlir_codegen_and_run_jit(Cell expr) {
     return std::nullopt;
   }
 
+  module->dump();
   mlir::PassManager pm(module.get()->getName());
   if (mlir::failed(mlir::applyPassManagerCLOptions(pm))) {
     llvm::errs() << "applyPassManagerCLOptions error"
@@ -290,7 +291,7 @@ std::optional<Cell> mlir_codegen_and_run_jit(Cell expr) {
                  << "\n";
     return std::nullopt;
   }
-  // module->dump();
+  module->dump();
   if (auto err = run_jit(*module)) {
     llvm::errs() << "run mlir error"
                  << "\n";
