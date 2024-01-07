@@ -245,6 +245,7 @@ std::optional<Cell> mlir_codegen_and_run_jit(Cell expr) {
   if (!expr.is_pair()) {
     return std::nullopt;
   }
+  Cell fakeResult;
   // hardcode only suport (+ num1 num2)
   if (car(expr).is_sym() && *car(expr).to_sym() == "+"_sym) {
     auto num1 = cadr(expr);
@@ -265,6 +266,7 @@ std::optional<Cell> mlir_codegen_and_run_jit(Cell expr) {
                    << "\n";
       return std::nullopt;
     }
+    fakeResult = new pscm::Number(n1->to_int() + n2->to_int());
   }
   else {
     llvm::errs() << "not supported now"
@@ -297,6 +299,6 @@ std::optional<Cell> mlir_codegen_and_run_jit(Cell expr) {
                  << "\n";
     return std::nullopt;
   }
-  return Cell::none();
+  return fakeResult;
 }
 } // namespace pscm
