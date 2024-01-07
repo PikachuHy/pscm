@@ -474,7 +474,14 @@ Cell Scheme::eval(const UString& code) {
       ret = Evaluator(*this).eval(ret, current_module_->env());
     }
     else if (use_mlir_) {
-      ret = mlir_codegen_and_run_jit(ret);
+      auto run_ret = mlir_codegen_and_run_jit(ret);
+      if (run_ret.has_value()) {
+        ret = run_ret.value();
+      }
+      else {
+        // failback to direct eval
+        ret = eval(ret);
+      }
     }
     else {
       ret = eval(ret);

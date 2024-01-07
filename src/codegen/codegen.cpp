@@ -228,7 +228,7 @@ int create_mlir_add(mlir::MLIRContext& ctx, mlir::OwningOpRef<mlir::ModuleOp>& m
   return 0;
 }
 
-Cell mlir_codegen_and_run_jit(Cell expr) {
+std::optional<Cell> mlir_codegen_and_run_jit(Cell expr) {
   mlir::registerAsmPrinterCLOptions();
   mlir::registerMLIRContextCLOptions();
   mlir::registerPassManagerCLOptions();
@@ -249,20 +249,20 @@ Cell mlir_codegen_and_run_jit(Cell expr) {
     if (auto err = create_mlir_add(context, module, cadr(expr), caddr(expr))) {
       llvm::errs() << "create mlir error"
                    << "\n";
-      return Cell::bool_false();
+      return std::nullopt;
     }
   }
   else {
     llvm::errs() << "not supported now"
                  << "\n";
-    return Cell::bool_false();
+    return std::nullopt;
   }
 
   mlir::PassManager pm(module.get()->getName());
   if (mlir::failed(mlir::applyPassManagerCLOptions(pm))) {
     llvm::errs() << "applyPassManagerCLOptions error"
                  << "\n";
-    return Cell::bool_false();
+    return std::nullopt;
   }
   mlir::OpPassManager& optPM = pm.nest<pscm::FuncOp>();
   optPM.addPass(mlir::createCanonicalizerPass());
@@ -274,13 +274,13 @@ Cell mlir_codegen_and_run_jit(Cell expr) {
   if (mlir::failed(pm.run(*module))) {
     llvm::errs() << "run pass error"
                  << "\n";
-    return Cell::bool_false();
+    return std::nullopt;
   }
   // module->dump();
   if (auto err = run_jit(*module)) {
     llvm::errs() << "run mlir error"
                  << "\n";
-    return Cell::bool_false();
+    return std::nullopt;
   }
   return Cell::none();
 }
