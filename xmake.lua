@@ -30,7 +30,10 @@ target("pscm") do
     add_packages({"spdlog", "universal_stacktrace", "cpp-linenoise"})
     add_packages({"icu4c", "mscharconv"}, {public = true})
     add_files({
-        "src/**.cpp",
+        "src/*.cpp",
+        "src/icu/**.cpp",
+        "src/logger/**.cpp",
+        "src/misc/*.cpp",
         "$(buildir)/version.cpp"})
     
     if is_mode("coverage") then
