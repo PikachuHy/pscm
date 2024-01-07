@@ -1,18 +1,22 @@
 cmake_minimum_required(VERSION 3.26)
 SET(CMAKE_OSX_DEPLOYMENT_TARGET "13.3" CACHE STRING "Minimum OS X deployment version" FORCE)
-project(pscm VERSION 0.3.0 LANGUAGES CXX)
+project(pscm VERSION 0.3.0 LANGUAGES C CXX)
 option(PSCM_USE_CXX20_MODULES "enable c++20 modules" OFF)
+option(PSCM_ENABLE_MLIR_CODEGEN "enable codegen with MLIR" OFF)
 if (WIN32)
     set(CMAKE_CXX_STANDARD 20)
 else ()
     if (PSCM_USE_CXX20_MODULES)
         if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-            # CMake 3.26
-            # set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
-            # CMake 3.27
-            set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "aa1f7df0-828a-4fcd-9afc-2dc80491aca7")
-            # set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "ac01f462-0f5f-432a-86aa-acef252918a6")
-            include(cxx_modules_rules_clang.cmake)
+            if (${CMAKE_MINOR_VERSION} STREQUAL 26)
+                set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
+                include(cxx_modules_rules_clang.cmake)
+            elseif (${CMAKE_MINOR_VERSION} STREQUAL 27)
+                set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "aa1f7df0-828a-4fcd-9afc-2dc80491aca7")
+            else ()
+                # https://cmake.org/cmake/help/latest/policy/CMP0155.html#policy:CMP0155
+                cmake_policy(SET CMP0155 NEW)
+            endif ()
             set(CMAKE_CXX_STANDARD 20)
             set(CMAKE_CXX_EXTENSIONS OFF)
         else ()
@@ -27,7 +31,7 @@ endif ()
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_library(pscm)
+add_library(pscm STATIC)
 if (EMSCRIPTEN)
     target_link_options(pscm PUBLIC "-sUSE_ICU=1")
     target_compile_options(pscm PUBLIC "-sUSE_ICU=1")
@@ -36,7 +40,7 @@ elseif (WIN32)
     target_link_libraries(pscm PUBLIC icu)
 else ()
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules (ICU REQUIRED icu-i18n icu-uc icu-io IMPORTED_TARGET)
+    pkg_check_modules(ICU REQUIRED icu-i18n icu-uc icu-io IMPORTED_TARGET)
     target_link_libraries(pscm PUBLIC PkgConfig::ICU)
 endif ()
 
@@ -97,6 +101,54 @@ endif ()
 
 file(GLOB PSCM_SRCS "src/*.cpp")
 target_sources(pscm PRIVATE ${PSCM_SRCS})
+if (PSCM_ENABLE_MLIR_CODEGEN)
+    message(STATUS "Enable codegen with MLIR")
+    target_compile_definitions(pscm PRIVATE PSCM_ENABLE_MLIR_CODEGEN)
+    file(GLOB CODEGEN_SRCS "src/codegen/*.cpp" src/codegen/mlir/*.cpp)
+    target_sources(pscm PRIVATE ${CODEGEN_SRCS})
+    set(CMAKE_MODULE_PATH /usr/local/opt/llvm/lib/cmake/clang /usr/local/opt/llvm/lib/cmake/lld /usr/local/opt/llvm/lib/cmake/llvm /usr/local/opt/llvm/lib/cmake/mlir)
+    set(CMAKE_PREFIX_PATH /usr/local/opt/llvm/lib/cmake/clang /usr/local/opt/llvm/lib/cmake/lld /usr/local/opt/llvm/lib/cmake/llvm /usr/local/opt/llvm/lib/cmake/mlir)
+    find_package(LLVM REQUIRED)
+    find_package(MLIR REQUIRED)
+    find_package(Clang REQUIRED)
+    include(TableGen)
+    include(AddMLIR)
+    include_directories(/usr/local/opt/llvm/include)
+    set(LLVM_TARGET_DEFINITIONS include/pscm/codegen/mlir/Ops.td)
+    mlir_tablegen(generate/Ops.h.inc -gen-op-decls)
+    mlir_tablegen(generate/Ops.cpp.inc -gen-op-defs)
+    mlir_tablegen(generate/Dialect.h.inc -gen-dialect-decls)
+    mlir_tablegen(generate/Dialect.cpp.inc -gen-dialect-defs)
+    add_public_tablegen_target(pscm-inc-gen)
+    add_dependencies(pscm pscm-inc-gen)
+    get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
+    get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
+    get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
+    target_link_libraries(pscm PRIVATE
+            ${dialect_libs}
+            ${conversion_libs}
+            ${extension_libs}
+
+            MLIRAnalysis
+            MLIRBuiltinToLLVMIRTranslation
+            MLIRCastInterfaces
+            MLIRCallInterfaces
+            MLIRExecutionEngine
+            MLIRLLVMToLLVMIRTranslation
+            MLIRMemRefDialect
+            MLIRIR
+            MLIRParser
+            MLIRPass
+            MLIRSideEffectInterfaces
+            MLIRSupport
+            MLIRTargetLLVMIRExport
+            MLIRTransforms
+
+            clangDriver
+            clangTooling
+            clangFrontend
+    )
+endif ()
 target_sources(pscm PRIVATE
         ${CMAKE_CURRENT_BINARY_DIR}/generate/src/version.cpp
         src/logger/Logger.cpp

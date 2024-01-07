@@ -49,6 +49,16 @@ jobs:
         working-directory: ${{github.workspace}}/build/test
         run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
 
+      - name: Configure CMake with MLIR
+        run: PKG_CONFIG_PATH=/usr/local/opt/icu4c/lib/pkgconfig cmake -B ${{github.workspace}}/build3 -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON -DPSCM_ENABLE_MLIR_CODEGEN=ON
+
+      - name: Build with MLIR
+        run: cmake --build ${{github.workspace}}/build3 --config ${{matrix.mode}} --verbose -j
+
+      - name: Test with MLIR
+        working-directory: ${{github.workspace}}/build3/test
+        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
+
       - name: Configure CMake with C++20 Modules
         run: PKG_CONFIG_PATH=/usr/local/opt/icu4c/lib/pkgconfig  CXX=/usr/local/opt/llvm/bin/clang++ CC=/usr/local/opt/llvm/bin/clang cmake -B ${{github.workspace}}/build2 -DCMAKE_BUILD_TYPE=${{matrix.mode}} -DCMAKE_MAKE_PROGRAM=/usr/local/bin/ninja -G Ninja -DUSE_CCACHE=ON -DPSCM_USE_CXX20_MODULES=ON
 

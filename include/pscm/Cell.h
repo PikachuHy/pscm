@@ -149,6 +149,7 @@ public:
   };
   UString to_string() const;
   UString pretty_string() const;
+  std::string to_std_string() const;
   void display(Port& port);
 
   static Cell nil() {

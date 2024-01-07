@@ -31,7 +31,7 @@
 (cpp_library
  (name "pscm")
  (srcs
-  (glob "src/**/*.cpp" "src/**/*.cppm")
+  (glob "src/icu/*.cpp" "src/logger/*.cpp" "src/misc/*.cpp" "src/*.cpp" "src/**/*.cppm")
   "build/generate/src/version.cpp"
   )
  (hdrs
