@@ -65,7 +65,8 @@ public:
     ModuleOp parentModule = op->getParentOfType<ModuleOp>();
 
     auto printfRef = getOrInsertPrintf(rewriter, parentModule);
-    Value formatSpecifierCst = getOrCreateGlobalString(loc, rewriter, "frmt_spec", StringRef("%d \0", 4), parentModule);
+    Value formatSpecifierCst =
+        getOrCreateGlobalString(loc, rewriter, "frmt_spec", StringRef("jit: %d \0", 8), parentModule);
     Value newLineCst = getOrCreateGlobalString(loc, rewriter, "nl", StringRef("\n\0", 2), parentModule);
 
     rewriter.create<func::CallOp>(loc, printfRef, rewriter.getIntegerType(32),
