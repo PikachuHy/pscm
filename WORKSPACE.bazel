@@ -243,6 +243,9 @@ new_git_repository(
     name = "llvm-raw",
     build_file_content = "# empty",
     commit = "6009708b4367171ccdbf4b5905cb6a803753fe18",
+    patches = [
+        "@dev_pscm//3rd/patch:llvm/fix_build_on_macos_13.patch",
+    ],
     remote = "https://github.com/llvm/llvm-project.git"
 )
 
@@ -319,6 +322,6 @@ maybe(
     sha256 = "7c42d56fac126929a6a85dbc73ff1db2411d04f104fae9bdea51305663a83fd0",
     strip_prefix = "zstd-1.5.2",
     urls = [
-        "https://github.com/facebook/zstd/releases/download/v1.5.2/zstd-1.5.2.tar.gz"
+        "https://github.com/facebook/zstd/releases/download/v1.5.2/zstd-1.5.2.tar.gz",
     ],
 )

@@ -28,6 +28,12 @@ jobs:
       - name: Test
         run: bazel test \:all --config=macos --test_output=errors
 
+      - name: Build with MLIR
+        run: bazel build \:all --config=macos --define codegen=mlir
+
+      - name: Test with MLIR
+        run: bazel test \:all --config=macos --define codegen=mlir --test_output=errors
+
       - name: Build ios App
         # build with c++20
         # workaround from https://github.com/bazelbuild/bazel/issues/12716#issuecomment-1113754835
