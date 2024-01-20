@@ -24,7 +24,10 @@ using namespace mlir;
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/Passes.h"
 
+#include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorOr.h"
@@ -32,8 +35,6 @@ using namespace mlir;
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include "llvm/ADT/ScopedHashTable.h"
 
 #include "pscm/Number.h"
 #include "pscm/Symbol.h"
@@ -229,6 +230,12 @@ int create_mlir_add(mlir::MLIRContext& ctx, mlir::OwningOpRef<mlir::ModuleOp>& m
 }
 
 std::optional<Cell> mlir_codegen_and_run_jit(Cell expr) {
+  if (auto ret = llvm_ir_codegen_and_run_jit(expr); ret.has_value()) {
+    llvm::errs() << "get result from llvm IR"
+                 << "\n";
+    return ret;
+  }
+
   mlir::registerAsmPrinterCLOptions();
   mlir::registerMLIRContextCLOptions();
   mlir::registerPassManagerCLOptions();
