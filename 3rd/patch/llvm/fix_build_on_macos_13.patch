@@ -1,0 +1,13 @@
+diff mlir/lib/Dialect/SparseTensor/Transforms/SparseTensorRewriting.cpp mlir/lib/Dialect/SparseTensor/Transforms/SparseTensorRewriting.cpp
+index ebbe88ee9029..21e128d61cc6 100644
+--- mlir/lib/Dialect/SparseTensor/Transforms/SparseTensorRewriting.cpp
++++ mlir/lib/Dialect/SparseTensor/Transforms/SparseTensorRewriting.cpp
+@@ -1094,7 +1094,7 @@ private:
+         });
+     rewriter.setInsertionPointAfter(op);
+     src = rewriter.create<LoadOp>(loc, foreachOp.getResult(0), true);
+-    if (bufferTp != dstTp) {
++    if (bufferTp != dstTp.getRankedTensorType()) {
+       rewriter.replaceOpWithNewOp<ConvertOp>(op, dstTp.getRankedTensorType(),
+                                              src);
+       rewriter.create<DeallocTensorOp>(loc, src);
