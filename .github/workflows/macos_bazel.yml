@@ -54,3 +54,10 @@ jobs:
         with:
           name: macos-pscm-wasm
           path: bazel-bin/wasm/
+
+      - name: Build krabby
+        run: bazel build //project/krabby:krabby -c opt
+  
+      - name: Build krabby wasm
+        run: bazel build //project/krabby:krabby-wasm -c opt
+  
