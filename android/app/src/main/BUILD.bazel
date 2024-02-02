@@ -8,17 +8,13 @@ android_library(
     manifest = "LibraryManifest.xml",
     resource_files = glob(["res/**/*"]),
     deps = [
-        ":jni_lib",
+        # ":jni_lib",
+        "//binding/java:pscm_java_api",
+        # must depend on cc_library directly
+        "//binding/java:pscm_java_binding",
         "@maven//:androidx_appcompat_appcompat",
         "@maven//:androidx_constraintlayout_constraintlayout",
     ],
-)
-
-cc_library(
-    name = "jni_lib",
-    srcs = ["cpp/native-lib.cpp"],
-    copts = ["-std=c++20"],
-    deps = ["//:pscm"],
 )
 
 android_binary(

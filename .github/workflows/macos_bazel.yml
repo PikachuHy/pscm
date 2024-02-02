@@ -28,6 +28,9 @@ jobs:
       - name: Test
         run: bazel test \:all --config=macos --test_output=errors
 
+      - name: Test Java Binding
+        run: bazel run //binding/java:pscm_java_api_test
+
       - name: Build with MLIR
         run: bazel build \:all --config=macos --define codegen=mlir
 
