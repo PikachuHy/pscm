@@ -58,6 +58,6 @@ jobs:
       - name: Build krabby
         run: bazel build //project/krabby:krabby -c opt
   
-      - name: Build krabby wasm --config=wasm
-        run: bazel build //project/krabby:krabby-wasm -c opt
+      - name: Build krabby wasm
+        run: bazel build //project/krabby:krabby-wasm -c opt --config=wasm
   
