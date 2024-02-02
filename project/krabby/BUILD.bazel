@@ -1,19 +1,33 @@
 load("@emsdk//emscripten_toolchain:wasm_rules.bzl", "wasm_cc_binary")
 
 # FIXME: -sUSE_SDL=2 -sUSE_SDL_TTF=2 not work with bazel
-# cc_binary(
-#     name = "krabby",
-#     srcs = ["src/main.cpp"],
-#     copts = [
-#         "-std=c++20",
-#     ],
-# )
 
-# wasm_cc_binary(
-#     name = "krabby-wasm",
-#     cc_target = ":krabby",
-#     outputs = [
-#         "krabby.js",
-#         "krabby.wasm",
-#     ],
-# )
+filegroup(
+    name = "asset",
+    srcs = glob([
+        "asset/font/*",
+        "asset/audio/*",
+    ]),
+)
+
+cc_binary(
+    name = "krabby",
+    srcs = ["src/main.cpp"],
+    additional_linker_inputs = [":asset"],
+    copts = [
+        "-std=c++20",
+    ],
+    data = [":asset"],
+    # linkopts = ["--preload-file $(locations asset)"],
+    deps = ["@sdl2_ttf"],
+)
+
+wasm_cc_binary(
+    name = "krabby-wasm",
+    cc_target = ":krabby",
+    outputs = [
+        "krabby.js",
+        "krabby.wasm",
+    ],
+    threads = "emscripten",
+)
