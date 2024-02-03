@@ -3,9 +3,11 @@ package dev.pscm.android;
 import android.os.Bundle;
 import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
+import dev.pscm.PSCMScheme;
 
 public class MainActivity extends AppCompatActivity {
-  private long scm;
+  private PSCMScheme scm;
+
   static {
     System.loadLibrary("app");
   }
@@ -14,20 +16,9 @@ public class MainActivity extends AppCompatActivity {
   protected void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
     setContentView(R.layout.activity_main);
-
-    // Example of a call to a native method
+    scm = new PSCMScheme();
     TextView tv = (TextView)findViewById(R.id.sample_text);
-    tv.setText(stringFromJNI());
-    scm = createScheme();
-    String ret = evalSchemeCode(scm, "(version)");
+    String ret = scm.eval("(version)");
     tv.setText(ret);
   }
-
-  /**
-   * A native method that is implemented by the 'native-lib' native library,
-   * which is packaged with this application.
-   */
-  public native String stringFromJNI();
-  public native long createScheme();
-  public native String evalSchemeCode(long scm, String code);
 }

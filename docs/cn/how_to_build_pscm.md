@@ -67,6 +67,12 @@ Note: don't
 use `bazel mobile-install //android/app/src/main:app --android_crosstool_top=@androidndk//:toolchain --fat_apk_cpu=arm64-v8a`,
 which may cause app crash
 
+- launch pscm android app
+
+```
+adb shell am start -n dev.pscm.android/dev.pscm.android.MainActivity
+```
+
 - build pscm ios app
 
 ```

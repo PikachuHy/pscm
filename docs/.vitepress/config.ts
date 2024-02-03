@@ -93,6 +93,10 @@ function sidebarGuideZh() {
           text: 'Unicode Support',
           link: '/cn/unicode_support'
         },
+        {
+          text: 'Language Binding',
+          link: '/cn/language_binding'
+        },
       ]
     },
     {
