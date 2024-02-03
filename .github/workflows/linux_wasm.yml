@@ -2,9 +2,9 @@ name: Linux WASM
 
 on:
   push:
-    branches: [ main ]
+    branches: [ master ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
 env:
   EM_VERSION: 3.1.35
   EM_CACHE_FOLDER: 'emsdk-cache'
