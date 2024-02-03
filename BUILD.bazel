@@ -2,7 +2,6 @@ load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("version.bzl", "gen_pscm_version_info")
 load("test.bzl", "collect_pscm_tests")
 load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
-load("@pybind11_bazel//:build_defs.bzl", "pybind_extension", "pybind_library")
 
 config_setting(
     name = "mlir_codegen",
