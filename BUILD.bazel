@@ -2,7 +2,6 @@ load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("version.bzl", "gen_pscm_version_info")
 load("test.bzl", "collect_pscm_tests")
 load("@llvm-project//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
-load("@pybind11_bazel//:build_defs.bzl", "pybind_extension", "pybind_library")
 
 config_setting(
     name = "mlir_codegen",
@@ -184,12 +183,4 @@ gentbl_cc_library(
     tblgen = "@llvm-project//mlir:mlir-tblgen",
     td_file = "include/pscm/codegen/mlir/Ops.td",
     deps = [":pscm-ops-td-files"],
-)
-
-# when import pscm, the pscm.so must in root folder
-# TODO: rename pypscm to pscm
-pybind_extension(
-    name = "pypscm",
-    visibility = ["//visibility:public"],
-    deps = ["//binding/python:pscm"],
 )
