@@ -103,6 +103,26 @@ file(GLOB PSCM_SRCS "src/*.cpp")
 target_sources(pscm PRIVATE ${PSCM_SRCS})
 if (PSCM_ENABLE_MLIR_CODEGEN)
     message(STATUS "Enable codegen with MLIR")
+    target_sources(pscm PUBLIC
+            src/core/Value.cpp
+            src/core/Value.h
+            src/core/Parser.cpp
+            src/core/Parser.h
+            src/core/Evaluator.cpp
+            src/core/Evaluator.h
+            src/core/SymbolTable.cpp
+            src/core/SymbolTable.h
+            src/core/Procedure.cpp
+            src/core/Procedure.h
+            src/core/JIT.cpp
+            src/core/JIT.h
+            src/core/Scheme.cpp
+            src/core/Scheme.h
+            src/core/Mangler.cpp
+            src/core/Mangler.h
+            src/core/Runtime.cpp
+            src/core/Runtime.h
+    )
     target_compile_definitions(pscm PRIVATE PSCM_ENABLE_MLIR_CODEGEN)
     file(GLOB CODEGEN_SRCS src/codegen/*.cpp src/codegen/mlir/*.cpp src/codegen/llvm_ir/*.cpp)
     target_sources(pscm PRIVATE ${CODEGEN_SRCS})

@@ -19,6 +19,8 @@ endforeach ()
 add_pscm_test(sicp_ch1_tests sicp/ch1_tests.cpp)
 add_pscm_test(r4rs_test r4rs/r4rs_tests.cpp)
 add_pscm_test(module_test module/load_path_tests.cpp)
+add_pscm_test(core_test core/simple_core_tests.cpp)
+target_include_directories(core_test PRIVATE ${CMAKE_SOURCE_DIR}/src)
 if (EMSCRIPTEN)
 elseif (WIN32)
 # TODO: handle EOF
