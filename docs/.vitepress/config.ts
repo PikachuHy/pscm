@@ -100,6 +100,16 @@ function sidebarGuideZh() {
       ]
     },
     {
+      text: 'pscm-core',
+      collapsible: true,
+      items: [
+        {
+          text: 'pscm-core 简介',
+          link: '/cn/pscm_core'
+        },
+      ]
+    },
+    {
       text: 'pscm-build',
       collapsible: true,
       items: [

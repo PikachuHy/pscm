@@ -30,9 +30,9 @@ cc_library(
         [
             "src/**/*.cpp",
         ],
-        exclude = ["src/codegen/**"],
+        exclude = ["src/codegen/**", "src/core/**"],
     ) + select({
-        ":mlir_codegen": glob(["src/codegen/**/*.cpp"]),
+        ":mlir_codegen": glob(["src/codegen/**/*.cpp", "src/core/**/*.cpp", "src/core/**/*.h"]),
         "//conditions:default": [],
     }) + [
         ":src/version.cpp",

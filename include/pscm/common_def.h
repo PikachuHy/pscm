@@ -9,6 +9,9 @@
 #define PSCM_THROW_EXCEPTION(msg)                                                                                      \
   PSCM_ERROR("Exception occurred here: {0}", (msg));                                                                   \
   throw ::pscm::Exception(msg)
+
+#define PSCM_UNIMPLEMENTED() PSCM_THROW_EXCEPTION("Unimplemented")
+
 #define PSCM_ASSERT(e)                                                                                                 \
   if (!(e)) {                                                                                                          \
     PSCM_ERROR("ASSERT FAILED here: {0}", #e);                                                                         \
