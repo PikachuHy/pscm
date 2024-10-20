@@ -205,3 +205,7 @@ add_subdirectory(test)
 add_subdirectory(example)
 add_subdirectory(tool)
 add_subdirectory(project)
+
+add_executable(pscm-c src/c/main.c)
+add_executable(pscm-cc src/c/main.cc)
+target_link_libraries(pscm-cc PUBLIC pscm)
