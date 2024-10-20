@@ -6,8 +6,9 @@
 #include <string.h>
 
 #include "pscm/Parser.h"
+#include "pscm/Symbol.h"
 #include "pscm/common_def.h"
-import pscm;
+#include "pscm/scm_utils.h"
 using namespace pscm;
 long *cont_base;
 
@@ -76,6 +77,7 @@ void print_basename(const char *path) {
 #define SCM_ERROR_SYMTBL(fmt, ...) SCM_DEBUG("[symtbl]", fmt, ##__VA_ARGS__)
 #define SCM_DEBUG_TRANS(fmt, ...) SCM_DEBUG("[trans]", fmt, ##__VA_ARGS__)
 #define SCM_DEBUG_EVAL(fmt, ...) SCM_DEBUG("[eval]", fmt, ##__VA_ARGS__)
+#define SCM_ERROR_EVAL(fmt, ...) SCM_DEBUG("[eval]", fmt, ##__VA_ARGS__)
 
 // #undef SCM_DEBUG_CONT
 // #define SCM_DEBUG_CONT(...)
@@ -102,6 +104,7 @@ struct SCM {
 
   void *value;
 };
+struct SCM_Environment;
 
 struct SCM_List {
   SCM *data;
@@ -117,6 +120,7 @@ struct SCM_Procedure {
   SCM_Symbol *name;
   SCM_List *args;
   SCM_List *body;
+  SCM_Environment *env;
 };
 
 struct SCM_Continuation {
@@ -176,6 +180,9 @@ void scm_env_insert(SCM_Environment *env, SCM_Symbol *sym, SCM *value) {
 }
 
 SCM *scm_env_search(SCM_Environment *env, SCM_Symbol *sym) {
+  if (strcmp(sym->data, "return") == 0) {
+    printf("got it\n");
+  }
   auto entry = scm_env_search_entry(env, sym);
   if (entry) {
     return entry->value;
@@ -369,7 +376,9 @@ void print_ast(SCM *ast) {
   if (is_proc(ast)) {
     auto proc = (SCM_Procedure *)ast->value;
     printf("<");
-    printf("proc %s ", proc->name->data);
+    if (proc->name) {
+      printf("proc %s ", proc->name->data);
+    }
     print_list(proc->args);
     printf(">");
     return;
@@ -461,6 +470,9 @@ SCM *eval_with_env(SCM_Environment *env, SCM *ast) {
   SCM_ASSERT(env);
   SCM_ASSERT(ast);
 entry:
+  SCM_DEBUG_EVAL("eval ");
+  print_ast(ast);
+  printf("\n");
   if (!is_pair(ast)) {
     if (is_sym(ast)) {
       SCM_Symbol *sym = (SCM_Symbol *)ast->value;
@@ -508,6 +520,7 @@ entry:
           proc->name = proc_name;
           proc->args = proc_sig->next;
           proc->body = l->next->next;
+          proc->env = env;
 
           SCM *ret = new SCM();
           ret->type = SCM::PROC;
@@ -577,6 +590,7 @@ entry:
     else if (strcmp(sym->data, "set!") == 0) {
       assert(is_sym(l->next->data));
       auto sym = (SCM_Symbol *)l->next->data->value;
+      scm_env_insert(env, sym, nullptr);
       auto val = eval_with_env(env, l->next->next->data);
       SCM_ASSERT(val);
       scm_env_insert(env, sym, val);
@@ -591,10 +605,74 @@ entry:
       }
       return scm_nil();
     }
+    else if (strcmp(sym->data, "for-each") == 0) {
+      // (for-each f arg)
+      SCM_ASSERT(l->next);
+      auto f = eval_with_env(env, l->next->data);
+      SCM_ASSERT(is_proc(f));
+      auto proc = (SCM_Procedure *)f->value;
+      int arg_count = 0;
+      auto l2 = proc->args;
+      while (l2) {
+        arg_count++;
+        l2 = l2->next;
+      }
+      SCM_List dummy;
+      dummy.data = nullptr;
+      dummy.next = nullptr;
+      l2 = &dummy;
+      l = l->next->next;
+
+      SCM_List args_dummy;
+      args_dummy.data = nullptr;
+      args_dummy.next = nullptr;
+      auto args_iter = &args_dummy;
+
+      for (int i = 0; i < arg_count; i++) {
+        if (l) {
+          auto item = new SCM_List();
+          item->data = eval_with_env(env, l->data);
+          SCM_ASSERT(is_pair(item->data));
+          l2->next = item;
+          l2 = item;
+
+          l = l->next;
+
+          auto arg = new SCM_List();
+          args_iter->next = arg;
+          args_iter = arg;
+        }
+        else {
+          SCM_ERROR_EVAL("args count not match, require %d, but got %d", arg_count, i + 1);
+          exit(1);
+        }
+      }
+      args_dummy.data = f;
+      // do for-each
+      SCM_ASSERT(arg_count == 1);
+      SCM_ASSERT(is_pair(dummy.next->data));
+      auto arg_l = (SCM_List *)dummy.next->data->value;
+      while (arg_l) {
+        args_dummy.next->data = arg_l->data;
+        SCM t;
+        t.type = SCM::LIST;
+        t.value = &args_dummy;
+        eval_with_env(env, &t);
+      }
+      // while (true) {
+      //   args_iter = &args_dummy;
+      //   l2 = dummy.next;
+      //   for (size_t i = 0; i < arg_count; i++) {
+      //     PSCM_ASSERT(args_iter->next);
+
+      //   }
+      // }
+    }
     else {
       auto val = scm_env_search(env, sym);
       if (!val) {
         printf("%s:%d Symbol not found '%s'\n", __FILE__, __LINE__, sym->data);
+        exit(1);
       }
       auto new_ast = new SCM();
       new_ast->type = SCM::LIST;
@@ -615,7 +693,7 @@ entry:
   else if (is_proc(l->data)) {
     auto proc = (SCM_Procedure *)l->data->value;
     auto proc_env = new SCM_Environment();
-    proc_env->parent = env;
+    proc_env->parent = proc->env;
     proc_env->dummy.data = nullptr;
     proc_env->dummy.next = nullptr;
     auto args_l = proc->args;
@@ -680,8 +758,6 @@ void init_scm() {
   printf("\n");
 
 void my_eval(SCM *ast) {
-
-  SCM_DEBUG_CONT("%p\n", __builtin_frame_address(0));
   SCM_PRINT_AST(ast);
   auto val = eval(ast);
   printf(" --> ");
