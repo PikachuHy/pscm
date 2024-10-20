@@ -10,6 +10,69 @@ import pscm;
 using namespace pscm;
 long *cont_base;
 
+void print_basename(const char *path) {
+  auto len = strlen(path);
+  int i = len;
+  while (i > 0) {
+    if (path[i] == '/') {
+      i++;
+      break;
+    }
+    i--;
+  }
+  for (int idx = i; idx <= len; idx++) {
+    printf("%c", path[idx]);
+  }
+}
+
+#define SCM_FILENAME_LINENO()                                                                                          \
+  print_basename(__BASE_FILE__);                                                                                       \
+  printf(":%d ", __LINE__);
+
+#define SCM_INIT_CONT(cont, base)                                                                                      \
+  {                                                                                                                    \
+    cont = new SCM_Continuation();                                                                                     \
+    long __stack_top__;                                                                                                \
+    cont->dst = &__stack_top__;                                                                                        \
+    cont->stack_len = (long)base - (long)cont->dst;                                                                    \
+    cont->stack_data = (long *)malloc(sizeof(long) * cont->stack_len);                                                 \
+    memcpy((void *)cont->stack_data, (void *)cont->dst, sizeof(long) * cont->stack_len);                               \
+  }                                                                                                                    \
+  while (0)                                                                                                            \
+    ;
+
+#define SCM_APPLY_CONT(cont)                                                                                           \
+  {                                                                                                                    \
+    long __cur__;                                                                                                      \
+    SCM_DEBUG_CONT("jump from %p to %p use %p\n", &__cur__, cont->dst, cont);                                          \
+    memcpy(cont->dst, cont->stack_data, sizeof(long) * cont->stack_len);                                               \
+    longjmp(cont->cont_jump_buffer, 1);                                                                                \
+  }                                                                                                                    \
+  while (0)                                                                                                            \
+    ;
+
+#define SCM_DEBUG(category, fmt, ...)                                                                                  \
+  {                                                                                                                    \
+    printf(category);                                                                                                  \
+    printf(" ");                                                                                                       \
+    SCM_FILENAME_LINENO();                                                                                             \
+    printf(fmt, ##__VA_ARGS__);                                                                                        \
+  }                                                                                                                    \
+  while (0)                                                                                                            \
+    ;
+
+#define SCM_DEBUG_CONT(fmt, ...) SCM_DEBUG("[cont]", fmt, ##__VA_ARGS__)
+#define SCM_DEBUG_SYMTBL(fmt, ...) SCM_DEBUG("[symtbl]", fmt, ##__VA_ARGS__)
+#define SCM_DEBUG_TRANS(fmt, ...) SCM_DEBUG("[trans]", fmt, ##__VA_ARGS__)
+#define SCM_DEBUG_EVAL(fmt, ...) SCM_DEBUG("[eval]", fmt, ##__VA_ARGS__)
+
+#undef SCM_DEBUG_CONT
+#define SCM_DEBUG_CONT(...)
+#undef SCM_DEBUG_SYMTBL
+#define SCM_DEBUG_SYMTBL(...)
+#undef SCM_DEBUG_TRANS
+#define SCM_DEBUG_TRANS(...)
+
 struct SCM {
   enum Type { NONE, NIL, LIST, PROC, CONT, NUM, BOOL, SYM } type;
 
@@ -61,7 +124,7 @@ SCM_Environment::Entry *scm_env_search_entry(SCM_Environment *env, SCM_Symbol *s
   auto l = env->dummy.next;
   while (l) {
     if (strcmp(l->data->key, sym->data) == 0) {
-      printf("find %s\n", sym->data);
+      SCM_DEBUG_SYMTBL("find %s\n", sym->data);
       return l->data;
     }
     l = l->next;
@@ -169,7 +232,7 @@ void print_ast(SCM *ast);
 void print_list(SCM_List *l);
 
 SCM *translate(Cell ret) {
-  printf("translate %s\n", ret.to_std_string().c_str());
+  SCM_DEBUG_TRANS("translate %s\n", ret.to_std_string().c_str());
   if (ret.is_none()) {
     return scm_none();
   }
@@ -194,8 +257,8 @@ SCM *translate(Cell ret) {
       if (first.is_pair()) {
         SCM_List *pair = new SCM_List();
         pair->data = translate(first);
-        print_ast(pair->data);
-        printf("\n");
+        // print_ast(pair->data);
+        // printf("\n");
         pair->next = nullptr;
         it->next = pair;
         it = pair;
@@ -355,13 +418,13 @@ entry:
     if (strcmp(sym->data, "define") == 0) {
       if (l->next && is_sym(l->next->data)) {
         SCM_Symbol *varname = (SCM_Symbol *)l->next->data->value;
-        printf("define variable %s", varname->data);
+        SCM_DEBUG_EVAL("define variable %s", varname->data);
         auto val = eval_with_env(env, l->next->next->data);
         if (is_proc(val)) {
           auto proc = (SCM_Procedure *)val->value;
           if (proc->name == nullptr) {
             proc->name = varname;
-            printf("define proc from lambda\n");
+            SCM_DEBUG_EVAL("define proc from lambda\n");
           }
         }
         scm_env_insert(env, varname, val);
@@ -371,10 +434,10 @@ entry:
       }
       else {
         SCM_List *proc_sig = (SCM_List *)l->next->data->value;
-        printf("define a procedure");
+        SCM_DEBUG_EVAL("define a procedure");
         if (is_sym(proc_sig->data)) {
           SCM_Symbol *proc_name = (SCM_Symbol *)proc_sig->data->value;
-          printf(" %s with params ", proc_name->data);
+          SCM_DEBUG_EVAL(" %s with params ", proc_name->data);
           printf("(");
           print_ast(proc_sig->next->data);
           printf(")\n");
@@ -399,23 +462,17 @@ entry:
       }
     }
     else if (strcmp(sym->data, "call/cc") == 0) {
-      auto cont = new SCM_Continuation();
-      long stack_top;
-      cont->dst = &stack_top;
-      cont->stack_len = (long)cont_base - (long)cont->dst;
-      printf("%p - %p\n", cont_base, cont->dst);
-      printf("stack len: %ld\n", cont->stack_len);
-      cont->stack_data = (long *)malloc(sizeof(long) * cont->stack_len);
-      memcpy((void *)cont->stack_data, (void *)cont->dst, sizeof(long) * cont->stack_len);
+      SCM_Continuation *cont;
+      SCM_INIT_CONT(cont, cont_base);
       int ret = setjmp(cont->cont_jump_buffer);
       if (ret) {
-        printf("jump back\n");
+        SCM_DEBUG_CONT("jump back\n");
         // print_ast(cont->arg);
         // std::exit(0);
         return cont->arg;
       }
       else {
-        printf("after setjmp\n");
+        SCM_DEBUG_CONT("after setjmp\n");
         auto arg = l->next->data;
         auto cont_arg = new SCM();
         cont_arg->type = SCM::CONT;
@@ -473,10 +530,7 @@ entry:
   if (is_cont(l->data)) {
     auto cont = (SCM_Continuation *)l->data->value;
     cont->arg = eval_with_env(env, l->next->data);
-    long cur;
-    printf("jump from %p to %p use %p\n", &cur, cont->dst, cont);
-    memcpy(cont->dst, cont->stack_data, sizeof(long) * cont->stack_len);
-    longjmp(cont->cont_jump_buffer, 1);
+    SCM_APPLY_CONT(cont);
   }
   else if (is_proc(l->data)) {
     auto proc = (SCM_Procedure *)l->data->value;
@@ -513,11 +567,37 @@ entry:
   return scm_nil();
 }
 
+jmp_buf my_jump_buffer;
+SCM *my_ret;
+int my_count = 0;
+bool debug = false;
+long hook_base;
+SCM_Continuation *my_cont;
+
 SCM *eval(SCM *ast) {
   auto env = &g_env;
   long stack_base;
   cont_base = &stack_base;
-  return eval_with_env(env, ast);
+  SCM_INIT_CONT(my_cont, hook_base);
+  int ret = setjmp(my_cont->cont_jump_buffer);
+  if (debug)
+    for (int i = 0; i < 16; i++) {
+      printf("%d %p\n", i, (void *)my_cont->cont_jump_buffer[i]);
+    }
+  if (ret != 0) {
+    SCM_DEBUG_CONT("my jump\n");
+    my_count++;
+    // if (my_count == 5) {
+    //   std::cout << "meet max count " << my_count << std::endl;
+    //   std::exit(0);
+    // }
+    return my_ret;
+  }
+  else {
+    auto ret = eval_with_env(env, ast);
+    my_ret = ret;
+    SCM_APPLY_CONT(my_cont);
+  }
 }
 
 void init_scm() {
@@ -526,41 +606,37 @@ void init_scm() {
   g_env.dummy.next = nullptr;
 }
 
+#define SCM_PRINT_AST(ast)                                                                                             \
+  printf("[ast] ");                                                                                                    \
+  print_ast(ast);                                                                                                      \
+  printf("\n");
+
+void my_eval(SCM *ast) {
+  SCM_PRINT_AST(ast);
+  auto val = eval(ast);
+  printf(" --> ");
+  SCM_PRINT_AST(val);
+}
+
 void run1() {
   SCM *ast = parse(R"(
   (define (f return)
     (return 2)
     3)
   )");
-  print_ast(ast);
-  printf("\n");
-  auto val = eval(ast);
-  printf(" --> ");
-  print_ast(val);
-  printf("\n");
+  my_eval(ast);
 
   ast = parse(R"(
 (call/cc f)
   )");
-  print_ast(ast);
-  printf("\n");
-  val = eval(ast);
-  printf(" --> ");
-  print_ast(val);
-  printf("\n");
+  my_eval(ast);
 }
 
 void run2() {
   SCM *ast = parse(R"(
 (define c #f)
   )");
-
-  print_ast(ast);
-  printf("\n");
-  auto val = eval(ast);
-  printf(" --> ");
-  print_ast(val);
-  printf("\n");
+  my_eval(ast);
 
   ast = parse(R"(
 (call/cc
@@ -568,22 +644,17 @@ void run2() {
           (set! c c0)
           'talk1))
   )");
-  print_ast(ast);
-  printf("\n");
-  val = eval(ast);
-  printf(" --> ");
-  print_ast(val);
-  printf("\n");
+  my_eval(ast);
 
   ast = parse(R"(
 (c 'talk2)
   )");
-  print_ast(ast);
-  printf("\n");
-  val = eval(ast);
-  printf(" --> ");
-  print_ast(val);
-  printf("\n");
+  my_eval(ast);
+
+  ast = parse(R"(
+(c 'talk2)
+  )");
+  my_eval(ast);
 }
 
 void repl() {
@@ -607,10 +678,13 @@ void repl() {
 }
 
 int main() {
+  long t;
+  hook_base = (long)&t;
   init_scm();
-  // run1();
-  // run2();
-  repl();
+  run1();
+
+  run2();
+  // repl();
   return 0;
 }
 
