@@ -1,4 +1,5 @@
 enable_testing()
+add_subdirectory(cont)
 function(add_pscm_test name src)
     add_executable(${name} ${src})
     target_link_libraries(${name} PRIVATE doctest::doctest pscm)

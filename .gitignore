@@ -70,3 +70,5 @@ cov/
 /build-*
 
 .aswb
+
+__pycache__

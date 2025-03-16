@@ -29,15 +29,13 @@ please report bugs to https://github.com/PikachuHy/pscm/issues
 }
 
 int main(int argc, char **argv) {
-  Scheme scm;
-  auto version = scm.eval("(version)");
-  std::cout << "Welcome to PikachuHy's Scheme" << std::endl;
-  std::cout << "version: " << version.to_string() << std::endl;
   bool use_register_machine = false;
   int index = 1;
   while (index < argc) {
     std::string arg = argv[index];
     if (arg == "-v" || arg == "--version") {
+      Scheme scm;
+      auto version = scm.eval("(version)");
       std::cout << "PikachuHy's Scheme " << version.to_string() << std::endl;
       std::cout << "Copyright (c) 2023 PikachuHy" << std::endl;
       return 0;
@@ -69,10 +67,10 @@ int main(int argc, char **argv) {
       show_usage();
       return 0;
     }
-    else if (arg == "-s") {
+    else if (arg == "-s" || arg == "--test") {
       Scheme new_scm(use_register_machine);
       if (index + 1 < argc) {
-        bool ok = new_scm.load(argv[index + 1]);
+        bool ok = new_scm.load(argv[index + 1], arg == "--test");
         if (!ok) {
           return 1;
         }
@@ -93,6 +91,10 @@ int main(int argc, char **argv) {
       return 0;
     }
   }
+  Scheme scm;
+  auto version = scm.eval("(version)");
+  std::cout << "Welcome to PikachuHy's Scheme" << std::endl;
+  std::cout << "version: " << version.to_string() << std::endl;
   scm.repl();
   return 0;
 }

@@ -1,0 +1,12 @@
+@LIT_SITE_CFG_IN_HEADER@
+
+import sys
+import lit.formats
+
+config.pscm_src_dir = path(r"@PSCM_SOURCE_DIR@")
+
+config.substitutions.append(("%pscm_main", "@PSCM_BINARY_DIR@/pscm_main"))
+
+import pscm.lit
+pscm.lit.initialize(lit_config, config)
+lit_config.load_config(config, os.path.join(config.pscm_src_dir, "test/cont/lit.cfg.py"))

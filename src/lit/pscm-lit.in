@@ -1,0 +1,28 @@
+#!@Python3_EXECUTABLE@
+# -*- coding: utf-8 -*-
+import re
+import sys
+
+config_map = {}
+
+def map_config(source_dir, site_config):
+    global config_map
+    source_dir = os.path.abspath(source_dir)
+    source_dir = os.path.normcase(source_dir)
+    site_config = os.path.normpath(site_config)
+    config_map[source_dir] = site_config
+
+# Set up some builtin parameters, so that by default the LLVM test suite
+# configuration file knows how to find the object tree.
+builtin_parameters = { 'build_mode' : '@BUILD_MODE@' }
+
+@PSCM_LIT_CONFIG_MAP@
+
+builtin_parameters['config_map'] = config_map
+
+pscm_source_root = path(r'@PSCM_SOURCE_DIR@')
+sys.path.insert(0, os.path.join(pscm_source_root, 'src', 'lit'))
+if __name__ == '__main__':
+    from lit.main import main
+    sys.argv[0] = re.sub(r'(-script\.pyw|\.exe)?$', '', sys.argv[0])
+    sys.exit(main(builtin_parameters))

@@ -138,7 +138,7 @@ void open_fstream(std::fstream& stream, UString path, std::ios_base::openmode mo
   path.toUTF8String(path_utf8);
   stream.open(path_utf8, mode);
   stream.seekg(0, std::ios_base::beg);
-  PSCM_INFO("path: {0}, file opened: {1}", path, stream.is_open())
+  PSCM_DEBUG("path: {0}, file opened: {1}", path, stream.is_open())
 }
 
 bool if_file_exists(UString fname) {

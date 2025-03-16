@@ -18,7 +18,7 @@ public:
   Cell eval(const UString& code);
   void eval_all(const UString& code, SourceLocation loc = {});
   Cell eval(Cell expr);
-  bool load(const UString& filename);
+  bool load(const UString& filename, bool print = false);
   void add_func(Symbol *sym, Function *func);
   void repl();
 

@@ -542,8 +542,8 @@ void Scheme::eval_all(const UString& code, SourceLocation loc) {
   }
 }
 
-bool Scheme::load(const UString& filename) {
-  std::cout << "load: " << filename << std::endl;
+bool Scheme::load(const UString& filename, bool print) {
+  PSCM_DEBUG("load: {0}", filename);
   auto res = read_file(filename);
   if (!std::holds_alternative<UString>(res)) {
     return false;
@@ -553,11 +553,15 @@ bool Scheme::load(const UString& filename) {
     Parser parser(code, filename);
     Cell expr = parser.next();
     while (!expr.is_none()) {
+      Cell ret;
       if (use_register_machine_) {
-        Evaluator(*this).eval(expr, envs_.back());
+        ret = Evaluator(*this).eval(expr, envs_.back());
       }
       else {
-        eval(expr);
+        auto ret = eval(expr);
+      }
+      if (print && !ret.is_none()) {
+        std::cout << ret << std::endl;
       }
       expr = parser.next();
     }
