@@ -79,3 +79,5 @@ add_test(
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
 )
 endif()
+
+add_subdirectory(base)

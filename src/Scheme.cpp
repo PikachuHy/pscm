@@ -558,7 +558,7 @@ bool Scheme::load(const UString& filename, bool print) {
         ret = Evaluator(*this).eval(expr, envs_.back());
       }
       else {
-        auto ret = eval(expr);
+        ret = eval(expr);
       }
       if (print && !ret.is_none()) {
         std::cout << ret << std::endl;
