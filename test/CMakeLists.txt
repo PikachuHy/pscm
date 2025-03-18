@@ -17,7 +17,6 @@ foreach (tests_file ${tests_files})
     add_pscm_test(${test_case_name} ${tests_file})
 endforeach ()
 
-add_pscm_test(sicp_ch1_tests sicp/ch1_tests.cpp)
 add_pscm_test(r4rs_test r4rs/r4rs_tests.cpp)
 add_pscm_test(module_test module/load_path_tests.cpp)
 if (PSCM_ENABLE_MLIR_CODEGEN)
@@ -81,3 +80,4 @@ add_test(
 endif()
 
 add_subdirectory(base)
+add_subdirectory(sicp)
