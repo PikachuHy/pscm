@@ -1613,13 +1613,16 @@ void Evaluator::run() {
       PSCM_ASSERT(reg_.proc.is_cont());
       auto cont = reg_.proc.to_cont();
       auto args = reg_.argl;
+      Cell val;
       if (args.is_nil()) {
-        PSCM_THROW_EXCEPTION("Invalid arguments of Continuation: " + reg_.proc.to_string());
+        val = Cell::nil();
       }
-      auto val = car(args);
-      PSCM_DEBUG("val: {0}", val);
-      if (!cdr(args).is_nil()) {
-        PSCM_THROW_EXCEPTION("Invalid arguments of Continuation: " + reg_.proc.to_string());
+      else {
+        val = car(args);
+        PSCM_DEBUG("val: {0}", val);
+        if (!cdr(args).is_nil()) {
+          PSCM_THROW_EXCEPTION("Invalid arguments of Continuation: " + reg_.proc.to_string());
+        }
       }
       reg_ = cont->reg_;
       stack_ = cont->stack_;
