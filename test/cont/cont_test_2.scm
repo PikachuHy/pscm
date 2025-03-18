@@ -19,3 +19,12 @@
 
 ;; CHECK: talk2
 (c 'talk2)
+
+(define cc #f)
+(* 3 (call/cc (lambda (k)
+                 (set! cc k)
+                 (+ 1 2))))
+;; CHECK: 9
+(+ 100 (cc 3))
+;; CHECK: 30 
+(+ 100 (cc 10))

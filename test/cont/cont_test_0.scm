@@ -9,3 +9,8 @@
 
 ;; CHECK: 3
 (call-with-current-continuation (lambda (k) (+ 2 5 (k 3))))
+
+;; CHECK: 9
+(* 3 (call/cc (lambda (k) (+ 1 2))))
+;; CHECK: 6
+(* 3 (call/cc (lambda (k)  (+ 1 (k 2)))))
