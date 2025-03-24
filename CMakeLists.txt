@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.26)
-SET(CMAKE_OSX_DEPLOYMENT_TARGET "13.3" CACHE STRING "Minimum OS X deployment version" FORCE)
 project(pscm VERSION 0.3.0 LANGUAGES C CXX)
 option(PSCM_USE_CXX20_MODULES "enable c++20 modules" OFF)
 option(PSCM_ENABLE_MLIR_CODEGEN "enable codegen with MLIR" OFF)
@@ -106,26 +105,6 @@ file(GLOB PSCM_SRCS "src/*.cpp")
 target_sources(pscm PRIVATE ${PSCM_SRCS})
 if (PSCM_ENABLE_MLIR_CODEGEN)
     message(STATUS "Enable codegen with MLIR")
-    target_sources(pscm PUBLIC
-            src/core/Value.cpp
-            src/core/Value.h
-            src/core/Parser.cpp
-            src/core/Parser.h
-            src/core/Evaluator.cpp
-            src/core/Evaluator.h
-            src/core/SymbolTable.cpp
-            src/core/SymbolTable.h
-            src/core/Procedure.cpp
-            src/core/Procedure.h
-            src/core/JIT.cpp
-            src/core/JIT.h
-            src/core/Scheme.cpp
-            src/core/Scheme.h
-            src/core/Mangler.cpp
-            src/core/Mangler.h
-            src/core/Runtime.cpp
-            src/core/Runtime.h
-    )
     target_compile_definitions(pscm PRIVATE PSCM_ENABLE_MLIR_CODEGEN)
     file(GLOB CODEGEN_SRCS src/codegen/*.cpp src/codegen/mlir/*.cpp src/codegen/llvm_ir/*.cpp)
     target_sources(pscm PRIVATE ${CODEGEN_SRCS})
@@ -202,11 +181,18 @@ if (EMSCRIPTEN)
     add_subdirectory(wasm)
 else ()
     add_executable(pscm_main main.cpp)
-    target_link_libraries(pscm_main PRIVATE pscm)
+    if (PSCM_ENABLE_LLVM_CODEGEN)
+        add_subdirectory(src/core)
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "14.0" CACHE STRING "Minimum OS X deployment version" FORCE)
+        target_link_libraries(pscm_main PRIVATE pscm_core)
+        target_include_directories(pscm_main PRIVATE src)
+    else ()
+        set(CMAKE_OSX_DEPLOYMENT_TARGET "13.3" CACHE STRING "Minimum OS X deployment version" FORCE)
+        target_link_libraries(pscm_main PRIVATE pscm)
+    endif ()
 endif ()
 add_subdirectory(test)
 add_subdirectory(example)
 add_subdirectory(tool)
 add_subdirectory(project)
-
 add_subdirectory(src/lit)

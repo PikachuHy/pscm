@@ -19,9 +19,8 @@ llvm::Function *CodegenContext::get_function(const std::string& name) {
 }
 
 llvm::FunctionCallee CodegenContext::get_malloc() {
-  auto malloc_func =
-      llvm_module.getOrInsertFunction("malloc", llvm::FunctionType::get(llvm::Type::getInt8PtrTy(llvm_ctx),
-                                                                        { llvm::Type::getInt64Ty(llvm_ctx) }, false));
+  auto malloc_func = llvm_module.getOrInsertFunction(
+      "malloc", llvm::FunctionType::get(builder.getPtrTy(), { llvm::Type::getInt64Ty(llvm_ctx) }, false));
   return malloc_func;
 }
 
@@ -31,7 +30,7 @@ llvm::StructType *CodegenContext::get_array() {
     return array_struct;
   }
   array_struct = llvm::StructType::create(llvm_ctx, "Array");
-  array_struct->setBody({ llvm::Type::getInt64Ty(llvm_ctx), llvm::Type::getInt64PtrTy(llvm_ctx) });
+  array_struct->setBody({ llvm::Type::getInt64Ty(llvm_ctx), builder.getPtrTy() });
   return array_struct;
 }
 
@@ -390,7 +389,7 @@ llvm::Value *MapExprAST::codegen(CodegenContext& ctx) {
 
     auto array_size_ptr = ctx.builder.CreateStructGEP(array_struct, array_ptr, 0, "array_size_ptr");
     auto array_data_placeholder = ctx.builder.CreateStructGEP(array_struct, array_ptr, 1, "array_data_placeholder");
-    auto array_data_ptr = ctx.builder.CreateAlignedLoad(llvm::Type::getInt64PtrTy(ctx.llvm_ctx), array_data_placeholder,
+    auto array_data_ptr = ctx.builder.CreateAlignedLoad(ctx.builder.getPtrTy(), array_data_placeholder,
                                                         llvm::MaybeAlign(8), "array_data_ptr");
     auto array_size = ctx.builder.CreateAlignedLoad(llvm::Type::getInt64Ty(ctx.llvm_ctx), array_size_ptr,
                                                     llvm::MaybeAlign(8), "array_size");
@@ -417,12 +416,11 @@ llvm::Value *MapExprAST::codegen(CodegenContext& ctx) {
     ctx.builder.CreateCondBr(cmptmp, loop_body_bb, loop_end_bb);
 
     ctx.builder.SetInsertPoint(loop_body_bb);
-    auto input_item_ptr =
-        ctx.builder.CreateGEP(llvm::Type::getInt64PtrTy(ctx.llvm_ctx), array_data_ptr, idx, "input_item_ptr");
+    auto input_item_ptr = ctx.builder.CreateGEP(ctx.builder.getPtrTy(), array_data_ptr, idx, "input_item_ptr");
     auto input_item = ctx.builder.CreateAlignedLoad(llvm::Type::getInt64Ty(ctx.llvm_ctx), input_item_ptr,
                                                     llvm::MaybeAlign(8), "input_item");
     auto ret_output_item_ptr =
-        ctx.builder.CreateGEP(llvm::Type::getInt64PtrTy(ctx.llvm_ctx), ret_array_data_ptr, idx, "output_item_ptr");
+        ctx.builder.CreateGEP(ctx.builder.getPtrTy(), ret_array_data_ptr, idx, "output_item_ptr");
     auto callee = ctx.get_function(callee_);
     const Type *return_type = nullptr;
     if (!callee) {
@@ -498,7 +496,7 @@ std::pair<llvm::Function *, const Type *> AST::instance_function(CodegenContext&
   ctx.evaluator.pop_symbol_table();
   auto proto = new PrototypeAST(mangled_name, args, args_, return_type);
   auto func = new FunctionAST(proto, value_to_codegen[0]);
-  func->codegen(ctx);
+  [[maybe_unused]] auto _ = func->codegen(ctx);
   auto callee = ctx.llvm_module.getFunction(mangled_name);
   PSCM_ASSERT(callee);
   ctx.builder.SetInsertPoint(t);

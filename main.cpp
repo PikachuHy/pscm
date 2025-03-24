@@ -6,6 +6,9 @@
 import pscm;
 import std;
 #else
+#ifdef PSCM_ENABLE_LLVM_CODEGEN
+#include <core/Scheme.h>
+#endif
 #include <iostream>
 #include <pscm/Scheme.h>
 #include <string>
@@ -30,6 +33,7 @@ please report bugs to https://github.com/PikachuHy/pscm/issues
 
 int main(int argc, char **argv) {
   bool use_register_machine = false;
+  bool use_llvm_jit = false;
   int index = 1;
   while (index < argc) {
     std::string arg = argv[index];
@@ -51,6 +55,10 @@ int main(int argc, char **argv) {
           index += 2;
           use_register_machine = true;
         }
+        else if (val == "LLVM_JIT"s) {
+          index += 2;
+          use_llvm_jit = true;
+        }
         else {
           std::cout << "bad -m value: " << val << std::endl;
           show_usage();
@@ -68,8 +76,15 @@ int main(int argc, char **argv) {
       return 0;
     }
     else if (arg == "-s" || arg == "--test") {
-      Scheme new_scm(use_register_machine);
       if (index + 1 < argc) {
+#ifdef PSCM_ENABLE_LLVM_CODEGEN
+        if (use_llvm_jit) {
+          pscm::core::Scheme new_scm;
+          new_scm.load(argv[index + 1], arg == "--test");
+          return 0;
+        }
+#endif
+        Scheme new_scm(use_register_machine);
         bool ok = new_scm.load(argv[index + 1], arg == "--test");
         if (!ok) {
           return 1;
