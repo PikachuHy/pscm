@@ -1,12 +1,13 @@
 #include "Scheme.h"
 #include "Evaluator.h"
-#include "JIT.h"
 #include "Parser.h"
 #include "Procedure.h"
+#include "Runtime.h"
 #include "Value.h"
 #include "pscm/logger/Appender.h"
 #include <fstream>
 #include <iterator>
+#include <llvm/ExecutionEngine/Orc/LLJIT.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 #include <pscm/common_def.h>
 #include <string>
@@ -33,15 +34,22 @@ public:
   }
 
   Value *run_jitted_func(AST *ast, std::unique_ptr<llvm::Module> module, bool print) {
-    auto jit = exit_on_err(JIT::create());
-    auto rt = jit->main_jit_dylib().createResourceTracker();
+    auto jit = exit_on_err(llvm::orc::LLJITBuilder().create());
+    module->setDataLayout(jit->getDataLayout());
+
+    llvm::cantFail(jit->getMainJITDylib().define(llvm::orc::absoluteSymbols({
+        { jit->mangleAndIntern("car_array[integer]"),
+         llvm::orc::ExecutorSymbolDef(llvm::orc::ExecutorAddr(llvm::pointerToJITTargetAddress(car_array)),
+         llvm::JITSymbolFlags::Exported) }
+    })));
+    auto rt = jit->getMainJITDylib().createResourceTracker();
     auto tsm = llvm::orc::ThreadSafeModule(std::move(module), std::make_unique<llvm::LLVMContext>());
-    exit_on_err(jit->add_module(std::move(tsm), rt));
-    auto expr_sym = exit_on_err(jit->lookup("_anon_expr"));
+    exit_on_err(jit->addIRModule(rt, std::move(tsm)));
+    auto expr_sym = exit_on_err(jit->lookup("__anon_expr"));
     Value *ret = nullptr;
     if (auto map_expr = dynamic_cast<MapExprAST *>(ast); map_expr) {
       // Array
-      Array *(*fp)() = expr_sym.getAddress().toPtr<Array *(*)()>();
+      Array *(*fp)() = expr_sym.toPtr<Array *(*)()>();
       auto eval_ret = fp();
       std::vector<Value *> list;
       list.reserve(eval_ret->size);
@@ -54,7 +62,7 @@ public:
     else if (auto call_expr = dynamic_cast<CallExprAST *>(ast); call_expr) {
       if (call_expr->type()) {
         if (auto array_type = dynamic_cast<const ArrayType *>(call_expr->type()); array_type) {
-          Array *(*fp)() = expr_sym.getAddress().toPtr<Array *(*)()>();
+          Array *(*fp)() = expr_sym.toPtr<Array *(*)()>();
           auto eval_ret = fp();
           std::vector<Value *> list;
           list.reserve(eval_ret->size);
@@ -64,7 +72,7 @@ public:
           ret = new ListValue(list);
         }
         else if (auto integer_type = dynamic_cast<const IntegerType *>(call_expr->type()); integer_type) {
-          int (*fp)() = expr_sym.getAddress().toPtr<int (*)()>();
+          int (*fp)() = expr_sym.toPtr<int (*)()>();
           auto eval_ret = fp();
           ret = new IntegerValue(eval_ret);
         }
@@ -77,7 +85,7 @@ public:
       }
     }
     else {
-      int (*fp)() = expr_sym.getAddress().toPtr<int (*)()>();
+      int (*fp)() = expr_sym.toPtr<int (*)()>();
       auto eval_ret = fp();
       ret = new IntegerValue(eval_ret);
     }

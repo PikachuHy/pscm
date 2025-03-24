@@ -8,6 +8,7 @@ import std;
 #else
 #ifdef PSCM_ENABLE_LLVM_CODEGEN
 #include <core/Scheme.h>
+#include <llvm/Support/InitLLVM.h>
 #endif
 #include <iostream>
 #include <pscm/Scheme.h>
@@ -32,6 +33,9 @@ please report bugs to https://github.com/PikachuHy/pscm/issues
 }
 
 int main(int argc, char **argv) {
+#ifdef PSCM_ENABLE_LLVM_CODEGEN
+  llvm::InitLLVM X(argc, argv);
+#endif
   bool use_register_machine = false;
   bool use_llvm_jit = false;
   int index = 1;

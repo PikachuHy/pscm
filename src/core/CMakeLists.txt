@@ -16,8 +16,6 @@ target_sources(pscm_core PUBLIC
     SymbolTable.h
     Procedure.cpp
     Procedure.h
-    JIT.cpp
-    JIT.h
     Scheme.cpp
     Scheme.h
     Mangler.cpp
