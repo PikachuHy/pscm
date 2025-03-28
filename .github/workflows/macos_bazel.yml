@@ -43,7 +43,7 @@ jobs:
         run: bazel build //ios/app:ios-app "--per_file_copt=.*\.mm\$@-std=c++20" "--per_file_copt=.*\.cpp\$@-std=c++20" --config=macos
 
       - name: Upload ios ipa
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ios-pscm
           path: |
@@ -53,7 +53,7 @@ jobs:
         run: bazel build //wasm:pscm-wasm -c opt
 
       - name: Upload macOS wasm
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: macos-pscm-wasm
           path: bazel-bin/wasm/
