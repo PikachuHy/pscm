@@ -1,15 +1,8 @@
 //
 // Created by PikachuHy on 2023/2/23.
 //
-#ifdef PSCM_USE_CXX20_MODULES
-#include "pscm/Logger.h"
-#include "pscm/common_def.h"
-import pscm;
-import std;
-import fmt;
-#else
-#include "pscm/ApiManager.h"
 #include "pscm/Cell.h"
+#include "pscm/ApiManager.h"
 #include "pscm/Char.h"
 #include "pscm/Continuation.h"
 #include "pscm/Function.h"
@@ -33,7 +26,7 @@ import fmt;
 #include <spdlog/fmt/fmt.h>
 #include <sstream>
 #include <unordered_set>
-#endif
+
 namespace pscm {
 Cell nil = Cell::nil();
 PSCM_INLINE_LOG_DECLARE("pscm.core.Cell");

@@ -1,15 +1,7 @@
 //
 // Created by PikachuHy on 2023/2/23.
 //
-#ifdef PSCM_USE_CXX20_MODULES
-#include "pscm/Evaluator.h"
-#include "pscm/common_def.h"
-
-import pscm;
-import std;
-import fmt;
-import linenoise;
-#else
+#include "pscm/Scheme.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Evaluator.h"
 #include "pscm/Exception.h"
@@ -24,7 +16,6 @@ import linenoise;
 #include "pscm/Parser.h"
 #include "pscm/Procedure.h"
 #include "pscm/Promise.h"
-#include "pscm/Scheme.h"
 #include "pscm/SchemeProxy.h"
 #include "pscm/Str.h"
 #include "pscm/Symbol.h"
@@ -46,7 +37,7 @@ import linenoise;
 #include <linenoise.hpp>
 #include <string>
 #include <string_view>
-#endif
+
 using namespace std::string_literals;
 
 PSCM_INLINE_LOG_DECLARE("pscm.core.Scheme");

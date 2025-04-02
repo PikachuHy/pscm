@@ -1,24 +1,17 @@
 //
 // Created by PikachuHy on 2023/3/4.
 //
-#ifdef PSCM_USE_CXX20_MODULES
-#include "pscm/Logger.h"
-#include "pscm/common_def.h"
-import pscm;
-import std;
-import fmt;
-#else
+#include "pscm/Procedure.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Exception.h"
 #include "pscm/Expander.h"
 #include "pscm/Pair.h"
-#include "pscm/Procedure.h"
 #include "pscm/Scheme.h"
 #include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
-#endif
+
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Procedure");
 

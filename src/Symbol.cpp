@@ -1,18 +1,11 @@
 //
 // Created by PikachuHy on 2023/2/25.
 //
-#ifdef PSCM_USE_CXX20_MODULES
-#include "pscm/Logger.h"
-#include "pscm/common_def.h"
-import pscm;
-import std;
-import fmt;
-#else
+#include "pscm/Symbol.h"
 #include "pscm/ApiManager.h"
 #include "pscm/Cell.h"
 #include "pscm/Pair.h"
 #include "pscm/SchemeProxy.h"
-#include "pscm/Symbol.h"
 #include "pscm/SymbolTable.h"
 #include "pscm/common_def.h"
 #include "pscm/icu/ICUCompat.h"
@@ -20,7 +13,7 @@ import fmt;
 #include <fstream>
 #include <iostream>
 #include <ostream>
-#endif
+
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.Symbol");
 Symbol callcc("call-with-current-continuation");

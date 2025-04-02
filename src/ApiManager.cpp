@@ -1,10 +1,3 @@
-#ifdef PSCM_USE_CXX20_MODULES
-#include "pscm/Logger.h"
-#include "pscm/common_def.h"
-import pscm;
-import std;
-import fmt;
-#else
 #include "pscm/ApiManager.h"
 #include "pscm/Function.h"
 #include "pscm/Macro.h"
@@ -19,7 +12,6 @@ import fmt;
 #include <spdlog/fmt/fmt.h>
 #include <tuple>
 #include <vector>
-#endif
 PSCM_INLINE_LOG_DECLARE("pscm.core.ApiManager");
 
 namespace pscm {

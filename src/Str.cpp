@@ -1,19 +1,12 @@
 //
 // Created by PikachuHy on 2023/3/20.
 //
-#ifdef PSCM_USE_CXX20_MODULES
-#include "pscm/Logger.h"
-#include "pscm/common_def.h"
-import pscm;
-import std;
-import fmt;
-#else
-#include "pscm/Port.h"
 #include "pscm/Str.h"
+#include "pscm/Port.h"
 #include "pscm/common_def.h"
 #include "pscm/scm_utils.h"
 #include <iostream>
-#endif
+
 namespace pscm {
 PSCM_INLINE_LOG_DECLARE("pscm.core.String");
 

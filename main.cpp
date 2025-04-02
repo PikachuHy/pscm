@@ -2,10 +2,6 @@
 // Created by PikachuHy on 2023/4/5.
 //
 #include <unicode/ustream.h>
-#ifdef PSCM_USE_CXX20_MODULES
-import pscm;
-import std;
-#else
 #ifdef PSCM_ENABLE_LLVM_CODEGEN
 #include <core/Scheme.h>
 #include <llvm/Support/InitLLVM.h>
@@ -13,7 +9,6 @@ import std;
 #include <iostream>
 #include <pscm/Scheme.h>
 #include <string>
-#endif
 using namespace std::string_literals;
 using namespace pscm;
 

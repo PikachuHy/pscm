@@ -1,34 +1,10 @@
 cmake_minimum_required(VERSION 3.26)
 project(pscm VERSION 0.3.0 LANGUAGES C CXX)
-option(PSCM_USE_CXX20_MODULES "enable c++20 modules" OFF)
 option(PSCM_ENABLE_MLIR_CODEGEN "enable codegen with MLIR" OFF)
 set(PSCM_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(PSCM_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-if (WIN32)
-    set(CMAKE_CXX_STANDARD 20)
-else ()
-    if (PSCM_USE_CXX20_MODULES)
-        if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-            if (${CMAKE_MINOR_VERSION} STREQUAL 26)
-                set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "2182bf5c-ef0d-489a-91da-49dbc3090d2a")
-                include(cxx_modules_rules_clang.cmake)
-            elseif (${CMAKE_MINOR_VERSION} STREQUAL 27)
-                set(CMAKE_EXPERIMENTAL_CXX_MODULE_CMAKE_API "aa1f7df0-828a-4fcd-9afc-2dc80491aca7")
-            else ()
-                # https://cmake.org/cmake/help/latest/policy/CMP0155.html#policy:CMP0155
-                cmake_policy(SET CMP0155 NEW)
-            endif ()
-            set(CMAKE_CXX_STANDARD 20)
-            set(CMAKE_CXX_EXTENSIONS OFF)
-        else ()
-            message(FATAL_ERROR "${CMAKE_CXX_COMPILER_ID} not support C++20 Modules now")
-        endif ()
-    else ()
-        set(CMAKE_CXX_STANDARD 20)
-    endif ()
-endif ()
-
+set(CMAKE_CXX_STANDARD 20)
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -158,21 +134,7 @@ target_sources(pscm PRIVATE
         src/misc/SourceLocation.cpp
         src/icu/ICUCompat.cpp
 )
-if (PSCM_USE_CXX20_MODULES)
-    target_compile_definitions(pscm PUBLIC PSCM_USE_CXX20_MODULES)
-    target_sources(pscm PUBLIC
-            FILE_SET cxx_modules TYPE CXX_MODULES FILES
-            src/icu/icu.cppm
-            src/logger/logger.cppm
-            src/misc/misc.cppm
-            src/pscm.cppm
-            src/compat.cppm
-            3rd/linenoise.cppm
-    )
-    target_link_libraries(pscm PUBLIC fmt)
-else ()
-    target_link_libraries(pscm PUBLIC spdlog::spdlog)
-endif ()
+target_link_libraries(pscm PUBLIC spdlog::spdlog)
 if (EMSCRIPTEN)
     target_compile_definitions(pscm PUBLIC WASM_PLATFORM)
     target_link_options(pscm PUBLIC "-sEXPORTED_RUNTIME_METHODS=ccall,cwrap")

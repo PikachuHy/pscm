@@ -1,10 +1,3 @@
-#ifdef PSCM_USE_CXX20_MODULES
-#include "pscm/Logger.h"
-#include "pscm/common_def.h"
-import pscm;
-import std;
-import fmt;
-#else
 #include "pscm/ApiManager.h"
 #include "pscm/Cell.h"
 #include "pscm/Exception.h"
@@ -17,7 +10,6 @@ import fmt;
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#endif
 using namespace std::string_literals;
 
 namespace pscm {

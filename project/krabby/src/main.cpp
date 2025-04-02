@@ -12,7 +12,6 @@
 #include <unordered_map>
 #include <vector>
 namespace fs = std::filesystem;
-// import std;
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #endif
@@ -443,15 +442,15 @@ bool handle_events() {
       else if (event.key.keysym.mod & KMOD_SHIFT) {
         // FIXME
         std::map<char, char> key_map = {
-          { ';', ':'},
-          {'\'', '"'},
-          { '[', '{'},
-          { ']', '}'},
-          { '-', '_'},
-          { '=', '+'},
-          { ',', '<'},
-          { '.', '>'},
-          { '/', '?'}
+          {  ';', ':' },
+          { '\'', '"' },
+          {  '[', '{' },
+          {  ']', '}' },
+          {  '-', '_' },
+          {  '=', '+' },
+          {  ',', '<' },
+          {  '.', '>' },
+          {  '/', '?' }
         };
         auto it = key_map.find(keynum);
         if (it != key_map.end()) {

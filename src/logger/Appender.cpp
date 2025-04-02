@@ -1,18 +1,11 @@
 //
 // Created by PikachuHy on 2023/7/15.
 //
-#ifdef PSCM_USE_CXX20_MODULES
-#include "pscm/Logger.h"
-#include "pscm/common_def.h"
-import pscm.logger;
-import fmt;
-#else
 #include "pscm/logger/Appender.h"
 #include <chrono>
 #include <iostream>
 #include <spdlog/fmt/chrono.h>
 #include <spdlog/fmt/fmt.h>
-#endif
 
 namespace fmt {
 template <>

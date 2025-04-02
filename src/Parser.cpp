@@ -1,19 +1,12 @@
 //
 // Created by PikachuHy on 2023/2/23.
 //
-#ifdef PSCM_USE_CXX20_MODULES
-#include "pscm/Logger.h"
-#include "pscm/common_def.h"
-import pscm;
-import std;
-import fmt;
-#else
+#include "pscm/Parser.h"
 #include "pscm/Char.h"
 #include "pscm/Exception.h"
 #include "pscm/Keyword.h"
 #include "pscm/Number.h"
 #include "pscm/Pair.h"
-#include "pscm/Parser.h"
 #include "pscm/Port.h"
 #include "pscm/Str.h"
 #include "pscm/Symbol.h"
@@ -32,7 +25,7 @@ import fmt;
 #include <optional>
 #include <string>
 #include <unordered_map>
-#endif
+
 using namespace std::string_literals;
 
 namespace pscm {
@@ -507,39 +500,39 @@ Cell Parser::parse_literal() {
     else if (tok == Token::SYMBOL) {
       auto key = last_symbol_->name();
       static std::unordered_map<UString, int> literal_map{
-        {"nul",  0},
-        {"soh",  1},
-        {"stx",  2},
-        {"etx",  3},
-        {"eot",  4},
-        {"enq",  5},
-        {"ack",  6},
-        {"bel",  7},
-        { "bs",  8},
-        { "ht",  9},
-        { "lf", 10},
-        { "vt", 11},
-        { "ff", 12},
-        { "cr", 13},
-        { "so", 14},
-        { "si", 15},
-        {"dle", 16},
-        {"dl1", 17},
-        {"dc2", 18},
-        {"dc3", 19},
-        {"dc4", 20},
-        {"nak", 21},
-        {"syn", 22},
-        {"etb", 23},
-        {"can", 24},
-        { "em", 25},
-        {"sub", 26},
-        {"esc", 27},
-        { "fs", 28},
-        { "gs", 29},
-        { "rs", 30},
-        { "us", 31},
-        { "sp", 32},
+        { "nul",  0 },
+        { "soh",  1 },
+        { "stx",  2 },
+        { "etx",  3 },
+        { "eot",  4 },
+        { "enq",  5 },
+        { "ack",  6 },
+        { "bel",  7 },
+        {  "bs",  8 },
+        {  "ht",  9 },
+        {  "lf", 10 },
+        {  "vt", 11 },
+        {  "ff", 12 },
+        {  "cr", 13 },
+        {  "so", 14 },
+        {  "si", 15 },
+        { "dle", 16 },
+        { "dl1", 17 },
+        { "dc2", 18 },
+        { "dc3", 19 },
+        { "dc4", 20 },
+        { "nak", 21 },
+        { "syn", 22 },
+        { "etb", 23 },
+        { "can", 24 },
+        {  "em", 25 },
+        { "sub", 26 },
+        { "esc", 27 },
+        {  "fs", 28 },
+        {  "gs", 29 },
+        {  "rs", 30 },
+        {  "us", 31 },
+        {  "sp", 32 },
       };
       auto it = literal_map.find(key);
       if (it != literal_map.end()) {
