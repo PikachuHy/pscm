@@ -2,9 +2,9 @@ name: MacOS Bazel
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   build_with_bazel:

@@ -2,9 +2,9 @@ name: Linux Bazel
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 jobs:
   build_with_bazel:
     runs-on: [ ubuntu-22.04 ]
