@@ -14,6 +14,8 @@
 #include <sstream>
 #include <string>
 
+#include <doctest/doctest.h>
+
 using namespace doctest;
 using namespace pscm;
 using namespace std::string_literals;
