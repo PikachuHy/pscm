@@ -53,10 +53,10 @@ jobs:
         working-directory: ${{github.workspace}}/build2
         run: ninja check-base check-cont check-sicp
         
-      - name: Configure CMake with MLIR
-        run: PKG_CONFIG_PATH=/usr/local/opt/icu4c/lib/pkgconfig cmake -B ${{github.workspace}}/build3 -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON -DPSCM_ENABLE_MLIR_CODEGEN=ON
+      - name: Configure CMake with codegen
+        run: PKG_CONFIG_PATH=/usr/local/opt/icu4c/lib/pkgconfig cmake -B ${{github.workspace}}/build3 -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON -DPSCM_ENABLE_LLVM_CODEGEN=ON
 
-      - name: Build with MLIR
+      - name: Build with codegen
         run: cmake --build ${{github.workspace}}/build3 --config ${{matrix.mode}} --verbose -j
 
       - name: Test with MLIR
