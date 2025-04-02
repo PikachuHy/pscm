@@ -6,7 +6,7 @@
 # Paths that are on a different drive than the basedir (on Windows) or that
 # contain symlinks are returned absolute.
 # Use with PSCM_LIT_PATH_FUNCTION below.
-function(make_paths_relative out_pathlist basedir pathlist)
+function(pscm_make_paths_relative out_pathlist basedir pathlist)
   # Passing ARG_PATH_VALUES as-is to execute_process() makes cmake strip
   # empty list entries. So escape the ;s in the list and do the splitting
   # ourselves. cmake has no relpath function, so use Python for that.
@@ -66,7 +66,7 @@ string(CONCAT PSCM_LIT_PATH_FUNCTION
 # lit.cfg.py file is in, and the `path()` function converts the relative
 # path back to absolute form. This makes it possible to move a build directory
 # containing lit.cfg.py files from one machine to another.
-function(configure_lit_site_cfg site_in site_out)
+function(pscm_configure_lit_site_cfg site_in site_out)
 cmake_parse_arguments(ARG "" "" "MAIN_CONFIG;PATHS" ${ARGN})
 
 if ("${ARG_MAIN_CONFIG}" STREQUAL "")
@@ -99,7 +99,7 @@ if (ARG_PATHS)
   list(REMOVE_AT ARG_PATH_VALUES 0)
 
   get_filename_component(OUTPUT_DIR ${site_out} DIRECTORY)
-  make_paths_relative(
+  pscm_make_paths_relative(
       ARG_PATH_VALUES_RELATIVE "${OUTPUT_DIR}" "${ARG_PATH_VALUES}")
 
   list(LENGTH ARG_PATHS len_paths)
@@ -157,7 +157,7 @@ endfunction()
 
 # A raw function to create a lit target. This is used to implement the testuite
 # management functions.
-function(add_lit_target target comment)
+function(pscm_add_lit_target target comment)
   cmake_parse_arguments(ARG "" "" "PARAMS;DEPENDS;ARGS" ${ARGN})
   set(LIT_ARGS "${ARG_ARGS} ${PSCM_LIT_ARGS}")
   separate_arguments(LIT_ARGS)
@@ -202,7 +202,7 @@ endfunction()
 
 
 # A function to add a set of lit test suites to be driven through 'check-*' targets.
-function(add_lit_testsuite target comment)
+function(pscm_add_lit_testsuite target comment)
   cmake_parse_arguments(ARG "EXCLUDE_FROM_CHECK_ALL" "" "PARAMS;DEPENDS;ARGS" ${ARGN})
 
   # EXCLUDE_FROM_ALL excludes the test ${target} out of check-all.
@@ -218,7 +218,7 @@ function(add_lit_testsuite target comment)
   endif()
 
   # Produce a specific suffixed check rule.
-  add_lit_target(${target} ${comment}
+  pscm_add_lit_target(${target} ${comment}
     ${ARG_UNPARSED_ARGUMENTS}
     PARAMS ${ARG_PARAMS}
     DEPENDS ${ARG_DEPENDS}

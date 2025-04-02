@@ -7,9 +7,9 @@ include(lit)
 
 set(LIT_BASE_DIR ${PSCM_BINARY_DIR}/bin)
 
-make_paths_relative(
+pscm_make_paths_relative(
     PSCM_LIT_CONFIG_FILES "${LIT_BASE_DIR}" "${PSCM_LIT_CONFIG_FILES}")
-  make_paths_relative(
+pscm_make_paths_relative(
     LLVM_SOURCE_DIR "${LIT_BASE_DIR}" "${PSCM_SOURCE_DIR}")
 
 set(PSCM_LIT_CONFIG_MAP "${PSCM_LIT_PATH_FUNCTION}\n")
