@@ -47,3 +47,18 @@
 ;; CHECK: (a (list c d))
 ((define-property* 'a) '(c d) 'e)
 
+;; CHECK: 6
+((lambda () 6))
+
+;; CHECK: 6
+((lambda () (* 2 3)))
+
+;; CHECK: 12
+((lambda () (* 2 3) (* 3 4)))
+
+
+(define (f return)
+  (return 2)
+  3)
+;; CHECK: 3
+(f (lambda (x) x))

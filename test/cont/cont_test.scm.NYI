@@ -23,3 +23,7 @@
             (c 'talk2)
             (reverse path))))
 
+
+(define (f c) c)
+(call/cc f)
+(call/cc (call/cc f))

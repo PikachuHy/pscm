@@ -34,3 +34,7 @@
                       (list '()  '(test))
                       (list '()  '(t . t)))
                       
+(for-each (lambda (x) x) '(54))
+(for-each (lambda (x) x) '(54 0))
+(for-each (lambda (x) x) '(-3))
+(for-each (lambda (x) x) '(54 0 37 -3 245 19))

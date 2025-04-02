@@ -22,3 +22,25 @@ sum
 
 ;; CHECK: 9
 (letrec () (define x 9) x)  
+
+;; CHECK: 6
+(let ((x 2) (y 3))
+  (* x y))
+
+;; CHECK: 35
+(let ((x 2) (y 3))
+  (let ((x 7)
+        (z (+ x y)))
+    (* z x)))
+
+;; CHECK: 70
+(let ((x 2) (y 3))
+    (let* ((x 7)
+          (z (+ x y)))
+      (* z x)))
+
+;; CHECK: 3
+(let* ((a 1)
+      (b 2))
+ (+ a b))
+ 

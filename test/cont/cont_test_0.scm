@@ -14,3 +14,10 @@
 (* 3 (call/cc (lambda (k) (+ 1 2))))
 ;; CHECK: 6
 (* 3 (call/cc (lambda (k)  (+ 1 (k 2)))))
+
+;; CHECK: #t
+(call/cc procedure?)
+;; CHECK: #t
+(procedure? procedure?)
+;; CHECK: #f
+(call/cc boolean?)

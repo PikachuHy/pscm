@@ -18,3 +18,7 @@
 
 ;; CHECK: 6
 (apply (lambda (x) (+ x x)) '(3))
+
+;; CHECK: 0
+(apply + '())
+
