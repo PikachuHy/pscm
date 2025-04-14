@@ -76,3 +76,6 @@ jobs:
         working-directory: ${{github.workspace}}/build2/test
         run: ctest -C ${{matrix.mode}} --output-on-failure
       
+      - name: Check
+        working-directory: ${{github.workspace}}/build2
+        run: ninja check-base check-cont check-sicp
