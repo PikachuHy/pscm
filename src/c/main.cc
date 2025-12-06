@@ -68,11 +68,9 @@ SCM *create_sym(const char *data, int len) {
 }
 
 SCM *eval(SCM *ast) {
-  auto env = &g_env;
   long stack_base;
   cont_base = &stack_base;
-  auto ret = eval_with_env(env, ast);
-  return ret;
+  return eval_with_env(&g_env, ast);
 }
 
 // Helper function for type checking predicates
@@ -234,6 +232,7 @@ int main(int argc, char **argv) {
       }
     }
     else {
+      // Treat as filename
       if (filename) {
         fprintf(stderr, "ERROR: duplicate filename\n");
         return 1;
