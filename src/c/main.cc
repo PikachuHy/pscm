@@ -32,10 +32,9 @@ DEFINE_SCM_SINGLETON(bool_true, BOOL, (void *)1)
 
 SCM_Symbol *make_sym(const char *data) {
   auto sym = new SCM_Symbol();
-  size_t len = strlen(data);
+  int len = (int)strlen(data);
   sym->data = new char[len + 1];
-  memcpy(sym->data, data, len);
-  sym->data[len] = '\0';  // Ensure null terminator
+  strcpy(sym->data, data);
   sym->len = len;
   return sym;
 }
@@ -192,7 +191,6 @@ int do_eval(const char *filename) {
   while (l) {
     auto expr = l->data;
     my_eval(expr);
-    assert(l);
     l = l->next;
   }
   return 0;
