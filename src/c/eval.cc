@@ -49,11 +49,32 @@ SCM *eval_with_func_2(SCM_Function *func, SCM *arg1, SCM *arg2) {
   return f(arg1, arg2);
 }
 
-// Error handling helper
+// Error handling helper with context
+static SCM *g_current_eval_context = nullptr;
+
 [[noreturn]] static void eval_error(const char *format, ...) {
   va_list args;
   va_start(args, format);
-  fprintf(stderr, "%s:%d ", __FILE__, __LINE__);
+  
+  // Print source location if available
+  bool printed_location = false;
+  if (g_current_eval_context) {
+    const char *loc_str = get_source_location_str(g_current_eval_context);
+    if (loc_str) {
+      fprintf(stderr, "%s: ", loc_str);
+      printed_location = true;
+    }
+    fprintf(stderr, "Error while evaluating: ");
+    print_ast(g_current_eval_context);
+    fprintf(stderr, "\n");
+    if (!printed_location) {
+      fprintf(stderr, "  (no source location available)\n");
+    }
+    fprintf(stderr, "  ");
+  } else {
+    fprintf(stderr, "%s:%d: ", __FILE__, __LINE__);
+  }
+  
   vfprintf(stderr, format, args);
   fprintf(stderr, "\n");
   va_end(args);
@@ -550,7 +571,7 @@ static SCM *eval_map(SCM_Environment *env, SCM_List *l) {
 }
 
 // Helper function to expand a macro call
-static SCM *expand_macro_call(SCM_Environment *env, SCM_Macro *macro, SCM_List *args) {
+static SCM *expand_macro_call(SCM_Environment *env, SCM_Macro *macro, SCM_List *args, SCM *original_call) {
   // Create macro environment (use macro's definition environment)
   SCM_Environment *macro_env = make_env(macro->env);
 
@@ -578,6 +599,17 @@ static SCM *expand_macro_call(SCM_Environment *env, SCM_Macro *macro, SCM_List *
 
   // Call the macro transformer (evaluate in macro environment)
   SCM *expanded = eval_with_list(macro_env, macro->transformer->body);
+
+  // Copy source location from original macro call to expanded result
+  // This ensures errors in macro-expanded code point to the original macro call location
+  if (original_call && expanded) {
+    // First, try to copy recursively to preserve structure
+    copy_source_location_recursive(expanded, original_call);
+    // Also ensure the top-level node has source location
+    if (!expanded->source_loc && original_call->source_loc) {
+      copy_source_location(expanded, original_call);
+    }
+  }
 
   if (debug_enabled) {
     SCM_DEBUG_EVAL("macro expanded to ");
@@ -607,7 +639,7 @@ static SCM *expand_macros(SCM_Environment *env, SCM *ast) {
     if (val && is_macro(val)) {
       // Found a macro, expand it
       SCM_Macro *macro = cast<SCM_Macro>(val);
-      SCM *expanded = expand_macro_call(env, macro, l->next);
+      SCM *expanded = expand_macro_call(env, macro, l->next, ast);
       // Recursively expand the result
       return expand_macros(env, expanded);
     }
@@ -630,9 +662,14 @@ static SCM *expand_macros(SCM_Environment *env, SCM *ast) {
     SCM *scm = new SCM();
     scm->type = SCM::LIST;
     scm->value = dummy.next;
+    scm->source_loc = nullptr;  // Initialize to nullptr
+    // Copy source location from original list
+    copy_source_location(scm, ast);
     return scm;
   }
-  return scm_nil();
+  SCM *result = scm_nil();
+  copy_source_location(result, ast);
+  return result;
 }
 
 // Helper function for define-macro special form
@@ -700,6 +737,17 @@ static SCM *eval_define_macro(SCM_Environment *env, SCM_List *l) {
 SCM *eval_with_env(SCM_Environment *env, SCM *ast) {
   assert(env);
   assert(ast);
+  
+  // Save current context for error reporting
+  SCM *old_context = g_current_eval_context;
+  g_current_eval_context = ast;
+  
+  // Helper macro to restore context before returning
+  #define RETURN_WITH_CONTEXT(val) do { \
+    g_current_eval_context = old_context; \
+    return (val); \
+  } while(0)
+  
 entry:
   SCM_DEBUG_EVAL("eval ");
   if (debug_enabled) {
@@ -709,9 +757,10 @@ entry:
   if (!is_pair(ast)) {
     if (is_sym(ast)) {
       SCM_Symbol *sym = cast<SCM_Symbol>(ast);
-      return lookup_symbol(env, sym);
+      SCM *result = lookup_symbol(env, sym);
+      RETURN_WITH_CONTEXT(result);
     }
-    return ast;
+    RETURN_WITH_CONTEXT(ast);
   }
   SCM_List *l = cast<SCM_List>(ast);
   assert(l->data);
@@ -723,17 +772,19 @@ entry:
     if (val && is_macro(val)) {
       // Found a macro, expand it and continue evaluation
       SCM_Macro *macro = cast<SCM_Macro>(val);
-      SCM *expanded = expand_macro_call(env, macro, l->next);
+      SCM *expanded = expand_macro_call(env, macro, l->next, ast);
       // Recursively expand the result, then evaluate
       ast = expand_macros(env, expanded);
       goto entry;
     }
 
     if (is_sym_val(l->data, "define")) {
-      return eval_define(env, l);
+      SCM *result = eval_define(env, l);
+      RETURN_WITH_CONTEXT(result);
     }
     else if (is_sym_val(l->data, "define-macro")) {
-      return eval_define_macro(env, l);
+      SCM *result = eval_define_macro(env, l);
+      RETURN_WITH_CONTEXT(result);
     }
     else if (is_sym_val(l->data, "let")) {
       ast = expand_let(ast);
@@ -749,42 +800,52 @@ entry:
     }
     else if (is_sym_val(l->data, "call/cc") || is_sym_val(l->data, "call-with-current-continuation")) {
       auto ret = eval_call_cc(env, l, &ast);
-      if (ret)
-        return ret;
+      if (ret) {
+        RETURN_WITH_CONTEXT(ret);
+      }
       goto entry;
     }
     else if (is_sym_val(l->data, "lambda")) {
-      return eval_lambda(env, l);
+      SCM *result = eval_lambda(env, l);
+      RETURN_WITH_CONTEXT(result);
     }
     else if (is_sym_val(l->data, "set!")) {
-      return eval_set(env, l);
+      SCM *result = eval_set(env, l);
+      RETURN_WITH_CONTEXT(result);
     }
     else if (is_sym_val(l->data, "quote")) {
-      return eval_quote(l);
+      SCM *result = eval_quote(l);
+      RETURN_WITH_CONTEXT(result);
     }
     else if (is_sym_val(l->data, "quasiquote")) {
-      return eval_quasiquote(env, l);
+      SCM *result = eval_quasiquote(env, l);
+      RETURN_WITH_CONTEXT(result);
     }
     else if (is_sym_val(l->data, "if")) {
       auto ret = eval_if(env, l, &ast);
-      if (ret)
-        return ret;
+      if (ret) {
+        RETURN_WITH_CONTEXT(ret);
+      }
       goto entry;
     }
     else if (is_sym_val(l->data, "cond")) {
       auto ret = eval_cond(env, l, &ast);
-      if (ret)
-        return ret;
+      if (ret) {
+        RETURN_WITH_CONTEXT(ret);
+      }
       goto entry;
     }
     else if (is_sym_val(l->data, "for-each")) {
-      return eval_for_each(env, l);
+      SCM *result = eval_for_each(env, l);
+      RETURN_WITH_CONTEXT(result);
     }
     else if (is_sym_val(l->data, "do")) {
-      return eval_do(env, l);
+      SCM *result = eval_do(env, l);
+      RETURN_WITH_CONTEXT(result);
     }
     else if (is_sym_val(l->data, "map")) {
-      return eval_map(env, l);
+      SCM *result = eval_map(env, l);
+      RETURN_WITH_CONTEXT(result);
     }
     else {
       // Variable reference: resolve symbol and build call expression
@@ -807,7 +868,8 @@ entry:
   }
   else if (is_proc(l->data)) {
     auto proc = cast<SCM_Procedure>(l->data);
-    return apply_procedure(env, proc, l->next);
+    SCM *result = apply_procedure(env, proc, l->next);
+    RETURN_WITH_CONTEXT(result);
   }
   else if (is_func(l->data)) {
     auto func = cast<SCM_Function>(l->data);
@@ -822,7 +884,8 @@ entry:
       printf("\n");
     }
     l->next = func_argl;
-    return eval_with_func(func, l);
+    SCM *result = eval_with_func(func, l);
+    RETURN_WITH_CONTEXT(result);
   }
   else if (is_pair(l->data)) {
     // Nested list: evaluate first element and continue

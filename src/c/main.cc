@@ -67,6 +67,7 @@ SCM *create_sym(const char *data, int len) {
   SCM *scm = new SCM();
   scm->type = SCM::SYM;
   scm->value = sym;
+  scm->source_loc = nullptr;  // Initialize to nullptr
   return scm;
 }
 

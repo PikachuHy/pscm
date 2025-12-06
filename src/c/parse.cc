@@ -77,6 +77,8 @@ static char consume(Parser *p) {
 // Parse a number (only if it starts with a digit, or +/- followed by a digit)
 static SCM *parse_number(Parser *p) {
   const char *start = p->pos;
+  int start_line = p->line;
+  int start_column = p->column;
   bool negative = false;
   
   // Only parse as number if it starts with a digit, or +/- followed by a digit
@@ -113,6 +115,8 @@ static SCM *parse_number(Parser *p) {
   SCM *scm = new SCM();
   scm->type = SCM::NUM;
   scm->value = (void *)value;
+  scm->source_loc = nullptr;  // Initialize to nullptr
+  set_source_location(scm, p->filename, start_line, start_column);
   return scm;
 }
 
@@ -121,6 +125,8 @@ static SCM *parse_string(Parser *p) {
   if (*p->pos != '"') {
     return nullptr;
   }
+  int start_line = p->line;
+  int start_column = p->column;
   p->pos++; // consume opening quote
   p->column++;
   
@@ -189,6 +195,7 @@ static SCM *parse_string(Parser *p) {
   
   SCM *scm = create_sym(str_data, len);
   scm->type = SCM::STR;
+  set_source_location(scm, p->filename, start_line, start_column);
   delete[] str_data;
   return scm;
 }
@@ -196,6 +203,8 @@ static SCM *parse_string(Parser *p) {
 // Parse a symbol or special literal
 static SCM *parse_symbol(Parser *p) {
   const char *start = p->pos;
+  int start_line = p->line;
+  int start_column = p->column;
   int len = 0;
   
   // Check for special literals first
@@ -204,7 +213,9 @@ static SCM *parse_symbol(Parser *p) {
        p->pos[2] == ')' || p->pos[2] == '(' || p->pos[2] == ';')) {
     p->pos += 2;
     p->column += 2;
-    return scm_bool_true();
+    SCM *result = scm_bool_true();
+    set_source_location(result, p->filename, start_line, start_column);
+    return result;
   }
   
   if (strncmp(p->pos, "#f", 2) == 0 && 
@@ -212,7 +223,9 @@ static SCM *parse_symbol(Parser *p) {
        p->pos[2] == ')' || p->pos[2] == '(' || p->pos[2] == ';')) {
     p->pos += 2;
     p->column += 2;
-    return scm_bool_false();
+    SCM *result = scm_bool_false();
+    set_source_location(result, p->filename, start_line, start_column);
+    return result;
   }
   
   // Parse regular symbol
@@ -234,6 +247,7 @@ static SCM *parse_symbol(Parser *p) {
   sym_data[len] = '\0';
   
   SCM *scm = create_sym(sym_data, len);
+  set_source_location(scm, p->filename, start_line, start_column);
   delete[] sym_data;
   return scm;
 }
@@ -339,6 +353,8 @@ static SCM *parse_list(Parser *p) {
   if (*p->pos != '(') {
     return nullptr;
   }
+  int start_line = p->line;
+  int start_column = p->column;
   p->pos++; // consume '('
   p->column++;
   
@@ -353,7 +369,9 @@ static SCM *parse_list(Parser *p) {
   if (*p->pos == ')') {
     p->pos++; // consume ')'
     p->column++;
-    return scm_nil();
+    SCM *result = scm_nil();
+    set_source_location(result, p->filename, start_line, start_column);
+    return result;
   }
   
   // Parse list elements
@@ -404,9 +422,13 @@ static SCM *parse_list(Parser *p) {
     SCM *scm = new SCM();
     scm->type = SCM::LIST;
     scm->value = dummy.next;
+    scm->source_loc = nullptr;  // Initialize to nullptr
+    set_source_location(scm, p->filename, start_line, start_column);
     return scm;
   }
-  return scm_nil();
+  SCM *result = scm_nil();
+  set_source_location(result, p->filename, start_line, start_column);
+  return result;
 }
 
 // Parse an expression

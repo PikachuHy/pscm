@@ -7,10 +7,18 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Source location information
+struct SCM_SourceLocation {
+  const char *filename;
+  int line;
+  int column;
+};
+
 struct SCM {
   enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, BOOL, SYM, STR, MACRO } type;
 
   void *value;
+  SCM_SourceLocation *source_loc;  // Optional source location
 };
 struct SCM_Environment;
 
@@ -127,6 +135,12 @@ inline bool is_macro(SCM *scm) {
 
 SCM *create_sym(const char *data, int len);
 
+// Source location functions (implemented in source_location.cc)
+void set_source_location(SCM *scm, const char *filename, int line, int column);
+void copy_source_location(SCM *dest, SCM *src);
+void copy_source_location_recursive(SCM *dest, SCM *src);
+const char *get_source_location_str(SCM *scm);
+
 inline SCM_List *make_list() {
   auto l = new SCM_List();
   l->data = nullptr;
@@ -213,6 +227,7 @@ inline SCM *wrap(SCM_Procedure *proc) {
   auto data = new SCM();
   data->type = SCM::PROC;
   data->value = proc;
+  data->source_loc = nullptr;
   return data;
 }
 
@@ -222,6 +237,7 @@ inline SCM *wrap(SCM_Continuation *cont) {
   auto data = new SCM();
   data->type = SCM::CONT;
   data->value = cont;
+  data->source_loc = nullptr;
   return data;
 }
 
@@ -231,6 +247,7 @@ inline SCM *wrap(SCM_Function *func) {
   auto data = new SCM();
   data->type = SCM::FUNC;
   data->value = func;
+  data->source_loc = nullptr;
   return data;
 }
 
@@ -243,6 +260,7 @@ inline SCM *wrap(SCM_List *l) {
   auto data = new SCM();
   data->type = SCM::LIST;
   data->value = l;
+  data->source_loc = nullptr;
   return data;
 }
 
@@ -252,6 +270,7 @@ inline SCM *wrap(SCM_Symbol *sym) {
   auto data = new SCM();
   data->type = SCM::SYM;
   data->value = sym;
+  data->source_loc = nullptr;
   return data;
 }
 
@@ -306,6 +325,7 @@ inline SCM *wrap(SCM_Macro *macro) {
   auto data = new SCM();
   data->type = SCM::MACRO;
   data->value = macro;
+  data->source_loc = nullptr;
   return data;
 }
 
@@ -332,6 +352,9 @@ inline SCM *cdr(SCM *data) {
   auto new_data = new SCM();
   new_data->type = SCM::LIST;
   new_data->value = l->next;
+  new_data->source_loc = nullptr;  // Initialize to nullptr
+  // Copy source location from original list
+  copy_source_location(new_data, data);
   return new_data;
 }
 
@@ -340,7 +363,12 @@ inline SCM *cadr(SCM *data) {
   auto l = cast<SCM_List>(data);
   assert(l);
   assert(l->next);
-  return l->next->data;
+  SCM *result = l->next->data;
+  // Copy source location if result doesn't have one
+  if (result && !result->source_loc && data->source_loc) {
+    copy_source_location(result, data);
+  }
+  return result;
 }
 
 inline SCM *cddr(SCM *data) {
@@ -348,7 +376,12 @@ inline SCM *cddr(SCM *data) {
 }
 
 inline SCM *caddr(SCM *data) {
-  return car(cdr(cdr(data)));
+  SCM *result = car(cdr(cdr(data)));
+  // Copy source location if result doesn't have one
+  if (result && !result->source_loc && data->source_loc) {
+    copy_source_location(result, data);
+  }
+  return result;
 }
 
 template <typename F>
