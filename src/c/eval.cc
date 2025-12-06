@@ -9,7 +9,6 @@ SCM_List _make_list_dummy() {
 
 SCM *eval_with_list(SCM_Environment *env, SCM_List *l) {
   assert(l);
-  // print_list(l);
   SCM *ret = nullptr;
   while (l) {
     ret = eval_with_env(env, l->data);
@@ -43,6 +42,82 @@ SCM *eval_with_func_2(SCM_Function *func, SCM *arg1, SCM *arg2) {
   return f(arg1, arg2);
 }
 
+// Helper functions for special forms
+static SCM *eval_quote(SCM_List *l) {
+  return l->next ? l->next->data : scm_nil();
+}
+
+static SCM *eval_set(SCM_Environment *env, SCM_List *l) {
+  assert(l->next && is_sym(l->next->data));
+  auto sym = cast<SCM_Symbol>(l->next->data);
+  auto val = eval_with_env(env, l->next->next->data);
+  scm_env_insert(env, sym, val);
+  if (debug_enabled) {
+    SCM_DEBUG_EVAL("set! ");
+    printf("%s to ", sym->data);
+    print_ast(val);
+    printf("\n");
+  }
+  return scm_nil();
+}
+
+static SCM *eval_lambda(SCM_Environment *env, SCM_List *l) {
+  auto proc_sig = cast<SCM_List>(l->next->data);
+  auto proc = make_proc(nullptr, proc_sig, l->next->next, env);
+  auto ret = wrap(proc);
+  if (debug_enabled) {
+    SCM_DEBUG_EVAL("create proc ");
+    print_ast(ret);
+    printf(" from ");
+    print_list(l);
+    printf("\n");
+  }
+  return ret;
+}
+
+static SCM *eval_define(SCM_Environment *env, SCM_List *l) {
+  if (l->next && is_sym(l->next->data)) {
+    SCM_Symbol *varname = cast<SCM_Symbol>(l->next->data);
+    SCM_DEBUG_EVAL("define variable %s\n", varname->data);
+    auto val = eval_with_env(env, l->next->next->data);
+    assert(val);
+    if (is_proc(val)) {
+      auto proc = cast<SCM_Procedure>(val);
+      if (proc->name == nullptr) {
+        proc->name = varname;
+        SCM_DEBUG_EVAL("define proc from lambda\n");
+      }
+    }
+    scm_env_insert(env, varname, val);
+    return scm_none();
+  }
+  else {
+    SCM_List *proc_sig = cast<SCM_List>(l->next->data);
+    SCM_DEBUG_EVAL("define a procedure");
+    if (is_sym(proc_sig->data)) {
+      SCM_Symbol *proc_name = cast<SCM_Symbol>(proc_sig->data);
+      SCM_DEBUG_EVAL(" %s with params ", proc_name->data);
+      if (debug_enabled) {
+        printf("(");
+        if (proc_sig->next) {
+          print_ast(proc_sig->next->data);
+        }
+        printf(")\n");
+      }
+      auto proc = make_proc(proc_name, proc_sig->next, l->next->next, env);
+      SCM *ret = wrap(proc);
+      scm_env_insert(env, proc_name, ret);
+      return ret;
+    }
+    else {
+      fprintf(stderr, "%s:%d not supported ", __FILE__, __LINE__);
+      print_ast(proc_sig->data);
+      fprintf(stderr, "\n");
+      exit(1);
+    }
+  }
+}
+
 SCM *eval_with_func(SCM_Function *func, SCM_List *l) {
   if (debug_enabled) {
     SCM_DEBUG_EVAL("eval func ");
@@ -55,8 +130,7 @@ SCM *eval_with_func(SCM_Function *func, SCM_List *l) {
     return eval_with_func_1(func, l->next->data);
   }
   if (func->n_args == 2) {
-    assert(l->next);
-    assert(l->next->next);
+    assert(l->next && l->next->next);
     return eval_with_func_2(func, l->next->data, l->next->next->data);
   }
   if (func->n_args == -1 && func->generic) {
@@ -101,46 +175,7 @@ entry:
   if (is_sym(l->data)) {
     SCM_Symbol *sym = cast<SCM_Symbol>(l->data);
     if (is_sym_val(l->data, "define")) {
-      if (l->next && is_sym(l->next->data)) {
-        SCM_Symbol *varname = cast<SCM_Symbol>(l->next->data);
-        SCM_DEBUG_EVAL("define variable %s\n", varname->data);
-        auto val = eval_with_env(env, l->next->next->data);
-        assert(val);
-        if (is_proc(val)) {
-          auto proc = cast<SCM_Procedure>(val);
-          if (proc->name == nullptr) {
-            proc->name = varname;
-            SCM_DEBUG_EVAL("define proc from lambda\n");
-          }
-        }
-        scm_env_insert(env, varname, val);
-        return scm_none();
-      }
-      else {
-        SCM_List *proc_sig = cast<SCM_List>(l->next->data);
-        SCM_DEBUG_EVAL("define a procedure");
-        if (is_sym(proc_sig->data)) {
-          SCM_Symbol *proc_name = cast<SCM_Symbol>(proc_sig->data);
-          SCM_DEBUG_EVAL(" %s with params ", proc_name->data);
-          if (debug_enabled) {
-            printf("(");
-            if (proc_sig->next) {
-              print_ast(proc_sig->next->data);
-            }
-            printf(")\n");
-          }
-          auto proc = make_proc(proc_name, proc_sig->next, l->next->next, env);
-          SCM *ret = wrap(proc);
-          scm_env_insert(env, proc_name, ret);
-          return ret;
-        }
-      else {
-        fprintf(stderr, "%s:%d not supported ", __FILE__, __LINE__);
-        print_ast(proc_sig->data);
-        fprintf(stderr, "\n");
-        exit(1);
-      }
-      }
+      return eval_define(env, l);
     }
     else if (is_sym_val(l->data, "let")) {
       ast = expand_let(ast);
@@ -157,7 +192,6 @@ entry:
     else if (is_sym_val(l->data, "call/cc") || is_sym_val(l->data, "call-with-current-continuation")) {
       assert(l->next);
       auto proc = eval_with_env(env, l->next->data);
-      assert(is_proc(proc) || is_cont(proc) || is_func(proc));  // Must be callable
       int first;
       auto cont = scm_make_continuation(&first);
       SCM_DEBUG_CONT("jump back: ");
@@ -180,42 +214,17 @@ entry:
       }
     }
     else if (is_sym_val(l->data, "lambda")) {
-      auto proc_sig = cast<SCM_List>(l->next->data);
-      auto proc = make_proc(nullptr, proc_sig, l->next->next, env);
-      auto ret = wrap(proc);
-
-      if (debug_enabled) {
-        SCM_DEBUG_EVAL("create proc ");
-        print_ast(ret);
-        printf(" from ");
-        print_list(l);
-        printf("\n");
-      }
-      return ret;
+      return eval_lambda(env, l);
     }
     else if (is_sym_val(l->data, "set!")) {
-      assert(is_sym(l->next->data));
-      auto sym = cast<SCM_Symbol>(l->next->data);
-      auto val = eval_with_env(env, l->next->next->data);
-      scm_env_insert(env, sym, val);
-      if (debug_enabled) {
-        SCM_DEBUG_EVAL("set! ");
-        printf("%s to ", sym->data);
-        print_ast(val);
-        printf("\n");
-      }
-      return scm_nil();
+      return eval_set(env, l);
     }
     else if (is_sym_val(l->data, "quote")) {
-      if (l->next) {
-        return l->next->data;
-      }
-      return scm_nil();
+      return eval_quote(l);
     }
     else if (is_sym_val(l->data, "if")) {
       assert(l->next);
       auto pred = eval_with_env(env, l->next->data);
-      assert(is_bool(pred));
       if (is_true(pred)) {
         ast = l->next->next->data;
         goto entry;
@@ -230,7 +239,6 @@ entry:
       assert(l->next);
       auto it = l->next;
       while (it) {
-        assert(is_pair(it->data));
         auto clause = cast<SCM_List>(it->data);
         if (debug_enabled) {
           SCM_DEBUG_EVAL("eval cond clause ");
@@ -248,23 +256,18 @@ entry:
         if (!clause->next) {
           return scm_bool_true();
         }
-        if (!is_sym_val(clause->next->data, "=>")) {
-          return eval_with_list(env, clause->next);
+        if (is_sym_val(clause->next->data, "=>")) {
+          assert(clause->next->next);
+          ast = scm_list2(clause->next->next->data, scm_list2(scm_sym_quote(), pred));
+          goto entry;
         }
-        auto val = scm_env_exist(env, cast<SCM_Symbol>(clause->next->data));
-        if (val) {
-          return eval_with_list(env, clause->next);
-        }
-        assert(clause->next->next);
-        ast = scm_list2(clause->next->next->data, scm_list2(scm_sym_quote(), pred));
-        goto entry;
+        return eval_with_list(env, clause->next);
       }
       return scm_none();
     }
     else if (is_sym_val(l->data, "for-each")) {
       assert(l->next);
       auto f = eval_with_env(env, l->next->data);
-      assert(is_proc(f));  // for-each requires a procedure
       auto proc = cast<SCM_Procedure>(f);
       int arg_count = 0;
       auto l2 = proc->args;
@@ -282,7 +285,6 @@ entry:
       for (int i = 0; i < arg_count; i++) {
         if (l) {
           auto item = make_list(eval_with_env(env, l->data));
-          assert(is_pair(item->data));
           l2->next = item;
           l2 = item;
 
@@ -299,7 +301,6 @@ entry:
       }
       args_dummy.data = f;
       assert(arg_count == 1);
-      assert(is_pair(dummy.next->data));
       auto arg_l = cast<SCM_List>(dummy.next->data);
       while (arg_l) {
         args_dummy.next->data = arg_l->data;
@@ -319,9 +320,7 @@ entry:
       return scm_none();
     }
     else if (is_sym_val(l->data, "do")) {
-      assert(l->next);
-      assert(l->next->next);
-      assert(l->next->next->next);
+      assert(l->next && l->next->next && l->next->next->next);
       auto var_init_l = cast<SCM_List>(l->next->data);
       auto test_clause = l->next->next->data;
       auto body_clause = l->next->next->next;
@@ -371,11 +370,6 @@ entry:
           auto var_name = cast<SCM_Symbol>(var_update_expr->data);
           auto var_update_step = var_update_expr->next->data;
 
-          if (debug_enabled) {
-            SCM_DEBUG_EVAL("eval do step ... ");
-            print_ast(var_update_step);
-            printf("\n");
-          }
           auto new_var_val = eval_with_env(do_env, var_update_step);
           if (debug_enabled) {
             SCM_DEBUG_EVAL("eval do step ... ");
@@ -404,16 +398,8 @@ entry:
     }
   }
   else if (is_cont(l->data)) {
-    auto cont = cast<SCM_Continuation>(l->data);
-    assert(cont);
-    if (l->next) {
-      assert(l->next->data);
-      auto cont_arg = eval_with_env(env, l->next->data);
-      scm_dynthrow(l->data, cont_arg);
-    }
-    else {
-      scm_dynthrow(l->data, scm_nil());
-    }
+    auto cont_arg = l->next ? eval_with_env(env, l->next->data) : scm_nil();
+    scm_dynthrow(l->data, cont_arg);
   }
   else if (is_proc(l->data)) {
     auto proc = cast<SCM_Procedure>(l->data);
@@ -433,7 +419,7 @@ entry:
       l = l->next;
       args_l = args_l->next;
     }
-    if (l && args_l) {
+    if (l->next || args_l) {
       fprintf(stderr, "args not match\n");
       fprintf(stderr, "expect ");
       print_list(proc->args);
