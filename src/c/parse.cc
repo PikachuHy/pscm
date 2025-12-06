@@ -1,161 +1,456 @@
 #include "pscm.h"
+#include <ctype.h>
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include "pscm/Parser.h"
-#include "pscm/Str.h"
-#include "pscm/Symbol.h"
-#include "pscm/common_def.h"
-#include "pscm/scm_utils.h"
+// Simple Scheme parser implementation from scratch
 
-#include "assert.h"
+// Parser state
+struct Parser {
+  const char *input;
+  const char *pos;
+  const char *filename;
+  int line;
+  int column;
+};
 
-using namespace pscm;
+// Error reporting
+static void parse_error(Parser *p, const char *msg) {
+  fprintf(stderr, "%s:%d:%d: parse error: %s\n", 
+          p->filename ? p->filename : "<input>", p->line, p->column, msg);
+  exit(1);
+}
 
-SCM *translate(Cell ret) {
-  SCM_DEBUG_TRANS("translate %s\n", ret.to_std_string().c_str());
-  if (ret.is_none()) {
-    return scm_none();
-  }
-  if (!ret.is_pair()) {
-    if (ret.is_bool()) {
-      if (ret.to_bool()) {
-        return scm_bool_true();
+// Skip whitespace and comments
+static void skip_whitespace(Parser *p) {
+  while (true) {
+    while (isspace((unsigned char)*p->pos)) {
+      if (*p->pos == '\n') {
+        p->line++;
+        p->column = 1;
+      } else {
+        p->column++;
       }
-      else {
-        return scm_bool_false();
-      }
+      p->pos++;
     }
-    if (ret.is_sym()) {
-      std::string sym_str;
-      ret.to_sym()->to_string().toUTF8String(sym_str);
-      auto sym = create_sym(sym_str.c_str(), sym_str.length());
-      return sym;
+    if (*p->pos == ';') {
+      // Skip comment until end of line
+      while (*p->pos && *p->pos != '\n') {
+        p->pos++;
+        p->column++;
+      }
+    } else {
+      break;
     }
-    if (ret.is_str()) {
-      std::string sym_str;
-      ret.to_str()->str().toUTF8String(sym_str);
-      auto sym = create_sym(sym_str.c_str(), sym_str.length());
-      sym->type = SCM::STR;
-      return sym;
-    }
-
-    printf("%s:%d [%s] not supported %s\n", __BASE_FILE__, __LINE__, __func__, car(ret).to_std_string().c_str());
-    std::exit(1);
-  }
-  SCM_List dummy;
-  dummy.data = nullptr;
-  dummy.data = nullptr;
-  SCM_List *it = &dummy;
-  if (ret.is_pair()) {
-    while (ret.is_pair()) {
-      auto first = car(ret);
-      if (first.is_pair()) {
-        SCM_List *pair = new SCM_List();
-        pair->data = translate(first);
-        // print_ast(pair->data);
-        // printf("\n");
-        pair->next = nullptr;
-        it->next = pair;
-        it = pair;
-        ret = cdr(ret);
-      }
-      else if (first.is_sym()) {
-        std::string sym_str;
-        car(ret).to_sym()->to_string().toUTF8String(sym_str);
-        auto sym = create_sym(sym_str.c_str(), sym_str.length());
-        SCM_List *pair = new SCM_List();
-        pair->data = sym;
-        pair->next = nullptr;
-        it->next = pair;
-        it = pair;
-        ret = cdr(ret);
-      }
-      else if (first.is_nil()) {
-        SCM_List *pair = new SCM_List();
-        pair->data = scm_nil();
-        pair->next = nullptr;
-        it->next = pair;
-        it = pair;
-        ret = cdr(ret);
-        // break;
-      }
-      else if (first.is_num()) {
-        SCM_List *pair = new SCM_List();
-        SCM *data = new SCM();
-        data->type = SCM::NUM;
-        auto val = first.to_num()->to_int();
-        data->value = (void *)val;
-        pair->data = data;
-        it->next = pair;
-        it = pair;
-        ret = cdr(ret);
-      }
-      else if (first.is_bool()) {
-        SCM_List *pair = new SCM_List();
-        pair->data = first.to_bool() ? scm_bool_true() : scm_bool_false();
-        it->next = pair;
-        it = pair;
-        ret = cdr(ret);
-      }
-      else if (first.is_str()) {
-        std::string sym_str;
-        car(ret).to_str()->str().toUTF8String(sym_str);
-        auto sym = create_sym(sym_str.c_str(), sym_str.length());
-        // set type to String
-        sym->type = SCM::STR;
-        SCM_List *pair = new SCM_List();
-        pair->data = sym;
-        pair->next = nullptr;
-        it->next = pair;
-        it = pair;
-        ret = cdr(ret);
-      }
-      else {
-        printf("%s:%d [%s] not supported %s\n", __BASE_FILE__, __LINE__, __func__, car(ret).to_std_string().c_str());
-        std::exit(1);
-      }
-    }
-  }
-  if (dummy.next) {
-    SCM *l = new SCM();
-    l->type = SCM::LIST;
-    l->value = dummy.next;
-    if (debug_enabled) {
-      printf("-->");
-      print_ast(l);
-      printf("\n");
-    }
-    return l;
-  }
-  else {
-    return scm_nil();
   }
 }
 
-SCM *parse(const char *s) {
-  UString unicode(s);
-  Parser parser(unicode);
-  auto ret = parser.parse();
-  return translate(ret);
+// Check if we're at end of input
+static bool is_eof(Parser *p) {
+  skip_whitespace(p);
+  return *p->pos == '\0';
 }
 
-SCM_List *parse_file(const char *filename) {
-  auto res = read_file(filename);
-  if (!std::holds_alternative<UString>(res)) {
+// Peek at current character
+static char peek(Parser *p) {
+  skip_whitespace(p);
+  return *p->pos;
+}
+
+// Consume current character
+static char consume(Parser *p) {
+  skip_whitespace(p);
+  char c = *p->pos;
+  if (c) {
+    p->pos++;
+    p->column++;
+    if (c == '\n') {
+      p->line++;
+      p->column = 1;
+    }
+  }
+  return c;
+}
+
+// Parse a number (only if it starts with a digit, or +/- followed by a digit)
+static SCM *parse_number(Parser *p) {
+  const char *start = p->pos;
+  bool negative = false;
+  
+  // Only parse as number if it starts with a digit, or +/- followed by a digit
+  if (*p->pos == '-') {
+    // Check if next char is a digit
+    if (!isdigit((unsigned char)p->pos[1])) {
+      return nullptr; // Not a number, let it be parsed as symbol
+    }
+    negative = true;
+    p->pos++;
+    p->column++;
+  } else if (*p->pos == '+') {
+    // Check if next char is a digit
+    if (!isdigit((unsigned char)p->pos[1])) {
+      return nullptr; // Not a number, let it be parsed as symbol
+    }
+    p->pos++;
+    p->column++;
+  } else if (!isdigit((unsigned char)*p->pos)) {
     return nullptr;
   }
-  SCM_List dummy_list;
-  dummy_list.data = nullptr;
-  dummy_list.next = nullptr;
-  auto it = &dummy_list;
-  auto code = std::get<UString>(res);
-  Parser parser(code, filename);
-  Cell ast = parser.next();
-  while (!ast.is_none()) {
-    Cell ret;
-    auto expr = translate(ast);
-    it->next = make_list(expr);
-    it = it->next;
-    ast = parser.next();
+  
+  long value = 0;
+  while (isdigit((unsigned char)*p->pos)) {
+    value = value * 10 + (*p->pos - '0');
+    p->pos++;
+    p->column++;
   }
-  return dummy_list.next;
+  
+  if (negative) {
+    value = -value;
+  }
+  
+  SCM *scm = new SCM();
+  scm->type = SCM::NUM;
+  scm->value = (void *)value;
+  return scm;
+}
+
+// Parse a string
+static SCM *parse_string(Parser *p) {
+  if (*p->pos != '"') {
+    return nullptr;
+  }
+  p->pos++; // consume opening quote
+  p->column++;
+  
+  const char *start = p->pos;
+  int len = 0;
+  bool escape = false;
+  
+  while (*p->pos) {
+    if (escape) {
+      escape = false;
+      len++;
+      p->pos++;
+      p->column++;
+      continue;
+    }
+    if (*p->pos == '\\') {
+      escape = true;
+      p->pos++;
+      p->column++;
+      continue;
+    }
+    if (*p->pos == '"') {
+      break;
+    }
+    if (*p->pos == '\n') {
+      p->line++;
+      p->column = 1;
+    }
+    len++;
+    p->pos++;
+    p->column++;
+  }
+  
+  if (*p->pos != '"') {
+    parse_error(p, "unterminated string");
+  }
+  p->pos++; // consume closing quote
+  p->column++;
+  
+  // Create string symbol
+  char *str_data = new char[len + 1];
+  const char *src = start;
+  char *dst = str_data;
+  escape = false;
+  
+  for (int i = 0; i < len; i++) {
+    if (escape) {
+      escape = false;
+      switch (*src) {
+        case 'n': *dst++ = '\n'; break;
+        case 't': *dst++ = '\t'; break;
+        case 'r': *dst++ = '\r'; break;
+        case '\\': *dst++ = '\\'; break;
+        case '"': *dst++ = '"'; break;
+        default: *dst++ = *src; break;
+      }
+      src++;
+    } else if (*src == '\\') {
+      escape = true;
+      src++;
+    } else {
+      *dst++ = *src++;
+    }
+  }
+  *dst = '\0';
+  
+  SCM *scm = create_sym(str_data, len);
+  scm->type = SCM::STR;
+  delete[] str_data;
+  return scm;
+}
+
+// Parse a symbol or special literal
+static SCM *parse_symbol(Parser *p) {
+  const char *start = p->pos;
+  int len = 0;
+  
+  // Check for special literals first
+  if (strncmp(p->pos, "#t", 2) == 0 && 
+      (p->pos[2] == '\0' || isspace((unsigned char)p->pos[2]) || 
+       p->pos[2] == ')' || p->pos[2] == '(' || p->pos[2] == ';')) {
+    p->pos += 2;
+    p->column += 2;
+    return scm_bool_true();
+  }
+  
+  if (strncmp(p->pos, "#f", 2) == 0 && 
+      (p->pos[2] == '\0' || isspace((unsigned char)p->pos[2]) || 
+       p->pos[2] == ')' || p->pos[2] == '(' || p->pos[2] == ';')) {
+    p->pos += 2;
+    p->column += 2;
+    return scm_bool_false();
+  }
+  
+  // Parse regular symbol
+  // Symbols can contain: letters, digits, and special characters
+  while (*p->pos && 
+         (isalnum((unsigned char)*p->pos) || 
+          strchr("!$%&*+-./:<=>?@^_~", *p->pos) != nullptr)) {
+    len++;
+    p->pos++;
+    p->column++;
+  }
+  
+  if (len == 0) {
+    return nullptr;
+  }
+  
+  char *sym_data = new char[len + 1];
+  memcpy(sym_data, start, len);
+  sym_data[len] = '\0';
+  
+  SCM *scm = create_sym(sym_data, len);
+  delete[] sym_data;
+  return scm;
+}
+
+
+// Forward declaration
+static SCM *parse_expr(Parser *p);
+
+// Parse a quoted expression
+static SCM *parse_quote(Parser *p) {
+  if (*p->pos != '\'') {
+    return nullptr;
+  }
+  p->pos++; // consume quote
+  p->column++;
+  
+  SCM *quoted = parse_expr(p);
+  if (!quoted) {
+    parse_error(p, "expected expression after quote");
+  }
+  
+  // Build (quote expr)
+  SCM *quote_sym = scm_sym_quote();
+  SCM_List *list = make_list(quote_sym, quoted);
+  
+  SCM *scm = new SCM();
+  scm->type = SCM::LIST;
+  scm->value = list;
+  return scm;
+}
+
+// Parse a list
+static SCM *parse_list(Parser *p) {
+  if (*p->pos != '(') {
+    return nullptr;
+  }
+  p->pos++; // consume '('
+  p->column++;
+  
+  SCM_List dummy;
+  dummy.data = nullptr;
+  dummy.next = nullptr;
+  SCM_List *tail = &dummy;
+  
+  skip_whitespace(p);
+  
+  // Check for empty list
+  if (*p->pos == ')') {
+    p->pos++; // consume ')'
+    p->column++;
+    return scm_nil();
+  }
+  
+  // Parse list elements
+  while (*p->pos && *p->pos != ')') {
+    SCM *elem = parse_expr(p);
+    if (!elem) {
+      parse_error(p, "expected expression in list");
+    }
+    
+    SCM_List *node = make_list(elem);
+    tail->next = node;
+    tail = node;
+    
+    skip_whitespace(p);
+    
+    // Check for dotted pair
+    if (*p->pos == '.') {
+      p->pos++;
+      p->column++;
+      skip_whitespace(p);
+      
+      SCM *cdr = parse_expr(p);
+      if (!cdr) {
+        parse_error(p, "expected expression after dot");
+      }
+      
+      tail->next = is_pair(cdr) ? cast<SCM_List>(cdr) : make_list(cdr);
+      skip_whitespace(p);
+      break;
+    }
+  }
+  
+  if (*p->pos != ')') {
+    parse_error(p, "expected ')' to close list");
+  }
+  p->pos++; // consume ')'
+  p->column++;
+  
+  if (dummy.next) {
+    SCM *scm = new SCM();
+    scm->type = SCM::LIST;
+    scm->value = dummy.next;
+    return scm;
+  }
+  return scm_nil();
+}
+
+// Parse an expression
+static SCM *parse_expr(Parser *p) {
+  skip_whitespace(p);
+  
+  if (*p->pos == '\0') {
+    return nullptr;
+  }
+  
+  // Try different parsers
+  SCM *result = nullptr;
+  
+  // Quote
+  if (*p->pos == '\'') {
+    return parse_quote(p);
+  }
+  
+  // List
+  if (*p->pos == '(') {
+    return parse_list(p);
+  }
+  
+  // String
+  if (*p->pos == '"') {
+    return parse_string(p);
+  }
+  
+  // Number
+  result = parse_number(p);
+  if (result) {
+    return result;
+  }
+  
+  // Symbol or special literal
+  result = parse_symbol(p);
+  if (result) {
+    return result;
+  }
+  
+  // Unknown token
+  parse_error(p, "unexpected character");
+  return nullptr;
+}
+
+// Parse a single expression from input
+SCM *parse(const char *s) {
+  Parser p;
+  p.input = s;
+  p.pos = s;
+  p.filename = nullptr;
+  p.line = 1;
+  p.column = 1;
+  
+  SCM *result = parse_expr(&p);
+  if (!result) {
+    parse_error(&p, "expected expression");
+  }
+  
+  skip_whitespace(&p);
+  if (*p.pos != '\0') {
+    parse_error(&p, "extra input after expression");
+  }
+  
+  return result;
+}
+
+// Read file content
+static char *read_file_content(const char *filename) {
+  FILE *f = fopen(filename, "r");
+  if (!f) {
+    fprintf(stderr, "ERROR: cannot open file: %s\n", filename);
+    return nullptr;
+  }
+  
+  // Get file size
+  fseek(f, 0, SEEK_END);
+  long size = ftell(f);
+  fseek(f, 0, SEEK_SET);
+  
+  // Allocate buffer
+  char *buffer = new char[size + 1];
+  size_t read = fread(buffer, 1, size, f);
+  buffer[read] = '\0';
+  fclose(f);
+  
+  return buffer;
+}
+
+// Parse file and return list of expressions
+SCM_List *parse_file(const char *filename) {
+  char *content = read_file_content(filename);
+  if (!content) {
+    return nullptr;
+  }
+  
+  Parser p;
+  p.input = content;
+  p.pos = content;
+  p.filename = filename;
+  p.line = 1;
+  p.column = 1;
+  
+  SCM_List dummy;
+  dummy.data = nullptr;
+  dummy.next = nullptr;
+  SCM_List *tail = &dummy;
+  
+  while (!is_eof(&p)) {
+    SCM *expr = parse_expr(&p);
+    if (!expr) {
+      break;
+    }
+    
+    SCM_List *node = make_list(expr);
+    tail->next = node;
+    tail = node;
+    
+    skip_whitespace(&p);
+  }
+  
+  delete[] content;
+  return dummy.next;
 }
