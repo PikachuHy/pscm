@@ -110,6 +110,16 @@ function sidebarGuideZh() {
       ]
     },
     {
+      text: 'pscm-cc',
+      collapsible: true,
+      items: [
+        {
+          text: 'pscm-cc 简介',
+          link: '/cn/pscm_cc'
+        },
+      ]
+    },
+    {
       text: 'pscm-build',
       collapsible: true,
       items: [
