@@ -99,6 +99,20 @@ SCM *scm_c_is_pair(SCM *arg) {
   return scm_c_type_check(arg, is_pair);
 }
 
+SCM *scm_c_gensym() {
+  static int index = 0;
+  char buffer[32];
+  snprintf(buffer, sizeof(buffer), " g%d", index++);
+  return wrap(make_sym(buffer));
+}
+
+SCM *scm_c_not(SCM *arg) {
+  if (is_false(arg) || is_nil(arg)) {
+    return scm_bool_true();
+  }
+  return scm_bool_false();
+}
+
 void init_scm() {
   g_env.parent = nullptr;
   g_env.dummy.data = nullptr;
@@ -110,9 +124,13 @@ void init_scm() {
   scm_define_function("car", 1, 0, 0, car);
   scm_define_function("cdr", 1, 0, 0, cdr);
   scm_define_function("cadr", 1, 0, 0, cadr);
+  scm_define_function("cddr", 1, 0, 0, cddr);
+  scm_define_function("caddr", 1, 0, 0, caddr);
   scm_define_function("cons", 2, 0, 0, scm_cons);
   scm_define_vararg_function("list", scm_list);
   scm_define_vararg_function("append", scm_append);
+  scm_define_function("gensym", 0, 0, 0, scm_c_gensym);
+  scm_define_function("not", 1, 0, 0, scm_c_not);
   init_number();
   init_eq();
   init_alist();

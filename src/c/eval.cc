@@ -31,6 +31,12 @@ SCM_List *eval_list_with_env(SCM_Environment *env, SCM_List *l) {
   return dummy.next;
 }
 
+SCM *eval_with_func_0(SCM_Function *func) {
+  typedef SCM *(*func_0)();
+  auto f = (func_0)func->func_ptr;
+  return f();
+}
+
 SCM *eval_with_func_1(SCM_Function *func, SCM *arg1) {
   typedef SCM *(*func_1)(SCM *);
   auto f = (func_1)func->func_ptr;
@@ -131,6 +137,9 @@ SCM *eval_with_func(SCM_Function *func, SCM_List *l) {
     printf("%s with ", func->name->data);
     print_list(l->next);
     printf("\n");
+  }
+  if (func->n_args == 0) {
+    return eval_with_func_0(func);
   }
   if (func->n_args == 1) {
     assert(l->next);
@@ -359,14 +368,45 @@ static SCM *eval_do(SCM_Environment *env, SCM_List *l) {
   return scm_none();
 }
 
+// Helper function to print a list of symbols for error reporting
+// This prints the argument list as-is, without evaluating
+static void print_arg_list(SCM_List *l) {
+  if (!l) {
+    fprintf(stderr, "()");
+    return;
+  }
+  fprintf(stderr, "(");
+  bool first = true;
+  SCM_List *current = l;  // Use a separate variable to avoid modifying the original pointer
+  while (current) {
+    if (!first) {
+      fprintf(stderr, " ");
+    }
+    first = false;
+    if (current->data) {
+      if (is_sym(current->data)) {
+        SCM_Symbol *sym = cast<SCM_Symbol>(current->data);
+        fprintf(stderr, "%s", sym->data);
+      } else {
+        // For non-symbol arguments, print the AST representation
+        print_ast(current->data);
+      }
+    } else {
+      fprintf(stderr, "()");
+    }
+    current = current->next;
+  }
+  fprintf(stderr, ")");
+}
+
 // Helper function to report argument mismatch error
 [[noreturn]] static void report_arg_mismatch(SCM_List *expected, SCM_List *got) {
   fprintf(stderr, "args not match\n");
   fprintf(stderr, "expect ");
-  print_list(expected);
+  print_arg_list(expected);
   fprintf(stderr, "\n");
   fprintf(stderr, "but got ");
-  print_list(got);
+  print_arg_list(got);
   fprintf(stderr, "\n");
   exit(1);
 }
@@ -375,10 +415,14 @@ static SCM *eval_do(SCM_Environment *env, SCM_List *l) {
 static SCM *apply_procedure(SCM_Environment *env, SCM_Procedure *proc, SCM_List *args) {
   auto proc_env = make_env(proc->env);
   auto args_l = proc->args;
-  while (args && args_l) {
+  // Save original args for error reporting - create a copy of the list structure
+  // (we only need the structure, not the values, for error reporting)
+  SCM_List *original_args = args;  // Save original args pointer for error reporting
+  SCM_List *args_iter = args;     // Use separate iterator for the loop
+  while (args_iter && args_l) {
     assert(is_sym(args_l->data));
     auto arg_sym = cast<SCM_Symbol>(args_l->data);
-    auto arg_val = eval_with_env(env, args->data);
+    auto arg_val = eval_with_env(env, args_iter->data);
     scm_env_insert(proc_env, arg_sym, arg_val, /*search_parent=*/false);
     if (debug_enabled) {
       SCM_DEBUG_EVAL("bind func arg ");
@@ -386,13 +430,123 @@ static SCM *apply_procedure(SCM_Environment *env, SCM_Procedure *proc, SCM_List 
       print_ast(arg_val);
       printf("\n");
     }
-    args = args->next;
+    args_iter = args_iter->next;
     args_l = args_l->next;
   }
-  if (args || args_l) {
-    report_arg_mismatch(proc->args, args);
+  if (args_iter || args_l) {
+    report_arg_mismatch(proc->args, original_args);
   }
   return eval_with_list(proc_env, proc->body);
+}
+
+// Helper function for map special form
+static SCM *eval_map(SCM_Environment *env, SCM_List *l) {
+  if (!l->next || !l->next->next) {
+    eval_error("map: requires at least 2 arguments (procedure and list)");
+  }
+  
+  SCM *proc = eval_with_env(env, l->next->data);
+  
+  // Check if proc is a procedure
+  if (!is_proc(proc) && !is_func(proc)) {
+    eval_error("map: first argument must be a procedure");
+  }
+  
+  // Collect all list arguments
+  SCM_List *list_args_head = l->next->next;
+  int num_lists = 0;
+  SCM_List *temp = list_args_head;
+  while (temp) {
+    num_lists++;
+    temp = temp->next;
+  }
+  
+  if (num_lists == 0) {
+    eval_error("map: requires at least one list argument");
+  }
+  
+  // Evaluate all list arguments and store them
+  SCM_List **list_ptrs = new SCM_List*[num_lists];
+  temp = list_args_head;
+  for (int i = 0; i < num_lists; i++) {
+    SCM *list_arg = eval_with_env(env, temp->data);
+    // Check if list_arg is a list
+    if (!is_pair(list_arg) && !is_nil(list_arg)) {
+      eval_error("map: list arguments must be lists");
+    }
+    list_ptrs[i] = is_nil(list_arg) ? nullptr : cast<SCM_List>(list_arg);
+    temp = temp->next;
+  }
+  
+  // Build result list by applying proc to corresponding elements
+  SCM_List dummy;
+  dummy.data = nullptr;
+  dummy.next = nullptr;
+  SCM_List *tail = &dummy;
+  
+  // Continue until the shortest list is exhausted
+  bool all_non_empty = true;
+  for (int i = 0; i < num_lists; i++) {
+    if (!list_ptrs[i]) {
+      all_non_empty = false;
+      break;
+    }
+  }
+  
+  while (all_non_empty) {
+    // Collect one element from each list
+    // Wrap each element in quote to prevent evaluation
+    SCM_List args_dummy;
+    args_dummy.data = nullptr;
+    args_dummy.next = nullptr;
+    SCM_List *args_tail = &args_dummy;
+    
+    for (int i = 0; i < num_lists; i++) {
+      // Wrap element in (quote element) to prevent evaluation
+      SCM *quoted_elem = scm_list2(scm_sym_quote(), list_ptrs[i]->data);
+      SCM_List *node = make_list(quoted_elem);
+      args_tail->next = node;
+      args_tail = node;
+      list_ptrs[i] = list_ptrs[i]->next;
+    }
+    
+    // Apply proc to collected arguments
+    SCM *result;
+    if (is_proc(proc)) {
+      SCM_Procedure *proc_obj = cast<SCM_Procedure>(proc);
+      result = apply_procedure(env, proc_obj, args_dummy.next);
+    } else if (is_func(proc)) {
+      SCM_Function *func_obj = cast<SCM_Function>(proc);
+      SCM_List *evaled_args = eval_list_with_env(env, args_dummy.next);
+      SCM_List func_call;
+      func_call.data = proc;
+      func_call.next = evaled_args;
+      result = eval_with_func(func_obj, &func_call);
+    } else {
+      eval_error("map: first argument must be a procedure");
+    }
+    
+    // Add result to result list
+    SCM_List *node = make_list(result);
+    tail->next = node;
+    tail = node;
+    
+    // Check if all lists still have elements
+    all_non_empty = true;
+    for (int i = 0; i < num_lists; i++) {
+      if (!list_ptrs[i]) {
+        all_non_empty = false;
+        break;
+      }
+    }
+  }
+  
+  delete[] list_ptrs;
+  
+  if (dummy.next) {
+    return wrap(dummy.next);
+  }
+  return scm_nil();
 }
 
 // Helper function to expand a macro call
@@ -628,6 +782,9 @@ entry:
     }
     else if (is_sym_val(l->data, "do")) {
       return eval_do(env, l);
+    }
+    else if (is_sym_val(l->data, "map")) {
+      return eval_map(env, l);
     }
     else {
       // Variable reference: resolve symbol and build call expression

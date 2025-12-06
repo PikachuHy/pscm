@@ -123,6 +123,16 @@ SCM *scm_c_gt_number(SCM *lhs, SCM *rhs) {
   return BinaryOperator<GtOp<bool, int64_t>>::run(lhs, rhs);
 }
 
+SCM *scm_c_abs(SCM *arg) {
+  assert(is_num(arg));
+  int64_t val = (int64_t)arg->value;
+  int64_t abs_val = val < 0 ? -val : val;
+  SCM *data = new SCM();
+  data->type = SCM::NUM;
+  data->value = (void *)abs_val;
+  return data;
+}
+
 bool _number_eq(SCM *lhs, SCM *rhs) {
   auto ret = BinaryOperator<EqOp<bool, int64_t>>::run(lhs, rhs);
   return is_true(ret);
@@ -145,4 +155,5 @@ void init_number() {
   scm_define_function(">=", 2, 0, 0, scm_c_gt_eq_number);
   scm_define_function("<", 2, 0, 0, scm_c_lt_number);
   scm_define_function(">", 2, 0, 0, scm_c_gt_number);
+  scm_define_function("abs", 1, 0, 0, scm_c_abs);
 }

@@ -343,6 +343,14 @@ inline SCM *cadr(SCM *data) {
   return l->next->data;
 }
 
+inline SCM *cddr(SCM *data) {
+  return cdr(cdr(data));
+}
+
+inline SCM *caddr(SCM *data) {
+  return car(cdr(cdr(data)));
+}
+
 template <typename F>
 SCM_List *map(SCM_List *l, F f) {
   SCM_List dummay_list;
