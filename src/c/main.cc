@@ -70,9 +70,11 @@ SCM *scm_bool_true() {
 
 SCM_Symbol *make_sym(const char *data) {
   auto sym = new SCM_Symbol();
-  sym->data = (char *)malloc(strlen(data) + 1);
-  memcpy(sym->data, data, strlen(data));
-  sym->len = strlen(data);
+  size_t len = strlen(data);
+  sym->data = (char *)malloc(len + 1);
+  memcpy(sym->data, data, len);
+  sym->data[len] = '\0';  // Ensure null terminator
+  sym->len = len;
   return sym;
 }
 
@@ -115,6 +117,7 @@ SCM *create_sym(const char *data, int len) {
   SCM_Symbol *sym = new SCM_Symbol();
   sym->data = new char[len + 1];
   memcpy(sym->data, data, len);
+  sym->data[len] = '\0';  // Ensure null terminator
   sym->len = len;
   SCM *scm = new SCM();
   scm->type = SCM::SYM;
@@ -197,10 +200,20 @@ void my_eval(SCM *ast) {
 }
 
 void repl() {
-  char buffer[100];
+  char buffer[4096];  // Increase buffer size to avoid overflow
   while (true) {
     printf("pscm> ");
     if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
+      // Check if input is too long (fgets retains newline)
+      size_t len = strlen(buffer);
+      if (len > 0 && buffer[len - 1] != '\n') {
+        // Input was truncated, clear remaining input
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF) {
+          // Discard remaining characters
+        }
+        printf("Warning: input too long, truncated\n");
+      }
       auto ast = parse(buffer);
       print_ast(ast);
       printf("\n");
@@ -210,8 +223,13 @@ void repl() {
       printf("\n");
     }
     else {
+      // EOF or error, exit normally instead of calling exit()
+      if (feof(stdin)) {
+        printf("\n");
+        return;  // Normal exit
+      }
       printf("read failed\n");
-      std::exit(1);
+      return;  // Return instead of calling exit()
     }
   }
 }
@@ -250,6 +268,7 @@ int main(int argc, char **argv) {
   setup_abort_handler();
   if (argc < 2) {
     show_usage();
+    return 1;  // Return error code when arguments are missing
   }
 
   int index = 1;
@@ -261,34 +280,38 @@ int main(int argc, char **argv) {
       index++;
       continue;
     }
+    else if (arg == "-h" || arg == "--help") {
+      show_usage();
+      return 0;
+    }
     else if (arg == "-s" || arg == "--test") {
       if (index + 1 < argc) {
         if (filename) {
-          printf("ERROR: duplicate filename");
+          fprintf(stderr, "ERROR: duplicate filename\n");
           return 1;
         }
         filename = argv[index + 1];
         index += 2;
       }
       else {
-        std::cout << "missing argument to `-s' switch" << std::endl;
+        fprintf(stderr, "ERROR: missing argument to `%s' switch\n", arg.c_str());
         show_usage();
-        return 0;
+        return 1;
       }
     }
     else {
       if (filename) {
-        printf("ERROR: duplicate filename");
+        fprintf(stderr, "ERROR: duplicate filename\n");
         return 1;
       }
-      else {
-        filename = argv[index];
-      }
+      filename = argv[index];
       index++;
     }
   }
   if (!filename) {
-    filename = argv[index];
+    fprintf(stderr, "ERROR: no filename specified\n");
+    show_usage();
+    return 1;
   }
   return do_eval(filename);
 }
