@@ -199,20 +199,18 @@ static SCM *eval_call_cc(SCM_Environment *env, SCM_List *l, SCM **ast) {
     }
     return cont;
   }
-  auto new_l = scm_list2(proc, cont);
+  *ast = scm_list2(proc, cont);
   if (debug_enabled) {
-    print_ast(new_l);
+    print_ast(*ast);
     printf("\n");
   }
-  *ast = new_l;
   return nullptr; // Signal to continue evaluation
 }
 
 // Helper function for cond special form
 static SCM *eval_cond(SCM_Environment *env, SCM_List *l, SCM **ast) {
   assert(l->next);
-  auto it = l->next;
-  while (it) {
+  for (auto it = l->next; it; it = it->next) {
     auto clause = cast<SCM_List>(it->data);
     if (debug_enabled) {
       SCM_DEBUG_EVAL("eval cond clause ");
@@ -224,7 +222,6 @@ static SCM *eval_cond(SCM_Environment *env, SCM_List *l, SCM **ast) {
     }
     auto pred = eval_with_env(env, clause->data);
     if (is_bool(pred) && is_false(pred)) {
-      it = it->next;
       continue;
     }
     if (!clause->next) {
@@ -247,42 +244,41 @@ static SCM *eval_for_each(SCM_Environment *env, SCM_List *l) {
   auto proc = cast<SCM_Procedure>(f);
   int arg_count = count_list_length(proc->args);
   SCM_List dummy = _make_list_dummy();
-  auto l2 = &dummy;
+  auto result_tail = &dummy;
   l = l->next->next;
 
   SCM_List args_dummy = _make_list_dummy();
   auto args_iter = &args_dummy;
 
+  // Evaluate all argument lists
   for (int i = 0; i < arg_count; i++) {
-    if (l) {
-      auto item = make_list(eval_with_env(env, l->data));
-      l2->next = item;
-      l2 = item;
-      l = l->next;
-      auto arg = make_list();
-      args_iter->next = arg;
-      args_iter = arg;
-    }
-    else {
+    if (!l) {
       eval_error("args count not match, require %d, but got %d", arg_count, i);
     }
+    auto item = make_list(eval_with_env(env, l->data));
+    result_tail->next = item;
+    result_tail = item;
+    l = l->next;
+    auto arg = make_list();
+    args_iter->next = arg;
+    args_iter = arg;
   }
   args_dummy.data = f;
   assert(arg_count == 1);
   auto arg_l = cast<SCM_List>(dummy.next->data);
   while (arg_l) {
     args_dummy.next->data = arg_l->data;
-    SCM t;
-    t.type = SCM::LIST;
-    t.value = &args_dummy;
+    SCM call_expr;
+    call_expr.type = SCM::LIST;
+    call_expr.value = &args_dummy;
     if (debug_enabled) {
-      SCM_DEBUG_EVAL("for-each ")
+      SCM_DEBUG_EVAL("for-each ");
       print_ast(f);
       printf(" ");
       print_ast(arg_l->data);
       printf("\n");
     }
-    eval_with_env(env, &t);
+    eval_with_env(env, &call_expr);
     arg_l = arg_l->next;
   }
   return scm_none();
@@ -458,6 +454,7 @@ entry:
       return eval_do(env, l);
     }
     else {
+      // Variable reference: resolve symbol and build call expression
       auto val = lookup_symbol(env, sym);
       auto new_list = make_list(val);
       new_list->next = l->next;
@@ -492,6 +489,7 @@ entry:
     return eval_with_func(func, l);
   }
   else if (is_pair(l->data)) {
+    // Nested list: evaluate first element and continue
     auto f = eval_with_env(env, l->data);
     auto new_l = make_list(f);
     new_l->next = l->next;
