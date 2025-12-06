@@ -52,19 +52,12 @@ SCM *eval_with_func(SCM_Function *func, SCM_List *l) {
   }
   if (func->n_args == 1) {
     assert(l->next);
-    auto arg1 = l->next->data;
-    auto ret = eval_with_func_1(func, arg1);
-    return ret;
+    return eval_with_func_1(func, l->next->data);
   }
   if (func->n_args == 2) {
-    assert(l);
     assert(l->next);
-    auto arg1 = l->next->data;
-    l = l->next;
-    assert(l->next);
-    auto arg2 = l->next->data;
-    auto ret = eval_with_func_2(func, arg1, arg2);
-    return ret;
+    assert(l->next->next);
+    return eval_with_func_2(func, l->next->data, l->next->next->data);
   }
   if (func->n_args == -1 && func->generic) {
     auto ret = reduce(
@@ -75,11 +68,9 @@ SCM *eval_with_func(SCM_Function *func, SCM_List *l) {
     return ret;
   }
   else {
-    printf("%s:%d not supported ", __FILE__, __LINE__);
-    printf("function: %s", func->name->data);
-    printf("\n");
+    fprintf(stderr, "%s:%d not supported function: %s\n", __FILE__, __LINE__, func->name->data);
     exit(1);
-    return NULL;
+    return nullptr;
   }
 }
 
@@ -101,7 +92,6 @@ entry:
         printf("\n");
         exit(1);
       }
-      assert(val);
       return val;
     }
     return ast;
@@ -110,7 +100,7 @@ entry:
   assert(l->data);
   if (is_sym(l->data)) {
     SCM_Symbol *sym = cast<SCM_Symbol>(l->data);
-    if (strcmp(sym->data, "define") == 0) {
+    if (is_sym_val(l->data, "define")) {
       if (l->next && is_sym(l->next->data)) {
         SCM_Symbol *varname = cast<SCM_Symbol>(l->next->data);
         SCM_DEBUG_EVAL("define variable %s\n", varname->data);
@@ -139,36 +129,35 @@ entry:
             }
             printf(")\n");
           }
-          // handle procedure body
           auto proc = make_proc(proc_name, proc_sig->next, l->next->next, env);
           SCM *ret = wrap(proc);
           scm_env_insert(env, proc_name, ret);
           return ret;
         }
-        else {
-          printf("%s:%d not supported ", __FILE__, __LINE__);
-          print_ast(proc_sig->data);
-          printf("\n");
-          exit(1);
-        }
+      else {
+        fprintf(stderr, "%s:%d not supported ", __FILE__, __LINE__);
+        print_ast(proc_sig->data);
+        fprintf(stderr, "\n");
+        exit(1);
+      }
       }
     }
-    else if (strcmp(sym->data, "let") == 0) {
+    else if (is_sym_val(l->data, "let")) {
       ast = expand_let(ast);
       goto entry;
     }
-    else if (strcmp(sym->data, "let*") == 0) {
+    else if (is_sym_val(l->data, "let*")) {
       ast = expand_letstar(ast);
       goto entry;
     }
-    else if (strcmp(sym->data, "letrec") == 0) {
+    else if (is_sym_val(l->data, "letrec")) {
       ast = expand_letrec(ast);
       goto entry;
     }
-    else if (strcmp(sym->data, "call/cc") == 0 || strcmp(sym->data, "call-with-current-continuation") == 0) {
+    else if (is_sym_val(l->data, "call/cc") || is_sym_val(l->data, "call-with-current-continuation")) {
       assert(l->next);
       auto proc = eval_with_env(env, l->next->data);
-      assert(is_proc(proc) || is_cont(proc) || is_func(proc));
+      assert(is_proc(proc) || is_cont(proc) || is_func(proc));  // Must be callable
       int first;
       auto cont = scm_make_continuation(&first);
       SCM_DEBUG_CONT("jump back: ");
@@ -178,8 +167,6 @@ entry:
           print_ast(cont);
           printf("\n");
         }
-        // ast = cont;
-        // goto entry;
         return cont;
       }
       else {
@@ -191,45 +178,8 @@ entry:
         ast = new_l;
         goto entry;
       }
-#if 0
-      auto cont = SCM_Continuation * cont;
-      SCM_INIT_CONT(cont, cont_base);
-      // {
-      //   cont = new SCM_Continuation();
-      //   long __stack_top__;
-      //   cont->dst = &__stack_top__;
-      //   cont->stack_len = (long)cont_base - (long)cont->dst;
-      //   SCM_DEBUG_CONT("stack_len: %zu\n", cont->stack_len);
-      //   cont->stack_data = (long *)malloc(sizeof(long) * cont->stack_len);
-      //   memcpy((void *)cont->stack_data, (void *)cont->dst, sizeof(long) * cont->stack_len);
-      // }
-      // while (0)
-      //   ;
-      int ret = setjmp(cont->cont_jump_buffer);
-      if (ret) {
-        SCM_DEBUG_CONT("jump back\n");
-        // print_ast(cont->arg);
-        // exit(0);
-        return cont->arg;
-      }
-      else {
-        SCM_DEBUG_CONT("after setjmp\n");
-        auto arg = l->next->data;
-        auto cont_arg = new SCM();
-        cont_arg->type = SCM::CONT;
-        cont_arg->value = cont;
-
-        auto f = eval_with_env(env, arg);
-        assert(f);
-
-        if (is_cont(cont_arg)) {
-          SCM_DEBUG_EVAL("before is cont\n");
-        }
-        ast = scm_list2(f, cont_arg);
-      }
-#endif
     }
-    else if (strcmp(sym->data, "lambda") == 0) {
+    else if (is_sym_val(l->data, "lambda")) {
       auto proc_sig = cast<SCM_List>(l->next->data);
       auto proc = make_proc(nullptr, proc_sig, l->next->next, env);
       auto ret = wrap(proc);
@@ -243,11 +193,10 @@ entry:
       }
       return ret;
     }
-    else if (strcmp(sym->data, "set!") == 0) {
+    else if (is_sym_val(l->data, "set!")) {
       assert(is_sym(l->next->data));
       auto sym = cast<SCM_Symbol>(l->next->data);
       auto val = eval_with_env(env, l->next->next->data);
-      assert(val);
       scm_env_insert(env, sym, val);
       if (debug_enabled) {
         SCM_DEBUG_EVAL("set! ");
@@ -257,13 +206,13 @@ entry:
       }
       return scm_nil();
     }
-    else if (strcmp(sym->data, "quote") == 0) {
+    else if (is_sym_val(l->data, "quote")) {
       if (l->next) {
         return l->next->data;
       }
       return scm_nil();
     }
-    else if (strcmp(sym->data, "if") == 0) {
+    else if (is_sym_val(l->data, "if")) {
       assert(l->next);
       auto pred = eval_with_env(env, l->next->data);
       assert(is_bool(pred));
@@ -277,13 +226,7 @@ entry:
       }
       return scm_none();
     }
-    else if (strcmp(sym->data, "cond") == 0) {
-      /*
-(cond
-  ((> x 0) 'positive)
-  ((< x 0) 'negative)
-  (else 'zero))
-      */
+    else if (is_sym_val(l->data, "cond")) {
       assert(l->next);
       auto it = l->next;
       while (it) {
@@ -318,11 +261,10 @@ entry:
       }
       return scm_none();
     }
-    else if (strcmp(sym->data, "for-each") == 0) {
-      // (for-each f arg)
+    else if (is_sym_val(l->data, "for-each")) {
       assert(l->next);
       auto f = eval_with_env(env, l->next->data);
-      assert(is_proc(f));
+      assert(is_proc(f));  // for-each requires a procedure
       auto proc = cast<SCM_Procedure>(f);
       int arg_count = 0;
       auto l2 = proc->args;
@@ -356,7 +298,6 @@ entry:
         }
       }
       args_dummy.data = f;
-      // do for-each
       assert(arg_count == 1);
       assert(is_pair(dummy.next->data));
       auto arg_l = cast<SCM_List>(dummy.next->data);
@@ -375,14 +316,9 @@ entry:
         eval_with_env(env, &t);
         arg_l = arg_l->next;
       }
+      return scm_none();
     }
-    else if (strcmp(sym->data, "do") == 0) {
-      /*
-      (do ((<var1> <init1> <step1>)
-          ...)
-          (<test1> <expr> ...)
-          <cmd> ...)
-      */
+    else if (is_sym_val(l->data, "do")) {
       assert(l->next);
       assert(l->next->next);
       assert(l->next->next->next);
@@ -409,17 +345,16 @@ entry:
 
       auto var_update_it = &var_update_dummy;
       while (var_init_it) {
-        // assert(is_pair(var_init_it->data));
         auto var_init_expr = cast<SCM_List>(var_init_it->data);
         auto var_name = cast<SCM_Symbol>(var_init_expr->data);
         auto var_init_val = eval_with_env(env, var_init_expr->next->data);
         auto var_update_step = var_init_expr->next->next->data;
 
-        scm_env_insert(env, var_name, var_init_val);
+        scm_env_insert(do_env, var_name, var_init_val);
 
         var_update_it->next = make_list(scm_list2(wrap(var_name), var_update_step));
         var_update_it = var_update_it->next;
-        var_update_it->next = NULL;
+        var_update_it->next = nullptr;
 
         var_init_it = var_init_it->next;
       }
@@ -454,15 +389,12 @@ entry:
 
         ret = eval_with_env(do_env, car(test_clause));
       }
-      if (is_nil(cdr(test_clause))) {
-        return scm_none();
-      }
       return scm_none();
     }
     else {
       auto val = scm_env_search(env, sym);
       if (!val) {
-        printf("%s:%d Symbol not found '%s'\n", __FILE__, __LINE__, sym->data);
+        fprintf(stderr, "%s:%d Symbol not found '%s'\n", __FILE__, __LINE__, sym->data);
         exit(1);
       }
       auto new_list = make_list(val);
@@ -475,7 +407,6 @@ entry:
     auto cont = cast<SCM_Continuation>(l->data);
     assert(cont);
     if (l->next) {
-      assert(l->next);
       assert(l->next->data);
       auto cont_arg = eval_with_env(env, l->next->data);
       scm_dynthrow(l->data, cont_arg);
@@ -503,13 +434,13 @@ entry:
       args_l = args_l->next;
     }
     if (l && args_l) {
-      printf("args not match\n");
-      printf("expect ");
+      fprintf(stderr, "args not match\n");
+      fprintf(stderr, "expect ");
       print_list(proc->args);
-      printf("\n");
-      printf("but got ");
+      fprintf(stderr, "\n");
+      fprintf(stderr, "but got ");
       print_list(l->next);
-      printf("\n");
+      fprintf(stderr, "\n");
       exit(1);
     }
     auto val = eval_with_list(proc_env, proc->body);
@@ -539,9 +470,9 @@ entry:
     goto entry;
   }
   else {
-    printf("%s:%d not supported ", __FILE__, __LINE__);
+    fprintf(stderr, "%s:%d not supported ", __FILE__, __LINE__);
     print_list(l);
-    printf("\n");
+    fprintf(stderr, "\n");
     exit(1);
   }
   return scm_nil();
