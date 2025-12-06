@@ -10,4 +10,4 @@ config.substitutions.append(("%pscm_cc", "@PSCM_BINARY_DIR@/pscm_cc"))
 
 import pscm.lit
 pscm.lit.initialize(lit_config, config)
-lit_config.load_config(config, os.path.join(config.pscm_src_dir, "test/base/lit.cfg.py"))
+lit_config.load_config(config, os.path.join(config.pscm_src_dir, "test/macro/lit.cfg.py"))

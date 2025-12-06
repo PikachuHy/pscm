@@ -80,3 +80,4 @@ endif()
 
 add_subdirectory(base)
 add_subdirectory(sicp)
+add_subdirectory(macro)
