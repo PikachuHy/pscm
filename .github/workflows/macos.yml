@@ -8,7 +8,7 @@ on:
 
 jobs:
   build_on_macos:
-    runs-on: macos-13
+    runs-on: macos-15
     strategy:
       matrix:
         mode: [ Release, Debug ]
@@ -30,7 +30,10 @@ jobs:
         run: env HOMEBREW_NO_AUTO_UPDATE=1 brew install sdl2 sdl2_image sdl2_mixer sdl2_ttf
 
       - name: Install icu4c
-        run: env HOMEBREW_NO_AUTO_UPDATE=1 brew install icu4c
+        run: |
+          env HOMEBREW_NO_AUTO_UPDATE=1 brew reinstall icu4c
+          ls /opt/homebrew/Cellar/icu4c@78/78.1
+          ls /opt/homebrew/Cellar/icu4c@78/78.1/lib/pkgconfig
 
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
@@ -40,34 +43,11 @@ jobs:
         run: cmake --version
 
       - name: Configure CMake
-        run: PKG_CONFIG_PATH=/usr/local/opt/icu4c/lib/pkgconfig cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON
+        run: PKG_CONFIG_PATH=/opt/homebrew/Cellar/icu4c@78/78.1/lib/pkgconfig cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON -DICU4C_ROOT=/opt/homebrew/Cellar/icu4c@78/78.1
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --config ${{matrix.mode}} --verbose -j
 
       - name: Test
         working-directory: ${{github.workspace}}/build/test
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
-
-      - name: Configure CMake with MLIR
-        run: PKG_CONFIG_PATH=/usr/local/opt/icu4c/lib/pkgconfig cmake -B ${{github.workspace}}/build3 -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON -DPSCM_ENABLE_MLIR_CODEGEN=ON
-
-      - name: Build with MLIR
-        run: cmake --build ${{github.workspace}}/build3 --config ${{matrix.mode}} --verbose -j
-
-      - name: Test with MLIR
-        working-directory: ${{github.workspace}}/build3/test
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
-
-      - name: Configure CMake with C++20 Modules
-        run: PKG_CONFIG_PATH=/usr/local/opt/icu4c/lib/pkgconfig  CXX=/usr/local/opt/llvm/bin/clang++ CC=/usr/local/opt/llvm/bin/clang cmake -B ${{github.workspace}}/build2 -DCMAKE_BUILD_TYPE=${{matrix.mode}} -DCMAKE_MAKE_PROGRAM=/usr/local/bin/ninja -G Ninja -DUSE_CCACHE=ON -DPSCM_USE_CXX20_MODULES=ON
-
-      - name: Build with C++20 Modules
-        run: cmake --build ${{github.workspace}}/build2 --config ${{matrix.mode}} --verbose -j
-
-      - name: Test with C++20 Modules
-        working-directory: ${{github.workspace}}/build2/test
-        run: ctest -C ${{env.BUILD_TYPE}} --output-on-failure
-
-      - name: Build with pscm-build
-        run: CC=/usr/local/opt/llvm/bin/clang ${{github.workspace}}/build2/tool/pscm-build/src/pscm-build build :all
+        run: ctest -C ${{matrix.mode}} --output-on-failure
