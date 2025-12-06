@@ -265,6 +265,75 @@ static SCM *parse_quote(Parser *p) {
   return scm;
 }
 
+// Parse a quasiquoted expression (backquote `)
+static SCM *parse_quasiquote(Parser *p) {
+  if (*p->pos != '`') {
+    return nullptr;
+  }
+  p->pos++; // consume backquote
+  p->column++;
+  
+  SCM *quoted = parse_expr(p);
+  if (!quoted) {
+    parse_error(p, "expected expression after quasiquote");
+  }
+  
+  // Build (quasiquote expr)
+  SCM *quasiquote_sym = scm_sym_quasiquote();
+  SCM_List *list = make_list(quasiquote_sym, quoted);
+  
+  SCM *scm = new SCM();
+  scm->type = SCM::LIST;
+  scm->value = list;
+  return scm;
+}
+
+// Parse an unquote expression (comma ,)
+// This is called when we encounter a comma in a list context
+static SCM *parse_unquote_in_list(Parser *p) {
+  if (*p->pos != ',') {
+    return nullptr;
+  }
+  
+  // Check for unquote-splicing (,@)
+  if (p->pos[1] == '@') {
+    p->pos += 2; // consume ,@
+    p->column += 2;
+    
+    SCM *expr = parse_expr(p);
+    if (!expr) {
+      parse_error(p, "expected expression after unquote-splicing");
+    }
+    
+    // Build (unquote-splicing expr)
+    SCM *unquote_splicing_sym = scm_sym_unquote_splicing();
+    SCM_List *list = make_list(unquote_splicing_sym, expr);
+    
+    SCM *scm = new SCM();
+    scm->type = SCM::LIST;
+    scm->value = list;
+    return scm;
+  }
+  
+  // Regular unquote
+  p->pos++; // consume comma
+  p->column++;
+  
+  SCM *expr = parse_expr(p);
+  if (!expr) {
+    parse_error(p, "expected expression after unquote");
+  }
+  
+  // Build (unquote expr)
+  SCM *unquote_sym = scm_sym_unquote();
+  SCM_List *list = make_list(unquote_sym, expr);
+  
+  SCM *scm = new SCM();
+  scm->type = SCM::LIST;
+  scm->value = list;
+  return scm;
+}
+
 // Parse a list
 static SCM *parse_list(Parser *p) {
   if (*p->pos != '(') {
@@ -289,7 +358,11 @@ static SCM *parse_list(Parser *p) {
   
   // Parse list elements
   while (*p->pos && *p->pos != ')') {
-    SCM *elem = parse_expr(p);
+    // Check for unquote/unquote-splicing in list context
+    SCM *elem = parse_unquote_in_list(p);
+    if (!elem) {
+      elem = parse_expr(p);
+    }
     if (!elem) {
       parse_error(p, "expected expression in list");
     }
@@ -306,7 +379,11 @@ static SCM *parse_list(Parser *p) {
       p->column++;
       skip_whitespace(p);
       
-      SCM *cdr = parse_expr(p);
+      // Check for unquote/unquote-splicing in dotted pair context
+      SCM *cdr = parse_unquote_in_list(p);
+      if (!cdr) {
+        cdr = parse_expr(p);
+      }
       if (!cdr) {
         parse_error(p, "expected expression after dot");
       }
@@ -346,6 +423,11 @@ static SCM *parse_expr(Parser *p) {
   // Quote
   if (*p->pos == '\'') {
     return parse_quote(p);
+  }
+  
+  // Quasiquote (backquote)
+  if (*p->pos == '`') {
+    return parse_quasiquote(p);
   }
   
   // List

@@ -51,6 +51,9 @@ SCM_Symbol *make_sym(const char *data) {
 
 DEFINE_SYMBOL_SINGLETON(let, "let")
 DEFINE_SYMBOL_SINGLETON(quote, "quote")
+DEFINE_SYMBOL_SINGLETON(quasiquote, "quasiquote")
+DEFINE_SYMBOL_SINGLETON(unquote, "unquote")
+DEFINE_SYMBOL_SINGLETON(unquote_splicing, "unquote-splicing")
 DEFINE_SYMBOL_SINGLETON(letrec, "letrec")
 DEFINE_SYMBOL_SINGLETON(set, "set!")
 DEFINE_SYMBOL_SINGLETON(lambda, "lambda")
@@ -107,7 +110,9 @@ void init_scm() {
   scm_define_function("car", 1, 0, 0, car);
   scm_define_function("cdr", 1, 0, 0, cdr);
   scm_define_function("cadr", 1, 0, 0, cadr);
+  scm_define_function("cons", 2, 0, 0, scm_cons);
   scm_define_vararg_function("list", scm_list);
+  scm_define_vararg_function("append", scm_append);
   init_number();
   init_eq();
   init_alist();

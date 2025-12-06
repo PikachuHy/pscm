@@ -58,7 +58,7 @@ SCM *eval_with_func_2(SCM_Function *func, SCM *arg1, SCM *arg2) {
 static SCM *eval_quote(SCM_List *l) {
   return l->next ? l->next->data : scm_nil();
 }
-
+SCM *eval_quasiquote(SCM_Environment *env, SCM_List *l);
 static SCM *eval_set(SCM_Environment *env, SCM_List *l) {
   assert(l->next && is_sym(l->next->data));
   auto sym = cast<SCM_Symbol>(l->next->data);
@@ -607,6 +607,9 @@ entry:
     }
     else if (is_sym_val(l->data, "quote")) {
       return eval_quote(l);
+    }
+    else if (is_sym_val(l->data, "quasiquote")) {
+      return eval_quasiquote(env, l);
     }
     else if (is_sym_val(l->data, "if")) {
       auto ret = eval_if(env, l, &ast);

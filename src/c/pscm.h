@@ -186,6 +186,8 @@ SCM *scm_list1(SCM *arg1);
 SCM *scm_list2(SCM *arg1, SCM *arg2);
 SCM *scm_list3(SCM *arg1, SCM *arg2, SCM *arg3);
 SCM *scm_list(SCM_List *args);
+SCM *scm_cons(SCM *car_val, SCM *cdr_val);
+SCM *scm_append(SCM_List *args);
 
 SCM *scm_concat_list2(SCM *arg1, SCM *arg2);
 
@@ -198,6 +200,9 @@ SCM *scm_sym_set();
 SCM *scm_sym_let();
 SCM *scm_sym_letrec();
 SCM *scm_sym_quote();
+SCM *scm_sym_quasiquote();
+SCM *scm_sym_unquote();
+SCM *scm_sym_unquote_splicing();
 
 template <typename T>
 SCM *wrap(T *);
@@ -413,12 +418,19 @@ SCM *scm_env_exist(SCM_Environment *env, SCM_Symbol *sym);
 SCM *eval_with_env(SCM_Environment *env, SCM *ast);
 
 /*
+ * Functions in quasiquote.cc
+ */
+SCM *eval_quasiquote(SCM_Environment *env, SCM_List *l);
+
+/*
  * Functions in list.cc
  */
 SCM *scm_list1(SCM *arg1);
 SCM *scm_list2(SCM *arg1, SCM *arg2);
 SCM *scm_list3(SCM *arg1, SCM *arg2, SCM *arg3);
 SCM *scm_list(SCM_List *args);
+SCM *scm_cons(SCM *car_val, SCM *cdr_val);
+SCM *scm_append(SCM_List *args);
 
 /*
  * Macro

@@ -64,3 +64,61 @@ static SCM *scm_list_impl(SCM_List *args) {
 SCM *scm_list(SCM_List *args) {
   return scm_list_impl(args);
 }
+
+// cons function: (cons a b) -> (a . b)
+SCM *scm_cons(SCM *car_val, SCM *cdr_val) {
+  SCM_List *l = make_list(car_val);
+  if (is_pair(cdr_val)) {
+    // If cdr is a list, append it
+    l->next = cast<SCM_List>(cdr_val);
+  } else if (is_nil(cdr_val)) {
+    // If cdr is nil, just return the list with car
+    // (already done)
+  } else {
+    // Otherwise, create a proper pair
+    l->next = make_list(cdr_val);
+  }
+  return wrap(l);
+}
+
+// append function: (append list1 list2 ...) -> concatenated list
+SCM *scm_append(SCM_List *args) {
+  if (!args) {
+    return scm_nil();
+  }
+  
+  // If only one argument, return it
+  if (!args->next) {
+    return args->data;
+  }
+  
+  // Build result by concatenating all lists
+  SCM_List dummy;
+  dummy.data = nullptr;
+  dummy.next = nullptr;
+  SCM_List *tail = &dummy;
+  
+  SCM_List *current = args;
+  while (current) {
+    if (is_pair(current->data)) {
+      SCM_List *src = cast<SCM_List>(current->data);
+      while (src) {
+        SCM_List *node = make_list(src->data);
+        tail->next = node;
+        tail = node;
+        src = src->next;
+      }
+    } else if (!is_nil(current->data)) {
+      // Non-list, non-nil: just add it
+      SCM_List *node = make_list(current->data);
+      tail->next = node;
+      tail = node;
+    }
+    current = current->next;
+  }
+  
+  if (dummy.next) {
+    return wrap(dummy.next);
+  }
+  return scm_nil();
+}
