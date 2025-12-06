@@ -36,3 +36,31 @@ SCM *scm_concat_list2(SCM *arg1, SCM *arg2) {
   }
   return scm_nil();
 }
+
+// Generic list function that takes variable number of arguments
+static SCM *scm_list_impl(SCM_List *args) {
+  if (!args) {
+    return scm_nil();
+  }
+  SCM_List dummy;
+  dummy.data = nullptr;
+  dummy.next = nullptr;
+  SCM_List *tail = &dummy;
+  SCM_List *current = args;
+  
+  while (current) {
+    SCM_List *node = make_list(current->data);
+    tail->next = node;
+    tail = node;
+    current = current->next;
+  }
+  
+  if (dummy.next) {
+    return wrap(dummy.next);
+  }
+  return scm_nil();
+}
+
+SCM *scm_list(SCM_List *args) {
+  return scm_list_impl(args);
+}

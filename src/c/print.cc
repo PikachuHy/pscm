@@ -73,6 +73,15 @@ void print_ast(SCM *ast) {
     }
     return;
   }
+  if (is_macro(ast)) {
+    auto macro = cast<SCM_Macro>(ast);
+    printf("#<macro!");
+    if (macro->name) {
+      printf(" %s", macro->name->data);
+    }
+    printf(">");
+    return;
+  }
   printf("%s:%d not supported %d\n", __FILE__, __LINE__, ast->type);
   exit(1);
 }

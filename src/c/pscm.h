@@ -8,7 +8,7 @@
 #include <string.h>
 
 struct SCM {
-  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, BOOL, SYM, STR } type;
+  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, BOOL, SYM, STR, MACRO } type;
 
   void *value;
 };
@@ -49,6 +49,12 @@ struct SCM_Continuation {
   void *stack_data;
   void *dst;
   SCM *arg;
+};
+
+struct SCM_Macro {
+  SCM_Symbol *name;
+  SCM_Procedure *transformer;  // Macro transformer procedure
+  SCM_Environment *env;        // Environment where macro was defined
 };
 
 struct SCM_Environment {
@@ -115,6 +121,10 @@ inline bool is_none(SCM *scm) {
   return scm->type == SCM::NONE;
 }
 
+inline bool is_macro(SCM *scm) {
+  return scm->type == SCM::MACRO;
+}
+
 SCM *create_sym(const char *data, int len);
 
 inline SCM_List *make_list() {
@@ -175,6 +185,7 @@ inline SCM_Environment *make_env(SCM_Environment *parent) {
 SCM *scm_list1(SCM *arg1);
 SCM *scm_list2(SCM *arg1, SCM *arg2);
 SCM *scm_list3(SCM *arg1, SCM *arg2, SCM *arg3);
+SCM *scm_list(SCM_List *args);
 
 SCM *scm_concat_list2(SCM *arg1, SCM *arg2);
 
@@ -282,6 +293,21 @@ inline SCM_Continuation *cast<SCM_Continuation>(SCM *data) {
   assert(is_cont(data));
   auto l = (SCM_Continuation *)data->value;
   return l;
+}
+
+template <>
+inline SCM *wrap(SCM_Macro *macro) {
+  assert(macro);
+  auto data = new SCM();
+  data->type = SCM::MACRO;
+  data->value = macro;
+  return data;
+}
+
+template <>
+inline SCM_Macro *cast<SCM_Macro>(SCM *data) {
+  assert(is_macro(data));
+  return (SCM_Macro *)data->value;
 }
 
 inline SCM *car(SCM *data) {
@@ -392,6 +418,7 @@ SCM *eval_with_env(SCM_Environment *env, SCM *ast);
 SCM *scm_list1(SCM *arg1);
 SCM *scm_list2(SCM *arg1, SCM *arg2);
 SCM *scm_list3(SCM *arg1, SCM *arg2, SCM *arg3);
+SCM *scm_list(SCM_List *args);
 
 /*
  * Macro
@@ -515,6 +542,15 @@ void scm_define_generic_function(const char *name, F func_ptr, SCM *init_val) {
   auto func = _create_func(name, func_ptr);
   func->generic = init_val;
   func->n_args = -1;
+  auto data = wrap(func);
+  scm_env_insert(&g_env, func->name, data);
+}
+
+template <typename F>
+void scm_define_vararg_function(const char *name, F func_ptr) {
+  auto func = _create_func(name, func_ptr);
+  func->n_args = -2;  // Special value for variable argument functions
+  func->generic = nullptr;
   auto data = wrap(func);
   scm_env_insert(&g_env, func->name, data);
 }

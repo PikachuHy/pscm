@@ -107,6 +107,7 @@ void init_scm() {
   scm_define_function("car", 1, 0, 0, car);
   scm_define_function("cdr", 1, 0, 0, cdr);
   scm_define_function("cadr", 1, 0, 0, cadr);
+  scm_define_vararg_function("list", scm_list);
   init_number();
   init_eq();
   init_alist();
