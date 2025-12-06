@@ -288,6 +288,27 @@ static SCM *eval_for_each(SCM_Environment *env, SCM_List *l) {
   return scm_none();
 }
 
+// Helper function to update do loop variables
+static void update_do_variables(SCM_Environment *do_env, SCM_List *var_update_list) {
+  auto it = var_update_list;
+  while (it->next) {
+    it = it->next;
+    auto var_update_expr = cast<SCM_List>(it->data);
+    auto var_name = cast<SCM_Symbol>(var_update_expr->data);
+    auto var_update_step = var_update_expr->next->data;
+
+    auto new_var_val = eval_with_env(do_env, var_update_step);
+    if (debug_enabled) {
+      SCM_DEBUG_EVAL("eval do step ... ");
+      print_ast(var_update_step);
+      printf(" --> ");
+      print_ast(new_var_val);
+      printf("\n");
+    }
+    scm_env_insert(do_env, var_name, new_var_val);
+  }
+}
+
 // Helper function for do special form
 static SCM *eval_do(SCM_Environment *env, SCM_List *l) {
   assert(l->next && l->next->next && l->next->next->next);
@@ -329,24 +350,7 @@ static SCM *eval_do(SCM_Environment *env, SCM_List *l) {
   auto ret = eval_with_env(do_env, car(test_clause));
   while (is_false(ret)) {
     eval_list_with_env(do_env, body_clause);
-    var_update_it = &var_update_dummy;
-
-    while (var_update_it->next) {
-      var_update_it = var_update_it->next;
-      auto var_update_expr = cast<SCM_List>(var_update_it->data);
-      auto var_name = cast<SCM_Symbol>(var_update_expr->data);
-      auto var_update_step = var_update_expr->next->data;
-
-      auto new_var_val = eval_with_env(do_env, var_update_step);
-      if (debug_enabled) {
-        SCM_DEBUG_EVAL("eval do step ... ");
-        print_ast(var_update_step);
-        printf(" --> ");
-        print_ast(new_var_val);
-        printf("\n");
-      }
-      scm_env_insert(do_env, var_name, new_var_val);
-    }
+    update_do_variables(do_env, &var_update_dummy);
     ret = eval_with_env(do_env, car(test_clause));
   }
   return scm_none();
@@ -462,7 +466,10 @@ entry:
     }
   }
   else if (is_cont(l->data)) {
-    auto cont_arg = l->next ? eval_with_env(env, l->next->data) : scm_nil();
+    SCM *cont_arg = scm_nil();
+    if (l->next) {
+      cont_arg = eval_with_env(env, l->next->data);
+    }
     scm_dynthrow(l->data, cont_arg);
   }
   else if (is_proc(l->data)) {
@@ -482,8 +489,7 @@ entry:
       printf("\n");
     }
     l->next = func_argl;
-    auto val = eval_with_func(func, l);
-    return val;
+    return eval_with_func(func, l);
   }
   else if (is_pair(l->data)) {
     auto f = eval_with_env(env, l->data);
@@ -495,5 +501,4 @@ entry:
   else {
     eval_error("not supported expression type");
   }
-  return scm_nil();
 }
