@@ -160,6 +160,15 @@ static int count_list_length(SCM_List *l) {
   return count;
 }
 
+// Helper function to lookup symbol in environment
+static SCM *lookup_symbol(SCM_Environment *env, SCM_Symbol *sym) {
+  auto val = scm_env_search(env, sym);
+  if (!val) {
+    eval_error("symbol '%s' not found", sym->data);
+  }
+  return val;
+}
+
 // Helper function for if special form
 static SCM *eval_if(SCM_Environment *env, SCM_List *l, SCM **ast) {
   assert(l->next);
@@ -343,6 +352,18 @@ static SCM *eval_do(SCM_Environment *env, SCM_List *l) {
   return scm_none();
 }
 
+// Helper function to report argument mismatch error
+[[noreturn]] static void report_arg_mismatch(SCM_List *expected, SCM_List *got) {
+  fprintf(stderr, "args not match\n");
+  fprintf(stderr, "expect ");
+  print_list(expected);
+  fprintf(stderr, "\n");
+  fprintf(stderr, "but got ");
+  print_list(got);
+  fprintf(stderr, "\n");
+  exit(1);
+}
+
 // Helper function to apply procedure with arguments
 static SCM *apply_procedure(SCM_Environment *env, SCM_Procedure *proc, SCM_List *args) {
   auto proc_env = make_env(proc->env);
@@ -362,14 +383,7 @@ static SCM *apply_procedure(SCM_Environment *env, SCM_Procedure *proc, SCM_List 
     args_l = args_l->next;
   }
   if (args || args_l) {
-    fprintf(stderr, "args not match\n");
-    fprintf(stderr, "expect ");
-    print_list(proc->args);
-    fprintf(stderr, "\n");
-    fprintf(stderr, "but got ");
-    print_list(args);
-    fprintf(stderr, "\n");
-    exit(1);
+    report_arg_mismatch(proc->args, args);
   }
   return eval_with_list(proc_env, proc->body);
 }
@@ -386,11 +400,7 @@ entry:
   if (!is_pair(ast)) {
     if (is_sym(ast)) {
       SCM_Symbol *sym = cast<SCM_Symbol>(ast);
-      auto val = scm_env_search(env, sym);
-      if (!val) {
-        eval_error("symbol '%s' not found", sym->data);
-      }
-      return val;
+      return lookup_symbol(env, sym);
     }
     return ast;
   }
@@ -444,10 +454,7 @@ entry:
       return eval_do(env, l);
     }
     else {
-      auto val = scm_env_search(env, sym);
-      if (!val) {
-        eval_error("Symbol not found '%s'", sym->data);
-      }
+      auto val = lookup_symbol(env, sym);
       auto new_list = make_list(val);
       new_list->next = l->next;
       ast = wrap(new_list);
