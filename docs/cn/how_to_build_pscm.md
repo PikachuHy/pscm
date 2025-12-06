@@ -2,6 +2,15 @@
 
 ## Preparation
 
+on MacOS
+
+```
+brew install cmake
+brew install ninja
+brew install pkg-config
+brew install icu4c
+```
+
 ### Required toolchain
 
 if you build other projects under pscm repo
