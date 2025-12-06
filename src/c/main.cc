@@ -1,4 +1,3 @@
-#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdnoreturn.h>
@@ -14,45 +13,22 @@ long *cont_base;
 
 SCM_Environment g_env;
 
-SCM *scm_none() {
-  static SCM *value = nullptr;
-  if (!value) {
-    value = new SCM();
-    value->type = SCM::NONE;
-    value->value = nullptr;
+// Helper macro to define singleton SCM values
+#define DEFINE_SCM_SINGLETON(func_name, type_val, value_val) \
+  SCM *scm_##func_name() { \
+    static SCM *value = nullptr; \
+    if (!value) { \
+      value = new SCM(); \
+      value->type = SCM::type_val; \
+      value->value = value_val; \
+    } \
+    return value; \
   }
-  return value;
-}
 
-SCM *scm_nil() {
-  static SCM *value = nullptr;
-  if (!value) {
-    value = new SCM();
-    value->type = SCM::NIL;
-    value->value = nullptr;
-  }
-  return value;
-}
-
-SCM *scm_bool_false() {
-  static SCM *value = nullptr;
-  if (!value) {
-    value = new SCM();
-    value->type = SCM::BOOL;
-    value->value = 0;
-  }
-  return value;
-}
-
-SCM *scm_bool_true() {
-  static SCM *value = nullptr;
-  if (!value) {
-    value = new SCM();
-    value->type = SCM::BOOL;
-    value->value = (void *)1;
-  }
-  return value;
-}
+DEFINE_SCM_SINGLETON(none, NONE, nullptr)
+DEFINE_SCM_SINGLETON(nil, NIL, nullptr)
+DEFINE_SCM_SINGLETON(bool_false, BOOL, 0)
+DEFINE_SCM_SINGLETON(bool_true, BOOL, (void *)1)
 
 SCM_Symbol *make_sym(const char *data) {
   auto sym = new SCM_Symbol();
@@ -193,19 +169,17 @@ void repl() {
 }
 
 void show_usage() {
-  std::cout << R"(
-Usage: pscm OPTION ...
-Evaluate Scheme code, interactively or from a script.
-
-  [-s] FILE      load Scheme source code from FILE, and exit
-
-  --test FILE    load Scheme source code from FILE, print each eval result and exit
-  --debug        enable debugging log output
-  -h, --help     display this help and exit
-  -v, --version  display version information and exit
-
-please report bugs to https://github.com/PikachuHy/pscm/issues
-)";
+  printf("Usage: pscm OPTION ...\n");
+  printf("Evaluate Scheme code, interactively or from a script.\n");
+  printf("\n");
+  printf("  [-s] FILE      load Scheme source code from FILE, and exit\n");
+  printf("\n");
+  printf("  --test FILE    load Scheme source code from FILE, print each eval result and exit\n");
+  printf("  --debug        enable debugging log output\n");
+  printf("  -h, --help     display this help and exit\n");
+  printf("  -v, --version  display version information and exit\n");
+  printf("\n");
+  printf("please report bugs to https://github.com/PikachuHy/pscm/issues\n");
 }
 
 int do_eval(const char *filename) {
@@ -236,17 +210,17 @@ int main(int argc, char **argv) {
   int index = 1;
   char *filename = nullptr;
   while (index < argc) {
-    std::string arg = argv[index];
-    if (arg == "--debug") {
+    const char *arg = argv[index];
+    if (strcmp(arg, "--debug") == 0) {
       debug_enabled = true;
       index++;
       continue;
     }
-    else if (arg == "-h" || arg == "--help") {
+    else if (strcmp(arg, "-h") == 0 || strcmp(arg, "--help") == 0) {
       show_usage();
       return 0;
     }
-    else if (arg == "-s" || arg == "--test") {
+    else if (strcmp(arg, "-s") == 0 || strcmp(arg, "--test") == 0) {
       if (index + 1 < argc) {
         if (filename) {
           fprintf(stderr, "ERROR: duplicate filename\n");
@@ -256,7 +230,7 @@ int main(int argc, char **argv) {
         index += 2;
       }
       else {
-        fprintf(stderr, "ERROR: missing argument to `%s' switch\n", arg.c_str());
+        fprintf(stderr, "ERROR: missing argument to `%s' switch\n", arg);
         show_usage();
         return 1;
       }
