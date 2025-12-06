@@ -5,21 +5,12 @@
 
 ;; LONGJMP-NOT: not supported
 
-(define c #f)
-;; CHECK: talk1
-(call/cc
-  (lambda (c0)
-          (set! c c0)
-          'talk1))
-
-;; CHECK: talk2
-(c 'talk2)
-
-;; CHECK: talk2
-(c 'talk2)
-
-;; CHECK: talk2
-(c 'talk2)
-
-;; CHECK: talk2
-(c 'talk2)
+(define cc #f)
+;; CHECK: 9
+(* 3 (call/cc (lambda (k)
+                 (set! cc k)
+                 (+ 1 2))))
+;; CHECK: 9
+(+ 100 (cc 3))
+;; CHECK: 30 
+(+ 100 (cc 10))

@@ -4,22 +4,10 @@
 ;; TODO: %pscm_main --test %s | FileCheck %s
 
 ;; LONGJMP-NOT: not supported
-
-(define c #f)
-;; CHECK: talk1
+;; CHECK: -3
 (call/cc
-  (lambda (c0)
-          (set! c c0)
-          'talk1))
-
-;; CHECK: talk2
-(c 'talk2)
-
-;; CHECK: talk2
-(c 'talk2)
-
-;; CHECK: talk2
-(c 'talk2)
-
-;; CHECK: talk2
-(c 'talk2)
+ (lambda (exit)
+   (for-each (lambda (x)
+	       (if (negative? x) (exit x)))
+	     '(54 0 37 -3 245 19))
+   #t))

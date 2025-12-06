@@ -6,6 +6,7 @@ import lit.formats
 config.pscm_src_dir = path(r"@PSCM_SOURCE_DIR@")
 
 config.substitutions.append(("%pscm_main", "@PSCM_BINARY_DIR@/pscm_main"))
+config.substitutions.append(("%pscm_cc", "@PSCM_BINARY_DIR@/pscm_cc"))
 
 import pscm.lit
 pscm.lit.initialize(lit_config, config)

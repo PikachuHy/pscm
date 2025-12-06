@@ -13,7 +13,7 @@
 #include <pscm/scm_utils.h>
 #include <sstream>
 #include <string>
-
+#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include <doctest/doctest.h>
 
 using namespace doctest;

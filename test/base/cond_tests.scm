@@ -2,24 +2,23 @@
 ;; RUN: %pscm_main --test %s | FileCheck %s
 ;; RUN: %pscm_main --test %s | FileCheck %s --check-prefix=DIRECT
 
-
 ;; CHECK: #t
 (cond ((eq? 1 2))
-      ((eq? 1 1))
-      (else 'a))
+  ((eq? 1 1))
+  (else 'a))
 
 ;; CHECK: greater
 (cond ((> 3 2) 'greater)
-      ((< 3 2) 'less))
+  ((< 3 2) 'less))
 
 ;; CHECK: equal
 (cond ((> 3 3) 'greater)
-      ((< 3 3) 'less)
-      (else 'equal))
+  ((< 3 3) 'less)
+  (else 'equal))
 
 ;; CHECK: 2
 (cond ((assv 'b '((a 1) (b 2))) => cadr)
-      (else #f))
+  (else #f))
 
 ;; CHECK: 2
 (cond ((> 3 2) (+ 1) (+ 2)))
