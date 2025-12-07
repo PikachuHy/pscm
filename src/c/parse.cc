@@ -358,9 +358,7 @@ static SCM *parse_list(Parser *p) {
   p->pos++; // consume '('
   p->column++;
   
-  SCM_List dummy;
-  dummy.data = nullptr;
-  dummy.next = nullptr;
+  SCM_List dummy = make_list_dummy();
   SCM_List *tail = &dummy;
   
   skip_whitespace(p);
@@ -537,9 +535,7 @@ SCM_List *parse_file(const char *filename) {
   p.line = 1;
   p.column = 1;
   
-  SCM_List dummy;
-  dummy.data = nullptr;
-  dummy.next = nullptr;
+  SCM_List dummy = make_list_dummy();
   SCM_List *tail = &dummy;
   
   while (!is_eof(&p)) {

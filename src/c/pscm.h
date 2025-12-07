@@ -141,6 +141,14 @@ void copy_source_location(SCM *dest, SCM *src);
 void copy_source_location_recursive(SCM *dest, SCM *src);
 const char *get_source_location_str(SCM *scm);
 
+// Inline helper function
+inline SCM_List make_list_dummy() {
+  SCM_List dummy;
+  dummy.data = nullptr;
+  dummy.next = nullptr;
+  return dummy;
+}
+
 inline SCM_List *make_list() {
   auto l = new SCM_List();
   l->data = nullptr;
@@ -457,6 +465,7 @@ SCM *scm_env_exist(SCM_Environment *env, SCM_Symbol *sym);
  * Functions in eval.cc
  */
 SCM *eval_with_env(SCM_Environment *env, SCM *ast);
+SCM_List *eval_list_with_env(SCM_Environment *env, SCM_List *l);
 
 /*
  * Functions in quasiquote.cc

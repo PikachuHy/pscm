@@ -1,12 +1,6 @@
 #include "pscm.h"
+#include "eval.h"
 #include <stdarg.h>
-
-SCM_List _make_list_dummy() {
-  SCM_List dummy;
-  dummy.data = nullptr;
-  dummy.next = nullptr;
-  return dummy;
-}
 
 SCM *eval_with_list(SCM_Environment *env, SCM_List *l) {
   assert(l);
@@ -19,7 +13,7 @@ SCM *eval_with_list(SCM_Environment *env, SCM_List *l) {
 }
 
 SCM_List *eval_list_with_env(SCM_Environment *env, SCM_List *l) {
-  SCM_List dummy = _make_list_dummy();
+  SCM_List dummy = make_list_dummy();
   SCM_List *it = &dummy;
   while (l) {
     auto val = eval_with_env(env, l->data);
@@ -280,11 +274,11 @@ static SCM *eval_for_each(SCM_Environment *env, SCM_List *l) {
   auto f = eval_with_env(env, l->next->data);
   auto proc = cast<SCM_Procedure>(f);
   int arg_count = count_list_length(proc->args);
-  SCM_List dummy = _make_list_dummy();
+  SCM_List dummy = make_list_dummy();
   auto result_tail = &dummy;
   l = l->next->next;
 
-  SCM_List args_dummy = _make_list_dummy();
+  SCM_List args_dummy = make_list_dummy();
   auto args_iter = &args_dummy;
 
   // Evaluate all argument lists
@@ -321,73 +315,6 @@ static SCM *eval_for_each(SCM_Environment *env, SCM_List *l) {
   return scm_none();
 }
 
-// Helper function to update do loop variables
-static void update_do_variables(SCM_Environment *do_env, SCM_List *var_update_list) {
-  auto it = var_update_list;
-  while (it->next) {
-    it = it->next;
-    auto var_update_expr = cast<SCM_List>(it->data);
-    auto var_name = cast<SCM_Symbol>(var_update_expr->data);
-    auto var_update_step = var_update_expr->next->data;
-
-    auto new_var_val = eval_with_env(do_env, var_update_step);
-    if (debug_enabled) {
-      SCM_DEBUG_EVAL("eval do step ... ");
-      print_ast(var_update_step);
-      printf(" --> ");
-      print_ast(new_var_val);
-      printf("\n");
-    }
-    scm_env_insert(do_env, var_name, new_var_val);
-  }
-}
-
-// Helper function for do special form
-static SCM *eval_do(SCM_Environment *env, SCM_List *l) {
-  assert(l->next && l->next->next && l->next->next->next);
-  auto var_init_l = cast<SCM_List>(l->next->data);
-  auto test_clause = l->next->next->data;
-  auto body_clause = l->next->next->next;
-
-  if (debug_enabled) {
-    SCM_DEBUG_EVAL("eval do\n");
-    printf("var: ");
-    print_list(var_init_l);
-    printf("\n");
-    printf("test: ");
-    print_ast(test_clause);
-    printf("\n");
-    printf("cmd: ");
-    print_list(body_clause);
-    printf("\n");
-  }
-  auto do_env = make_env(env);
-
-  auto var_init_it = var_init_l;
-  SCM_List var_update_dummy = _make_list_dummy();
-  auto var_update_it = &var_update_dummy;
-
-  while (var_init_it) {
-    auto var_init_expr = cast<SCM_List>(var_init_it->data);
-    auto var_name = cast<SCM_Symbol>(var_init_expr->data);
-    auto var_init_val = eval_with_env(env, var_init_expr->next->data);
-    auto var_update_step = var_init_expr->next->next->data;
-
-    scm_env_insert(do_env, var_name, var_init_val);
-    var_update_it->next = make_list(scm_list2(wrap(var_name), var_update_step));
-    var_update_it = var_update_it->next;
-    var_update_it->next = nullptr;
-    var_init_it = var_init_it->next;
-  }
-
-  auto ret = eval_with_env(do_env, car(test_clause));
-  while (is_false(ret)) {
-    eval_list_with_env(do_env, body_clause);
-    update_do_variables(do_env, &var_update_dummy);
-    ret = eval_with_env(do_env, car(test_clause));
-  }
-  return scm_none();
-}
 
 // Helper function to print a list of symbols for error reporting
 // This prints the argument list as-is, without evaluating
@@ -500,9 +427,7 @@ static SCM *eval_map(SCM_Environment *env, SCM_List *l) {
   }
   
   // Build result list by applying proc to corresponding elements
-  SCM_List dummy;
-  dummy.data = nullptr;
-  dummy.next = nullptr;
+  SCM_List dummy = make_list_dummy();
   SCM_List *tail = &dummy;
   
   // Continue until the shortest list is exhausted
@@ -517,9 +442,7 @@ static SCM *eval_map(SCM_Environment *env, SCM_List *l) {
   while (all_non_empty) {
     // Collect one element from each list
     // Wrap each element in quote to prevent evaluation
-    SCM_List args_dummy;
-    args_dummy.data = nullptr;
-    args_dummy.next = nullptr;
+    SCM_List args_dummy = make_list_dummy();
     SCM_List *args_tail = &args_dummy;
     
     for (int i = 0; i < num_lists; i++) {
@@ -646,7 +569,7 @@ static SCM *expand_macros(SCM_Environment *env, SCM *ast) {
   }
 
   // Recursively expand each element in the list
-  SCM_List dummy = _make_list_dummy();
+  SCM_List dummy = make_list_dummy();
   SCM_List *tail = &dummy;
   SCM_List *current = l;
 

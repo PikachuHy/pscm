@@ -4,10 +4,8 @@ SCM *expand_let(SCM *expr) {
   auto l = cast<SCM_List>(expr);
   assert(l->next);
   assert(l->next->next);
-  SCM_List dummy_params;
-  SCM_List dummy_args;
-  dummy_params.next = NULL;
-  dummy_args.next = NULL;
+  SCM_List dummy_params = make_list_dummy();
+  SCM_List dummy_args = make_list_dummy();
   auto params = &dummy_params;
   auto args = &dummy_args;
   auto func_args = l->next->data;
@@ -205,10 +203,8 @@ SCM *expand_letrec(SCM *expr) {
   auto l = cast<SCM_List>(expr);
   assert(l->next);
   assert(l->next->next);
-  SCM_List dummy_params;
-  SCM_List dummy_args;
-  dummy_params.next = NULL;
-  dummy_args.next = NULL;
+  SCM_List dummy_params = make_list_dummy();
+  SCM_List dummy_args = make_list_dummy();
   auto params = &dummy_params;
   auto args = &dummy_args;
   auto func_args = l->next->data;

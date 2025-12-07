@@ -42,9 +42,7 @@ static SCM *scm_list_impl(SCM_List *args) {
   if (!args) {
     return scm_nil();
   }
-  SCM_List dummy;
-  dummy.data = nullptr;
-  dummy.next = nullptr;
+  SCM_List dummy = make_list_dummy();
   SCM_List *tail = &dummy;
   SCM_List *current = args;
   
@@ -93,9 +91,7 @@ SCM *scm_append(SCM_List *args) {
   }
   
   // Build result by concatenating all lists
-  SCM_List dummy;
-  dummy.data = nullptr;
-  dummy.next = nullptr;
+  SCM_List dummy = make_list_dummy();
   SCM_List *tail = &dummy;
   
   SCM_List *current = args;
