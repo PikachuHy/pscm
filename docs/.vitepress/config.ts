@@ -23,7 +23,7 @@ export default {
     },
 
     socialLinks: [
-      {icon: 'github', link: 'https://github.com/PikachuHy/pscm'}
+      { icon: 'github', link: 'https://github.com/PikachuHy/pscm' }
     ],
 
     footer: {
@@ -39,7 +39,7 @@ export default {
 
 function nav() {
   return [
-    {text: 'Guide', link: '/cn/intro', activeMatch: '/cn/'},
+    { text: 'Guide', link: '/cn/intro', activeMatch: '/cn/' },
     {
       text: "Language",
       items: [
@@ -116,6 +116,18 @@ function sidebarGuideZh() {
         {
           text: 'pscm-cc 简介',
           link: '/cn/pscm_cc'
+        },
+        {
+          text: 'pscm-cc 字符支持实现说明',
+          link: '/cn/char_support'
+        },
+        {
+          text: 'pscm-cc 浮点数支持实现说明',
+          link: '/cn/float_number_support'
+        },
+        {
+          text: 'pscm-cc 点对支持实现说明',
+          link: '/cn/dotted_pair_support'
         },
       ]
     },

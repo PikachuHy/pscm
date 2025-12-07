@@ -2,7 +2,7 @@
 
 pscm cc 是重新写的一套PikachuHy's Scheme的实现。
 这个版本最大的特性是学习类似Guile 1.8的方式，基于`longjmp/setjmp`实现了continuation。
-代码规模约3500行。
+代码规模约4300行。
 
 cc后缀表示使用C++编写。实际上，这版本实现是使用尽可能少的C++特性来实现，目前用到了模板、重载、inline函数和lambda表达式等。
 
@@ -24,8 +24,9 @@ pscm 依然处于非常简陋的状态
 ### 类型系统
 
 - 所有的类型都是`struct SCM`(内部是`void*`)。通过`cast<Type>(scm)`可以将`struct SCM`类型转换为具体的`Type`类型；通过`wrap(type)`可以将具体的`Type`类型转换为`struct SCM`(数字类型暂不支持)。
-- 支持的数据类型：`NONE`, `NIL`, `LIST`, `PROC`, `CONT`, `FUNC`, `NUM`, `BOOL`, `SYM`, `STR`, `MACRO`
+- 支持的数据类型：`NONE`, `NIL`, `LIST`, `PROC`, `CONT`, `FUNC`, `NUM`, `FLOAT`, `CHAR`, `BOOL`, `SYM`, `STR`, `MACRO`
 - 每个AST节点都携带可选的源位置信息（文件名、行号、列号），用于错误报告和调试
+- 支持整数和浮点数混合运算，自动进行类型提升
 
 ### 数据结构
 
@@ -41,10 +42,11 @@ pscm 依然处于非常简陋的状态
   - **作用域**：`let`/`let*`/`letrec`(通过宏展开实现)
   - **循环**：`do`, `for-each`, `map`
   - **引用**：`quote`, `quasiquote`
+  - **函数应用**：`apply`
   - **Continuation**：`call/cc`/`call-with-current-continuation`
 - 代码结构高度模块化：
-  - 每个特殊形式都有独立的处理函数（`eval_define`, `eval_lambda`, `eval_if`, `eval_cond`, `eval_do`, `eval_map`等）
-  - `do`特殊形式已拆分到独立的`do.cc`文件中
+  - 每个特殊形式都有独立的处理函数（`eval_define`, `eval_lambda`, `eval_if`, `eval_cond`, `eval_do`, `eval_map`, `eval_apply`等）
+  - 特殊形式已拆分到独立文件：`do.cc`（do特殊形式）、`cond.cc`（cond特殊形式）、`map.cc`（map特殊形式）、`apply.cc`（apply特殊形式）、`quasiquote.cc`（准引用）、`macro.cc`（宏展开）、`let.cc`（let系列宏展开）
   - 公共接口统一在`eval.h`中声明
 - 统一的错误处理机制：
   - 使用`eval_error`函数提供清晰的错误信息
@@ -66,25 +68,53 @@ pscm 依然处于非常简陋的状态
 ### C/C++函数注册
 
 - C/C++代码注册到Scheme中采用类似Guile 1.8的接口，方便后续在TeXmacs中使用。
-- 支持固定参数数量的函数(1个或2个参数)和泛型函数(如`+`运算符)
+- 支持三种函数注册方式：
+  - 固定参数数量的函数：`scm_define_function`（指定必需参数数量）
+  - 泛型函数：`scm_define_generic_function`（支持可变参数，如`+`、`*`运算符）
+  - 可变参数函数：`scm_define_vararg_function`（如`list`、`append`、`-`、`make-string`、`apply`）
 
 ### 内置函数
 
 当前实现的内置函数包括：
-- **类型检查**：`procedure?`, `boolean?`, `null?`, `pair?`
+- **类型检查**：`procedure?`, `boolean?`, `null?`, `pair?`, `char?`
 - **列表操作**：`car`, `cdr`, `cadr`, `cddr`, `caddr`, `cons`, `list`, `append`
-- **数字运算**：`+`, `-`, `*`, `=`, `<`, `>`, `<=`, `>=`, `negative?`, `abs`
-- **相等性判断**：`eq?`, `eqv?`
-- **关联列表**：`assv`
-- **其他**：`gensym`, `not`
+- **数字运算**：
+  - 算术运算：`+`（泛型，支持可变参数）、`-`（可变参数，支持一元取反和多元减法）、`*`（泛型，支持可变参数）、`abs`
+  - 比较运算：`=`, `<`, `>`, `<=`, `>=`, `negative?`
+  - 支持整数和浮点数混合运算，自动类型提升
+- **字符操作**：`char?`, `char->integer`, `integer->char`
+- **字符串操作**：`string-length`, `make-string`（可变参数，支持可选填充字符）, `string-ref`, `string-set!`
+- **相等性判断**：`eq?`, `eqv?`, `equal?`
+- **关联列表**：`assv`, `assoc`, `acons`, `assoc-ref`, `assoc-set!`, `assq-set!`, `assoc-remove!`
+- **其他**：`gensym`, `not`, `eval`
 
 ## 代码优化
 
 ### 已完成优化
 
 1. **代码模块化**：
-   - 所有特殊形式处理函数都已提取为独立函数（`eval_define`, `eval_lambda`, `eval_if`, `eval_cond`, `eval_do`, `eval_for_each`, `eval_map`等）
-   - `do`特殊形式已拆分到独立的`do.cc`文件中，提高可维护性
+   - 所有特殊形式处理函数都已提取为独立函数（`eval_define`, `eval_lambda`, `eval_if`, `eval_cond`, `eval_do`, `eval_for_each`, `eval_map`, `eval_apply`等）
+   - 特殊形式已拆分到独立文件：
+     - `do.cc`：do特殊形式
+     - `cond.cc`：cond特殊形式（支持`else`和`=>`语法）
+     - `map.cc`：map特殊形式
+     - `apply.cc`：apply特殊形式
+     - `quasiquote.cc`：准引用处理
+     - `macro.cc`：宏展开和定义
+     - `let.cc`：let/let*/letrec宏展开
+   - 内置函数按功能分类到独立文件：
+     - `predicate.cc`：类型检查谓词
+     - `number.cc`：数字运算（支持整数和浮点数）
+     - `list.cc`：列表操作
+     - `string.cc`：字符串操作
+     - `char.cc`：字符操作
+     - `eq.cc`：相等性判断
+     - `alist.cc`：关联列表操作
+     - `environment.cc`：环境管理
+     - `function.cc`：函数应用
+     - `procedure.cc`：过程应用
+     - `continuation.cc`：continuation实现
+     - `source_location.cc`：源位置跟踪
    - 公共接口统一在`eval.h`中声明，遵循"先include pscm.h再include其他头文件"的规范
    - 提取了公共辅助函数（`lookup_symbol`, `apply_procedure`, `count_list_length`, `update_do_variables`等）
    - 统一使用`make_list_dummy()`辅助函数创建dummy list，减少代码重复
@@ -113,6 +143,14 @@ pscm 依然处于非常简陋的状态
    - 实现了`define-macro`，支持用户定义宏
    - 实现了`map`函数，支持多列表参数
    - 实现了`quasiquote`，支持准引用语法
+   - 实现了`apply`函数，支持动态函数应用
+   - 实现了浮点数类型（`FLOAT`）和字符类型（`CHAR`）
+   - 实现了整数和浮点数混合运算，自动类型提升
+   - 实现了完整的字符串操作函数集
+   - 实现了字符和整数之间的转换
+   - 实现了关联列表的完整操作集（增删改查）
+   - 实现了`equal?`函数，支持深度相等性比较
+   - 实现了`eval`函数，支持动态求值
    - 实现了源位置跟踪系统，提升错误报告质量
 
 ## 已知限制
@@ -125,7 +163,7 @@ pscm 依然处于非常简陋的状态
    - 环境查找使用线性搜索（O(n)复杂度），符号比较使用`strcmp`，在大规模代码中可能成为性能瓶颈
    - 建议使用哈希表优化环境查找性能
 
-4. **代码组织**：`eval.cc`文件仍然较大（约825行），虽然已进行部分模块化，但仍有进一步拆分的空间。
+4. **代码组织**：代码已高度模块化，特殊形式和内置函数都已拆分到独立文件，提高了可维护性。
 
 ## TODO
 
