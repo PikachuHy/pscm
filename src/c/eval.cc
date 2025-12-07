@@ -412,6 +412,14 @@ entry:
   }
   else if (is_func(l->data)) {
     auto func = cast<SCM_Function>(l->data);
+    // Special handling for apply: it needs access to environment and handles argument evaluation itself
+    if (func->name && strcmp(func->name->data, "apply") == 0) {
+      // For apply, when called as a function value, arguments are already evaluated
+      // We need to pass them to eval_apply, which will handle them correctly
+      // l->data is the apply function, l->next contains the already-evaluated arguments
+      SCM *result = eval_apply(env, l);
+      RETURN_WITH_CONTEXT(result);
+    }
     auto func_argl = eval_list_with_env(env, l->next);
     if (debug_enabled) {
       SCM_DEBUG_EVAL(" ");

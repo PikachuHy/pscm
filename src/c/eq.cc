@@ -86,4 +86,5 @@ SCM *scm_c_is_eq(SCM *lhs, SCM *rhs) {
 void init_eq() {
   scm_define_function("eq?", 2, 0, 0, scm_c_is_eq);
   scm_define_function("eqv?", 2, 0, 0, scm_c_is_eq);
+  scm_define_function("equal?", 2, 0, 0, scm_c_is_eq);
 }

@@ -82,17 +82,28 @@ static bool _should_print_as_pair(SCM_List *l, bool nested) {
   if (!l || !l->next || l->next->next) {
     return false; // Need exactly 2 elements
   }
-  
+
   SCM *cdr_val = l->next->data;
   SCM *car_val = l->data;
-  
+
   // A dotted pair has atomic cdr (not pair, not nil)
   if (is_pair(cdr_val) || is_nil(cdr_val)) {
     return false;
   }
-  
+
+  // If both are numbers, treat as a list (e.g., (3 4) from data, not (3 . 4))
+  if (is_num(car_val) && is_num(cdr_val)) {
+    return false;
+  }
+
+  // If both are symbols, treat as a list (e.g., (a b) function params, not (a . b))
+  // This is a heuristic: function parameter lists are usually symbols
+  if (is_sym(car_val) && is_sym(cdr_val)) {
+    return false;
+  }
+
   // Print as pair if nested OR if car is not a number
-  // (numbers in map results suggest it's a list, not a pair)
+  // (nested suggests alist structure)
   return nested || !is_num(car_val);
 }
 

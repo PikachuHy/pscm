@@ -114,6 +114,9 @@ SCM *scm_c_not(SCM *arg) {
   return scm_bool_false();
 }
 
+// Forward declaration for apply function
+SCM *scm_c_apply(SCM_List *args);
+
 void init_scm() {
   g_env.parent = nullptr;
   g_env.dummy.data = nullptr;
@@ -132,6 +135,7 @@ void init_scm() {
   scm_define_vararg_function("append", scm_append);
   scm_define_function("gensym", 0, 0, 0, scm_c_gensym);
   scm_define_function("not", 1, 0, 0, scm_c_not);
+  scm_define_vararg_function("apply", scm_c_apply);
   init_number();
   init_eq();
   init_alist();

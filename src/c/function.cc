@@ -56,6 +56,15 @@ SCM *eval_with_func(SCM_Function *func, SCM_List *l) {
   }
   if (func->n_args == -2) {
     // Variable argument function (like list)
+    // Special handling for apply: it needs access to environment
+    // But we can't access env here, so we need to handle it differently
+    // Actually, apply should never reach here because eval.cc handles it specially
+    if (func->name && strcmp(func->name->data, "apply") == 0) {
+      // This should not happen - apply should be handled in eval.cc
+      // But if it does, we need to handle it
+      eval_error("apply: internal error - should be handled in eval.cc");
+      return nullptr;
+    }
     typedef SCM *(*func_var)(SCM_List *);
     auto f = (func_var)func->func_ptr;
     return f(l->next);
