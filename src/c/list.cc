@@ -79,7 +79,27 @@ SCM *scm_cons(SCM *car_val, SCM *cdr_val) {
   return wrap(l);
 }
 
+// Helper function to copy a list element
+static SCM_List *_copy_list_element(SCM *data) {
+  return make_list(data);
+}
+
+// Helper function to check if a list is a dotted pair (ends with non-nil, non-pair cdr)
+static bool _is_dotted_pair(SCM_List *l) {
+  if (!l || !l->next) {
+    return false;
+  }
+  // A dotted pair has exactly 2 elements, and the second element's next is nullptr
+  // and the second element's data is not a pair and not nil
+  if (l->next->next) {
+    return false; // More than 2 elements, not a simple dotted pair
+  }
+  SCM *cdr_val = l->next->data;
+  return !is_pair(cdr_val) && !is_nil(cdr_val);
+}
+
 // append function: (append list1 list2 ...) -> concatenated list
+// If the last argument is a dotted pair, the result will also be a dotted pair
 SCM *scm_append(SCM_List *args) {
   if (!args) {
     return scm_nil();
@@ -90,6 +110,21 @@ SCM *scm_append(SCM_List *args) {
     return args->data;
   }
   
+  // Find the last argument to check if it's a dotted pair
+  SCM_List *last_arg = args;
+  while (last_arg->next) {
+    last_arg = last_arg->next;
+  }
+  bool last_is_dotted_pair = false;
+  SCM *last_cdr = nullptr;
+  if (is_pair(last_arg->data)) {
+    SCM_List *last_list = cast<SCM_List>(last_arg->data);
+    if (_is_dotted_pair(last_list)) {
+      last_is_dotted_pair = true;
+      last_cdr = last_list->next->data;
+    }
+  }
+  
   // Build result by concatenating all lists
   SCM_List dummy = make_list_dummy();
   SCM_List *tail = &dummy;
@@ -98,19 +133,45 @@ SCM *scm_append(SCM_List *args) {
   while (current) {
     if (is_pair(current->data)) {
       SCM_List *src = cast<SCM_List>(current->data);
-      while (src) {
-        SCM_List *node = make_list(src->data);
-        tail->next = node;
-        tail = node;
-        src = src->next;
+      if (current == last_arg && last_is_dotted_pair) {
+        // Last argument is a dotted pair: copy car, but preserve the cdr
+        // For (c . d), src points to the pair, src->data is c, src->next->data is d
+        // We copy c, but not d (which will be the final cdr)
+        if (src) {
+          SCM_List *node = _copy_list_element(src->data);
+          tail->next = node;
+          tail = node;
+        }
+        // The cdr (d) will be appended below, creating the dotted pair structure
+      } else {
+        // Regular list: copy all elements
+        while (src) {
+          SCM_List *node = _copy_list_element(src->data);
+          tail->next = node;
+          tail = node;
+          src = src->next;
+        }
       }
     } else if (!is_nil(current->data)) {
       // Non-list, non-nil: just add it
-      SCM_List *node = make_list(current->data);
+      SCM_List *node = _copy_list_element(current->data);
       tail->next = node;
       tail = node;
     }
     current = current->next;
+  }
+  
+  // If last argument was a dotted pair, append its cdr as the final cdr
+  // This creates a dotted pair structure: the last node's next points to a node with the cdr,
+  // and that node's next is nullptr
+  if (last_is_dotted_pair && last_cdr) {
+    // Create a node for the cdr, but don't update tail
+    // This makes tail->next point to a node with data=cdr and next=nullptr
+    // which is the structure for a dotted pair
+    SCM_List *node = _copy_list_element(last_cdr);
+    tail->next = node;
+    // tail remains pointing to the previous node, so tail->next->next == nullptr
+    // This creates the dotted pair structure
   }
   
   if (dummy.next) {
