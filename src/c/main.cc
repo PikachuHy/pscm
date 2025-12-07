@@ -159,41 +159,6 @@ void my_eval(SCM *ast) {
   }
 }
 
-void repl() {
-  char buffer[4096];  // Increase buffer size to avoid overflow
-  while (true) {
-    printf("pscm> ");
-    if (fgets(buffer, sizeof(buffer), stdin) != NULL) {
-      // Check if input is too long (fgets retains newline)
-      size_t len = strlen(buffer);
-      if (len > 0 && buffer[len - 1] != '\n') {
-        // Input was truncated, clear remaining input
-        int c;
-        while ((c = getchar()) != '\n' && c != EOF) {
-          // Discard remaining characters
-        }
-        printf("Warning: input too long, truncated\n");
-      }
-      auto ast = parse(buffer);
-      print_ast(ast);
-      printf("\n");
-      auto val = eval(ast);
-      printf(" --> ");
-      print_ast(val);
-      printf("\n");
-    }
-    else {
-      // EOF or error, exit normally instead of calling exit()
-      if (feof(stdin)) {
-        printf("\n");
-        return;  // Normal exit
-      }
-      printf("read failed\n");
-      return;  // Return instead of calling exit()
-    }
-  }
-}
-
 void show_usage() {
   printf("Usage: pscm OPTION ...\n");
   printf("Evaluate Scheme code, interactively or from a script.\n");
@@ -228,8 +193,10 @@ void setup_abort_handler();
 int main(int argc, char **argv) {
   setup_abort_handler();
   if (argc < 2) {
-    show_usage();
-    return 1;  // Return error code when arguments are missing
+    // No arguments: enter REPL mode
+    init_scm();
+    repl();
+    return 0;
   }
 
   int index = 1;

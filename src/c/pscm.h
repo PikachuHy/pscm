@@ -442,6 +442,11 @@ SCM *parse(const char *s);
 SCM_List *parse_file(const char *filename);
 
 /*
+ * Functions in repl.cc
+ */
+void repl();
+
+/*
  * Functions in continuation.cc
  */
 SCM *scm_make_continuation(int *first);
