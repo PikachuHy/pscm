@@ -6,13 +6,27 @@ bool _eq(SCM *lhs, SCM *rhs);
 bool _sym_eq(SCM *lhs, SCM *rhs) {
   assert(lhs);
   assert(rhs);
-  assert(is_sym(lhs));
-  assert(is_sym(rhs));
-  auto sym1 = cast<SCM_Symbol>(lhs);
-  auto sym2 = cast<SCM_Symbol>(rhs);
-  if (strcmp(sym1->data, sym2->data) == 0) {
-    return true;
+  assert(is_sym(lhs) || is_str(lhs));
+  assert(is_sym(rhs) || is_str(rhs));
+  
+  // Handle symbols
+  if (is_sym(lhs) && is_sym(rhs)) {
+    auto sym1 = cast<SCM_Symbol>(lhs);
+    auto sym2 = cast<SCM_Symbol>(rhs);
+    return strcmp(sym1->data, sym2->data) == 0;
   }
+  
+  // Handle strings
+  if (is_str(lhs) && is_str(rhs)) {
+    auto str1 = cast<SCM_String>(lhs);
+    auto str2 = cast<SCM_String>(rhs);
+    if (str1->len != str2->len) {
+      return false;
+    }
+    return strncmp(str1->data, str2->data, str1->len) == 0;
+  }
+  
+  // Mixed types (sym and str) are not equal
   return false;
 }
 
@@ -42,8 +56,7 @@ bool _eq(SCM *lhs, SCM *rhs) {
   switch (lhs->type) {
   case SCM::NONE:
   case SCM::NIL:
-    return scm_bool_true();
-    break;
+    return true;
   case SCM::LIST:
     return _list_eq(lhs, rhs);
   case SCM::PROC:
@@ -59,7 +72,7 @@ bool _eq(SCM *lhs, SCM *rhs) {
     return _sym_eq(lhs, rhs);
   default:
     SCM_ERROR_EVAL("unsupported scheme type %d", lhs->type);
-    break;
+    return false;
   }
 }
 

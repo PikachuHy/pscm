@@ -19,6 +19,12 @@ SCM *eval_with_func_2(SCM_Function *func, SCM *arg1, SCM *arg2) {
   return f(arg1, arg2);
 }
 
+SCM *eval_with_func_3(SCM_Function *func, SCM *arg1, SCM *arg2, SCM *arg3) {
+  typedef SCM *(*func_3)(SCM *, SCM *, SCM *);
+  auto f = (func_3)func->func_ptr;
+  return f(arg1, arg2, arg3);
+}
+
 SCM *eval_with_func(SCM_Function *func, SCM_List *l) {
   if (debug_enabled) {
     SCM_DEBUG_EVAL("eval func ");
@@ -36,6 +42,10 @@ SCM *eval_with_func(SCM_Function *func, SCM_List *l) {
   if (func->n_args == 2) {
     assert(l->next && l->next->next);
     return eval_with_func_2(func, l->next->data, l->next->next->data);
+  }
+  if (func->n_args == 3) {
+    assert(l->next && l->next->next && l->next->next->next);
+    return eval_with_func_3(func, l->next->data, l->next->next->data, l->next->next->next->data);
   }
   if (func->n_args == -1 && func->generic) {
     return reduce(
