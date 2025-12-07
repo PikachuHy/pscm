@@ -32,18 +32,9 @@ void my_eval(SCM *ast) {
   SCM_DEBUG_EVAL(" --> ");
   SCM_PRINT_AST(val);
   if (!is_none(val)) {
-    // In test mode, check if the expression is a nested function call
-    // Nested calls like (integer->char (char->integer #\.)) should use write format
-    // Simple calls like (integer->char 59) should use display format
-    bool use_write = false;
-    if (is_pair(ast)) {
-      SCM_List *list = cast<SCM_List>(ast);
-      if (list->next && is_pair(list->next->data)) {
-        // This is a nested function call, use write format
-        use_write = true;
-      }
-    }
-    print_ast(val, use_write);
+    // In test mode, use display format (without quotes for strings)
+    // This matches the expected output format in tests
+    print_ast(val, true);
     printf("\n");
   }
 }

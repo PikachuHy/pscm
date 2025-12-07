@@ -690,6 +690,7 @@ void init_number();
 void init_eq();
 void init_alist();
 void init_char();
+void init_string();
 
 extern SCM_Environment g_env;
 

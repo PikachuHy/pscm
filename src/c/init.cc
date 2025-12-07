@@ -15,5 +15,6 @@ void init_scm() {
   init_eq();
   init_alist();
   init_char();
+  init_string();
 }
 

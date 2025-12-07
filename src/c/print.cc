@@ -68,7 +68,13 @@ void print_ast(SCM *ast, bool write_mode) {
   }
   if (is_str(ast)) {
     auto str = cast<SCM_String>(ast);
-    printf("\"%s\"", str->data);
+    if (write_mode) {
+      // Write format: with quotes
+      printf("\"%s\"", str->data);
+    } else {
+      // Display format: without quotes
+      printf("%s", str->data);
+    }
     return;
   }
   if (is_pair(ast)) {

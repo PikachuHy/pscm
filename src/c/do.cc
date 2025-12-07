@@ -66,6 +66,18 @@ SCM *eval_do(SCM_Environment *env, SCM_List *l) {
     update_do_variables(do_env, &var_update_dummy);
     ret = eval_with_env(do_env, car(test_clause));
   }
-  return scm_none();
+  // Evaluate and return the result expressions from the test clause
+  auto return_exprs = cdr(test_clause);
+  if (is_nil(return_exprs)) {
+    return scm_none();
+  }
+  // Evaluate all return expressions and return the last one
+  auto return_list = cast<SCM_List>(return_exprs);
+  SCM *last_result = scm_none();
+  while (return_list) {
+    last_result = eval_with_env(do_env, return_list->data);
+    return_list = return_list->next;
+  }
+  return last_result;
 }
 
