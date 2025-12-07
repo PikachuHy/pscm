@@ -444,5 +444,6 @@ entry:
   }
   else {
     eval_error("not supported expression type");
+    return nullptr;  // Never reached, but satisfies compiler
   }
 }

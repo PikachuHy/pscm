@@ -547,7 +547,33 @@ SCM *scm_env_exist(SCM_Environment *env, SCM_Symbol *sym);
  * Functions in eval.cc
  */
 SCM *eval_with_env(SCM_Environment *env, SCM *ast);
+SCM *eval(SCM *ast);
 SCM_List *eval_list_with_env(SCM_Environment *env, SCM_List *l);
+
+/*
+ * Functions in apply.cc
+ */
+SCM *scm_c_apply(SCM_List *args);
+void init_apply();
+
+/*
+ * Functions in predicate.cc
+ */
+SCM *scm_c_is_procedure(SCM *arg);
+SCM *scm_c_is_boolean(SCM *arg);
+SCM *scm_c_is_null(SCM *arg);
+SCM *scm_c_is_pair(SCM *arg);
+
+/*
+ * Functions in symbol.cc
+ */
+SCM_Symbol *make_sym(const char *data);
+SCM *scm_c_gensym();
+
+/*
+ * Functions in predicate.cc
+ */
+SCM *scm_c_not(SCM *arg);
 
 /*
  * Functions in quasiquote.cc
@@ -653,8 +679,13 @@ extern bool debug_enabled;
 void print_basename(const char *path);
 
 /*
- * Initilize
+ * Initialize
  */
+void init_scm();
+void init_predicate();
+void init_list();
+void init_symbol();
+void init_apply();
 void init_number();
 void init_eq();
 void init_alist();

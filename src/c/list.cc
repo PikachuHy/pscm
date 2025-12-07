@@ -188,3 +188,14 @@ SCM *scm_append(SCM_List *args) {
   }
   return scm_nil();
 }
+
+void init_list() {
+  scm_define_function("car", 1, 0, 0, car);
+  scm_define_function("cdr", 1, 0, 0, cdr);
+  scm_define_function("cadr", 1, 0, 0, cadr);
+  scm_define_function("cddr", 1, 0, 0, cddr);
+  scm_define_function("caddr", 1, 0, 0, caddr);
+  scm_define_function("cons", 2, 0, 0, scm_cons);
+  scm_define_vararg_function("list", scm_list);
+  scm_define_vararg_function("append", scm_append);
+}

@@ -12,6 +12,10 @@ SCM *scm_c_apply(SCM_List *args) {
   return nullptr;
 }
 
+void init_apply() {
+  scm_define_vararg_function("apply", scm_c_apply);
+}
+
 // Helper function for apply special form
 // (apply proc arg1 arg2 ... args-list) -> apply proc to (arg1 arg2 ... args-list elements)
 // When called as a function value, l->next contains already-evaluated arguments
