@@ -191,35 +191,6 @@ static SCM *eval_call_cc(SCM_Environment *env, SCM_List *l, SCM **ast) {
   return nullptr; // Signal to continue evaluation
 }
 
-// Helper function for cond special form
-static SCM *eval_cond(SCM_Environment *env, SCM_List *l, SCM **ast) {
-  assert(l->next);
-  for (auto it = l->next; it; it = it->next) {
-    auto clause = cast<SCM_List>(it->data);
-    if (debug_enabled) {
-      SCM_DEBUG_EVAL("eval cond clause ");
-      print_list(clause);
-      printf("\n");
-    }
-    if (is_sym_val(clause->data, "else")) {
-      return eval_with_list(env, clause->next);
-    }
-    auto pred = eval_with_env(env, clause->data);
-    if (is_bool(pred) && is_false(pred)) {
-      continue;
-    }
-    if (!clause->next) {
-      return scm_bool_true();
-    }
-    if (is_sym_val(clause->next->data, "=>")) {
-      assert(clause->next->next);
-      *ast = scm_list2(clause->next->next->data, scm_list2(scm_sym_quote(), pred));
-      return nullptr; // Signal to continue evaluation
-    }
-    return eval_with_list(env, clause->next);
-  }
-  return scm_none();
-}
 // Helper function for for-each special form
 static SCM *eval_for_each(SCM_Environment *env, SCM_List *l) {
   assert(l->next);

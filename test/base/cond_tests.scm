@@ -1,6 +1,7 @@
 ;; RUN: %pscm_main -m REGISTER_MACHINE --test %s | FileCheck %s
 ;; RUN: %pscm_main --test %s | FileCheck %s
 ;; RUN: %pscm_main --test %s | FileCheck %s --check-prefix=DIRECT
+;; RUN: %pscm_cc --test %s | FileCheck %s
 
 ;; CHECK: #t
 (cond ((eq? 1 2))
