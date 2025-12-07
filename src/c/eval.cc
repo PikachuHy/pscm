@@ -220,7 +220,6 @@ static SCM *eval_cond(SCM_Environment *env, SCM_List *l, SCM **ast) {
   }
   return scm_none();
 }
-
 // Helper function for for-each special form
 static SCM *eval_for_each(SCM_Environment *env, SCM_List *l) {
   assert(l->next);
@@ -381,6 +380,10 @@ entry:
     }
     else if (is_sym_val(l->data, "map")) {
       SCM *result = eval_map(env, l);
+      RETURN_WITH_CONTEXT(result);
+    }
+    else if (is_sym_val(l->data, "apply")) {
+      SCM *result = eval_apply(env, l);
       RETURN_WITH_CONTEXT(result);
     }
     else {
