@@ -117,7 +117,7 @@ static SCM *parse_number(Parser *p) {
     is_float = true;
     p->pos++;
     p->column++;
-    
+  
     // Parse fractional part
     double fractional = 0.0;
     double divisor = 1.0;
@@ -189,6 +189,63 @@ static SCM *parse_number(Parser *p) {
     scm->value = (void *)int_part;
   }
   scm->source_loc = nullptr;
+  set_source_location(scm, p->filename, start_line, start_column);
+  return scm;
+}
+  
+// Parse a character literal (#\A, #\., #\space, etc.)
+static SCM *parse_char(Parser *p) {
+  // Must match '#\'
+  if (p->pos[0] != '#' || p->pos[1] != '\\') {
+    return nullptr;
+  }
+  
+  const char *start = p->pos;
+  int start_line = p->line;
+  int start_column = p->column;
+  
+  p->pos += 2;  // Skip #\
+  p->column += 2;
+  
+  if (*p->pos == '\0') {
+    parse_error(p, "unexpected end of input in character literal");
+  }
+  
+  char ch;
+  
+  // Check for named characters
+  if (isalpha((unsigned char)*p->pos)) {
+    const char *name_start = p->pos;
+    while (isalpha((unsigned char)*p->pos)) {
+      p->pos++;
+      p->column++;
+    }
+    
+    int len = p->pos - name_start;
+    // Check for common named characters
+    if (len == 5 && strncmp(name_start, "space", 5) == 0) {
+      ch = ' ';
+    } else if (len == 7 && strncmp(name_start, "newline", 7) == 0) {
+      ch = '\n';
+    } else if (len == 3 && strncmp(name_start, "tab", 3) == 0) {
+      ch = '\t';
+    } else {
+      // If not a named character, treat the first character as the character value
+      // This handles cases like #\A where A is a letter
+      p->pos = name_start;
+      p->column = start_column + 2;
+      ch = *p->pos;
+      p->pos++;
+      p->column++;
+    }
+  } else {
+    // Single character (non-letter or any single char after #\)
+    ch = *p->pos;
+    p->pos++;
+    p->column++;
+  }
+  
+  SCM *scm = scm_from_char(ch);
   set_source_location(scm, p->filename, start_line, start_column);
   return scm;
 }
@@ -544,6 +601,12 @@ static SCM *parse_expr(Parser *p) {
   // String
   if (*p->pos == '"') {
     return parse_string(p);
+  }
+  
+  // Character literal (#\A, #\., etc.)
+  result = parse_char(p);
+  if (result) {
+    return result;
   }
   
   // Number

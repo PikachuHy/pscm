@@ -72,6 +72,14 @@ bool _eq(SCM *lhs, SCM *rhs) {
   case SCM::NUM:
   case SCM::FLOAT:
     return _number_eq(lhs, rhs);
+  case SCM::CHAR:
+    // Character comparison
+    if (rhs->type == SCM::CHAR) {
+      char ch_lhs = ptr_to_char(lhs->value);
+      char ch_rhs = ptr_to_char(rhs->value);
+      return ch_lhs == ch_rhs;
+    }
+    return false;
   case SCM::BOOL:
     return is_true(lhs) == is_true(rhs);
   case SCM::SYM:

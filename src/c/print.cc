@@ -1,5 +1,5 @@
 #include "pscm.h"
-void print_ast(SCM *ast) {
+void print_ast(SCM *ast, bool write_mode) {
   if (is_proc(ast)) {
     auto proc = cast<SCM_Procedure>(ast);
     printf("#<");
@@ -37,6 +37,27 @@ void print_ast(SCM *ast) {
       printf("%.0f", val);
     } else {
       printf("%g", val);
+    }
+    return;
+  }
+  if (is_char(ast)) {
+    char ch = ptr_to_char(ast->value);
+    // write_mode: print as #\A, #\., etc. (write format)
+    // !write_mode: print as A, ., etc. (display format)
+    if (write_mode) {
+      // Write format: #\A, #\., #\space, etc.
+      if (ch == ' ') {
+        printf("#\\space");
+      } else if (ch == '\n') {
+        printf("#\\newline");
+      } else if (ch == '\t') {
+        printf("#\\tab");
+      } else {
+        printf("#\\%c", ch);
+      }
+    } else {
+      // Display format: just the character
+      printf("%c", ch);
     }
     return;
   }
@@ -118,7 +139,7 @@ static void _print_list(SCM_List *l, bool nested) {
     if (strcmp(sym->data, "quote") == 0) {
       printf("'");
       if (l->next) {
-        print_ast(l->next->data);
+        print_ast(l->next->data, true);  // Use write mode in quoted expressions
         assert(!l->next->next);
       } else {
         printf("()");
@@ -157,7 +178,7 @@ static void _print_list(SCM_List *l, bool nested) {
           if (is_pair(current->data)) {
             _print_list(cast<SCM_List>(current->data), true);
           } else {
-            print_ast(current->data);
+            print_ast(current->data, true);  // Use write mode in lists
           }
           current = current->next;
         }
@@ -170,7 +191,7 @@ static void _print_list(SCM_List *l, bool nested) {
           if (is_pair(cdr_current->data)) {
             _print_list(cast<SCM_List>(cdr_current->data), true);
           } else {
-            print_ast(cdr_current->data);
+            print_ast(cdr_current->data, true);  // Use write mode in lists
           }
           cdr_current = cdr_current->next;
         }
@@ -189,9 +210,9 @@ static void _print_list(SCM_List *l, bool nested) {
       
       // If this is the last element before the dotted pair cdr
       if (current == prev) {
-        print_ast(current->data);
+        print_ast(current->data, true);  // Use write mode in lists
         printf(" . ");
-        print_ast(last->data);  // last->data is the cdr
+        print_ast(last->data, true);  // Use write mode in lists
         break;
       }
       
@@ -199,7 +220,7 @@ static void _print_list(SCM_List *l, bool nested) {
       if (is_pair(current->data)) {
         _print_list(cast<SCM_List>(current->data), true);
       } else {
-        print_ast(current->data);
+        print_ast(current->data, true);  // Use write mode in lists
       }
       
       current = current->next;
@@ -218,7 +239,7 @@ static void _print_list(SCM_List *l, bool nested) {
       if (is_pair(current->data)) {
         _print_list(cast<SCM_List>(current->data), true);
       } else {
-        print_ast(current->data);
+        print_ast(current->data, true);  // Use write mode in lists
       }
       
       current = current->next;

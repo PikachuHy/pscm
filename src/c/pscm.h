@@ -15,7 +15,7 @@ struct SCM_SourceLocation {
 };
 
 struct SCM {
-  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, BOOL, SYM, STR, MACRO } type;
+  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, CHAR, BOOL, SYM, STR, MACRO } type;
 
   void *value;
   SCM_SourceLocation *source_loc;  // Optional source location
@@ -99,6 +99,10 @@ inline bool is_num(SCM *scm) {
 
 inline bool is_float(SCM *scm) {
   return scm->type == SCM::FLOAT;
+}
+
+inline bool is_char(SCM *scm) {
+  return scm->type == SCM::CHAR;
 }
 
 inline bool is_proc(SCM *scm) {
@@ -262,6 +266,33 @@ inline double scm_to_double(SCM *scm) {
     return (double)(int64_t)scm->value;
   }
   return 0.0;
+}
+
+// Character helper functions
+// char <-> void* conversion helpers
+inline void* char_to_ptr(char val) {
+  return (void*)(uintptr_t)(unsigned char)val;
+}
+
+inline char ptr_to_char(void *ptr) {
+  return (char)(uintptr_t)ptr;
+}
+
+// Create a character
+inline SCM *scm_from_char(char val) {
+  SCM *scm = new SCM();
+  scm->type = SCM::CHAR;
+  scm->value = char_to_ptr(val);
+  scm->source_loc = nullptr;
+  return scm;
+}
+
+// Convert SCM to char
+inline char scm_to_char(SCM *scm) {
+  if (is_char(scm)) {
+    return ptr_to_char(scm->value);
+  }
+  return 0;
 }
 SCM *scm_sym_lambda();
 SCM *scm_sym_set();
@@ -478,7 +509,7 @@ SCM *reduce(F f, SCM *init_val, SCM_List *l) {
 /*
  * Functions in print.cc
  */
-void print_ast(SCM *ast);
+void print_ast(SCM *ast, bool write_mode = false);
 void print_list(SCM_List *l);
 
 /*
@@ -627,6 +658,7 @@ void print_basename(const char *path);
 void init_number();
 void init_eq();
 void init_alist();
+void init_char();
 
 extern SCM_Environment g_env;
 
