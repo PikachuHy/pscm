@@ -69,12 +69,21 @@ SCM *scm_cons(SCM *car_val, SCM *cdr_val) {
   if (is_pair(cdr_val)) {
     // If cdr is a list, append it
     l->next = cast<SCM_List>(cdr_val);
+    // Check if the appended list is a dotted pair
+    // If so, preserve the is_dotted flag
+    SCM_List *last = l->next;
+    while (last->next) {
+      last = last->next;
+    }
+    // If the last node of cdr is dotted, keep it dotted
+    // Otherwise, it's a proper list, so no change needed
   } else if (is_nil(cdr_val)) {
     // If cdr is nil, just return the list with car
-    // (already done)
+    // (already done, l->next is nullptr)
   } else {
-    // Otherwise, create a proper pair
+    // Otherwise, create a dotted pair: (car . cdr)
     l->next = make_list(cdr_val);
+    l->next->is_dotted = true;  // Mark as dotted pair's cdr
   }
   return wrap(l);
 }
@@ -84,18 +93,17 @@ static SCM_List *_copy_list_element(SCM *data) {
   return make_list(data);
 }
 
-// Helper function to check if a list is a dotted pair (ends with non-nil, non-pair cdr)
+// Helper function to check if a list is a dotted pair by checking is_dotted flag
 static bool _is_dotted_pair(SCM_List *l) {
   if (!l || !l->next) {
     return false;
   }
-  // A dotted pair has exactly 2 elements, and the second element's next is nullptr
-  // and the second element's data is not a pair and not nil
-  if (l->next->next) {
-    return false; // More than 2 elements, not a simple dotted pair
+  // Find the last node and check its is_dotted flag
+  SCM_List *last = l;
+  while (last->next) {
+    last = last->next;
   }
-  SCM *cdr_val = l->next->data;
-  return !is_pair(cdr_val) && !is_nil(cdr_val);
+  return last->is_dotted;
 }
 
 // append function: (append list1 list2 ...) -> concatenated list
@@ -163,12 +171,13 @@ SCM *scm_append(SCM_List *args) {
   
   // If last argument was a dotted pair, append its cdr as the final cdr
   // This creates a dotted pair structure: the last node's next points to a node with the cdr,
-  // and that node's next is nullptr
+  // and that node's next is nullptr, and is_dotted = true
   if (last_is_dotted_pair && last_cdr) {
     // Create a node for the cdr, but don't update tail
     // This makes tail->next point to a node with data=cdr and next=nullptr
     // which is the structure for a dotted pair
     SCM_List *node = _copy_list_element(last_cdr);
+    node->is_dotted = true;  // Mark as dotted pair's cdr
     tail->next = node;
     // tail remains pointing to the previous node, so tail->next->next == nullptr
     // This creates the dotted pair structure

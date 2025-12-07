@@ -99,6 +99,7 @@ SCM *expand_let(SCM *expr) {
     auto new_list = new SCM_List();
     new_list->data = wrap(proc);
     new_list->next = dummy_args.next;
+    new_list->is_dotted = false;
     auto new_l = new SCM();
     new_l->type = SCM::LIST;
     new_l->value = new_list;

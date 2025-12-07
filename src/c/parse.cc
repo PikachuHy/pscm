@@ -404,7 +404,20 @@ static SCM *parse_list(Parser *p) {
         parse_error(p, "expected expression after dot");
       }
       
-      tail->next = is_pair(cdr) ? cast<SCM_List>(cdr) : make_list(cdr);
+      // Create node for cdr and mark it as dotted pair
+      if (is_pair(cdr)) {
+        tail->next = cast<SCM_List>(cdr);
+        // If cdr is a pair, we need to mark the last node of that pair
+        // Find the last node and mark it
+        SCM_List *last = tail->next;
+        while (last->next) {
+          last = last->next;
+        }
+        last->is_dotted = true;
+      } else {
+        tail->next = make_list(cdr);
+        tail->next->is_dotted = true;  // Mark as dotted pair's cdr
+      }
       skip_whitespace(p);
       break;
     }

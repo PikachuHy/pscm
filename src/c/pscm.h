@@ -25,6 +25,7 @@ struct SCM_Environment;
 struct SCM_List {
   SCM *data;
   SCM_List *next;
+  bool is_dotted;  // true 表示这是 dotted pair 的最后一个节点（存储 cdr 的节点）
 };
 
 struct SCM_Symbol {
@@ -146,6 +147,7 @@ inline SCM_List make_list_dummy() {
   SCM_List dummy;
   dummy.data = nullptr;
   dummy.next = nullptr;
+  dummy.is_dotted = false;
   return dummy;
 }
 
@@ -153,6 +155,7 @@ inline SCM_List *make_list() {
   auto l = new SCM_List();
   l->data = nullptr;
   l->next = nullptr;
+  l->is_dotted = false;
   return l;
 }
 
