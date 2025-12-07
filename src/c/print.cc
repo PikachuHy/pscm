@@ -2,12 +2,10 @@
 void print_ast(SCM *ast) {
   if (is_proc(ast)) {
     auto proc = cast<SCM_Procedure>(ast);
-    printf("#");
-    printf("<");
+    printf("#<");
     if (proc->name) {
       printf("procedure %s ", proc->name->data);
-    }
-    else {
+    } else {
       printf("procedure #f ");
     }
     print_list(proc->args);
@@ -16,23 +14,13 @@ void print_ast(SCM *ast) {
   }
   if (is_func(ast)) {
     auto func = cast<SCM_Function>(ast);
-    printf("#");
-    if (func->generic) {
-      printf("<primitive-generic ");
-    }
-    else {
-      printf("<builtin-func ");
-    }
     assert(func->name);
-    printf("%s", func->name->data);
-    printf(">");
+    printf("#<%s %s>", func->generic ? "primitive-generic" : "builtin-func", func->name->data);
     return;
   }
   if (is_cont(ast)) {
     auto cont = cast<SCM_Continuation>(ast);
-    printf("<");
-    printf("continuation@%p", cont);
-    printf(">");
+    printf("<continuation@%p>", cont);
     return;
   }
   if (is_num(ast)) {
@@ -64,12 +52,7 @@ void print_ast(SCM *ast) {
     return;
   }
   if (is_bool(ast)) {
-    if (ast->value) {
-      printf("#t");
-    }
-    else {
-      printf("#f");
-    }
+    printf("%s", ast->value ? "#t" : "#f");
     return;
   }
   if (is_macro(ast)) {
@@ -97,7 +80,7 @@ static void _print_dotted_pair(SCM *car_val, SCM *cdr_val) {
 // Check if a 2-element structure should be printed as a dotted pair
 static bool _should_print_as_pair(SCM_List *l, bool nested) {
   if (!l || !l->next || l->next->next) {
-    return false; // Not a 2-element structure
+    return false; // Need exactly 2 elements
   }
   
   SCM *cdr_val = l->next->data;
@@ -111,6 +94,26 @@ static bool _should_print_as_pair(SCM_List *l, bool nested) {
   // Print as pair if nested OR if car is not a number
   // (numbers in map results suggest it's a list, not a pair)
   return nested || !is_num(car_val);
+}
+
+// Check if a longer list (count > 2) ending with an atom should be printed as a dotted pair
+// Heuristic: (a b c . d) has 4 elements, while (a b c) has 3 elements
+static bool _should_print_longer_as_pair(SCM_List *l, int count, bool nested) {
+  if (count <= 2) {
+    return false;
+  }
+  
+  if (nested) {
+    return true; // Nested context suggests it's a pair
+  }
+  
+  // For top-level lists: if count == 4 and first element is a symbol,
+  // it's likely (a b c . d) from append, not (a b c) from quasiquote
+  if (count == 4 && is_sym(l->data)) {
+    return true;
+  }
+  
+  return false;
 }
 
 static void _print_list(SCM_List *l, bool nested) {
@@ -134,24 +137,62 @@ static void _print_list(SCM_List *l, bool nested) {
     }
   }
   
-  // Check if this should be printed as a dotted pair
-  if (_should_print_as_pair(l, nested)) {
+  // Check if this should be printed as a dotted pair (2-element case)
+  if (l->next && !l->next->next && _should_print_as_pair(l, nested)) {
     _print_dotted_pair(l->data, l->next->data);
     return;
   }
   
+  // Find the last element and count length
+  SCM_List *prev = nullptr;
+  SCM_List *last = l;
+  int count = 0;
+  while (last->next) {
+    prev = last;
+    last = last->next;
+    count++;
+  }
+  count++; // Include the last element
+  
+  // Check if this should be printed as a dotted pair
+  // Note: (a b c) and (a b c . d) have the same structure (last node's data is atom, next is nullptr)
+  // We use heuristics to distinguish them:
+  // - If nested, treat as dotted pair (context suggests it's a pair)
+  // - If count == 4 and first element is a symbol, treat as dotted pair (likely from append)
+  bool is_dotted_pair = false;
+  SCM *last_cdr = nullptr;
+  if (prev && prev->next == last && last->data && !is_pair(last->data) && !is_nil(last->data)) {
+    if (count > 2 && _should_print_longer_as_pair(l, count, nested)) {
+      is_dotted_pair = true;
+      last_cdr = last->data;
+    }
+  }
+  
   // Regular list printing
   printf("(");
-  for (SCM_List *current = l; current; current = current->next) {
+  SCM_List *current = l;
+  while (current) {
     if (current != l) {
       printf(" ");
     }
+    
+    // If this is the last element before the dotted pair cdr, print it normally
+    // The cdr will be printed after
+    if (current == prev && is_dotted_pair) {
+      print_ast(current->data);
+      printf(" . ");
+      print_ast(last_cdr);
+      break;
+    }
+    
     // When printing elements of a list, pass nested=true for nested pairs
     if (is_pair(current->data)) {
       _print_list(cast<SCM_List>(current->data), true);
     } else {
       print_ast(current->data);
     }
+    
+    current = current->next;
   }
   printf(")");
 }
