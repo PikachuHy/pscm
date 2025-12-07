@@ -15,7 +15,7 @@ struct SCM_SourceLocation {
 };
 
 struct SCM {
-  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, BOOL, SYM, STR, MACRO } type;
+  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, BOOL, SYM, STR, MACRO } type;
 
   void *value;
   SCM_SourceLocation *source_loc;  // Optional source location
@@ -95,6 +95,10 @@ inline bool is_pair(SCM *scm) {
 
 inline bool is_num(SCM *scm) {
   return scm->type == SCM::NUM;
+}
+
+inline bool is_float(SCM *scm) {
+  return scm->type == SCM::FLOAT;
 }
 
 inline bool is_proc(SCM *scm) {
@@ -220,6 +224,45 @@ SCM *scm_none();
 SCM *scm_nil();
 SCM *scm_bool_false();
 SCM *scm_bool_true();
+
+// Float number helper functions
+// double <-> void* conversion helpers (for 64-bit systems)
+inline void* double_to_ptr(double val) {
+  union {
+    double d;
+    void *p;
+  } u;
+  u.d = val;
+  return u.p;
+}
+
+inline double ptr_to_double(void *ptr) {
+  union {
+    double d;
+    void *p;
+  } u;
+  u.p = ptr;
+  return u.d;
+}
+
+// Create a float number
+inline SCM *scm_from_double(double val) {
+  SCM *scm = new SCM();
+  scm->type = SCM::FLOAT;
+  scm->value = double_to_ptr(val);
+  scm->source_loc = nullptr;
+  return scm;
+}
+
+// Convert SCM to double (handles both NUM and FLOAT)
+inline double scm_to_double(SCM *scm) {
+  if (is_float(scm)) {
+    return ptr_to_double(scm->value);
+  } else if (is_num(scm)) {
+    return (double)(int64_t)scm->value;
+  }
+  return 0.0;
+}
 SCM *scm_sym_lambda();
 SCM *scm_sym_set();
 SCM *scm_sym_let();

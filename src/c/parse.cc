@@ -101,21 +101,94 @@ static SCM *parse_number(Parser *p) {
     return nullptr;
   }
   
-  long value = 0;
+  // Parse integer part
+  long int_part = 0;
   while (isdigit((unsigned char)*p->pos)) {
-    value = value * 10 + (*p->pos - '0');
+    int_part = int_part * 10 + (*p->pos - '0');
     p->pos++;
     p->column++;
   }
   
-  if (negative) {
-    value = -value;
+  // Check for decimal point
+  bool is_float = false;
+  double float_value = (double)int_part;
+  
+  if (*p->pos == '.') {
+    is_float = true;
+    p->pos++;
+    p->column++;
+    
+    // Parse fractional part
+    double fractional = 0.0;
+    double divisor = 1.0;
+    while (isdigit((unsigned char)*p->pos)) {
+      fractional = fractional * 10 + (*p->pos - '0');
+      divisor *= 10;
+      p->pos++;
+      p->column++;
+    }
+    float_value += fractional / divisor;
   }
   
+  // Check for exponent (scientific notation)
+  if (*p->pos == 'e' || *p->pos == 'E') {
+    is_float = true;
+    p->pos++;
+    p->column++;
+    
+    // Parse exponent sign
+    bool exp_negative = false;
+    if (*p->pos == '-') {
+      exp_negative = true;
+      p->pos++;
+      p->column++;
+    } else if (*p->pos == '+') {
+      p->pos++;
+      p->column++;
+    }
+    
+    // Parse exponent value
+    long exp = 0;
+    if (!isdigit((unsigned char)*p->pos)) {
+      parse_error(p, "expected digit after exponent marker");
+    }
+    while (isdigit((unsigned char)*p->pos)) {
+      exp = exp * 10 + (*p->pos - '0');
+      p->pos++;
+      p->column++;
+    }
+    
+    // Apply exponent
+    double multiplier = 1.0;
+    for (long i = 0; i < exp; i++) {
+      multiplier *= 10.0;
+    }
+    if (exp_negative) {
+      float_value /= multiplier;
+    } else {
+      float_value *= multiplier;
+    }
+  }
+  
+  // Apply sign
+  if (negative) {
+    if (is_float) {
+      float_value = -float_value;
+    } else {
+      int_part = -int_part;
+    }
+  }
+  
+  // Create SCM object
   SCM *scm = new SCM();
-  scm->type = SCM::NUM;
-  scm->value = (void *)value;
-  scm->source_loc = nullptr;  // Initialize to nullptr
+  if (is_float) {
+    scm->type = SCM::FLOAT;
+    scm->value = double_to_ptr(float_value);
+  } else {
+    scm->type = SCM::NUM;
+    scm->value = (void *)int_part;
+  }
+  scm->source_loc = nullptr;
   set_source_location(scm, p->filename, start_line, start_column);
   return scm;
 }

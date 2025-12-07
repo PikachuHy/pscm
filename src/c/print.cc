@@ -28,6 +28,18 @@ void print_ast(SCM *ast) {
     printf("%lld", num);
     return;
   }
+  if (is_float(ast)) {
+    double val = ptr_to_double(ast->value);
+    // Use %g for compact representation, but ensure we show decimal point for non-integer values
+    // %g automatically chooses between %f and %e format
+    if (val == (double)(int64_t)val) {
+      // Integer value stored as float: print as integer
+      printf("%.0f", val);
+    } else {
+      printf("%g", val);
+    }
+    return;
+  }
   if (is_sym(ast)) {
     auto sym = cast<SCM_Symbol>(ast);
     printf("%s", sym->data);

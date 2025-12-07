@@ -49,6 +49,12 @@ bool _list_eq(SCM *lhs, SCM *rhs) {
 bool _eq(SCM *lhs, SCM *rhs) {
   assert(lhs);
   assert(rhs);
+  // Special case: allow NUM <-> FLOAT comparison
+  if ((lhs->type == SCM::NUM && rhs->type == SCM::FLOAT) ||
+      (lhs->type == SCM::FLOAT && rhs->type == SCM::NUM)) {
+    return _number_eq(lhs, rhs);
+  }
+  
   if (lhs->type != rhs->type) {
     return false;
   }
@@ -64,6 +70,7 @@ bool _eq(SCM *lhs, SCM *rhs) {
   case SCM::FUNC:
     return lhs == rhs;
   case SCM::NUM:
+  case SCM::FLOAT:
     return _number_eq(lhs, rhs);
   case SCM::BOOL:
     return is_true(lhs) == is_true(rhs);
