@@ -375,6 +375,7 @@ entry:
       cont_arg = eval_with_env(env, l->next->data);
     }
     scm_dynthrow(l->data, cont_arg);
+    return nullptr;  // Never reached, but satisfies compiler
   }
   else if (is_proc(l->data)) {
     auto proc = cast<SCM_Procedure>(l->data);
@@ -417,4 +418,16 @@ entry:
     eval_error("not supported expression type");
     return nullptr;  // Never reached, but satisfies compiler
   }
+}
+
+// Scheme eval function: (eval expr) -> evaluates expr in the current environment
+extern SCM_Environment g_env;
+
+SCM *scm_c_eval(SCM *expr) {
+  // Evaluate the expression in the global environment
+  return eval_with_env(&g_env, expr);
+}
+
+void init_eval() {
+  scm_define_function("eval", 1, 0, 0, scm_c_eval);
 }
