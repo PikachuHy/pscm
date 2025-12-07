@@ -1,5 +1,4 @@
 #include "pscm.h"
-void print_list(SCM_List *l, bool nested);
 void print_ast(SCM *ast) {
   if (is_proc(ast)) {
     auto proc = cast<SCM_Procedure>(ast);
@@ -53,7 +52,7 @@ void print_ast(SCM *ast) {
   }
   if (is_pair(ast)) {
     auto l = cast<SCM_List>(ast);
-    print_list(l, false);
+    print_list(l);
     return;
   }
   if (is_nil(ast)) {
@@ -87,7 +86,7 @@ void print_ast(SCM *ast) {
 }
 
 // Helper function to print a dotted pair: (car . cdr)
-static void print_dotted_pair(SCM *car_val, SCM *cdr_val) {
+static void _print_dotted_pair(SCM *car_val, SCM *cdr_val) {
   printf("(");
   print_ast(car_val);
   printf(" . ");
@@ -96,7 +95,7 @@ static void print_dotted_pair(SCM *car_val, SCM *cdr_val) {
 }
 
 // Check if a 2-element structure should be printed as a dotted pair
-static bool should_print_as_pair(SCM_List *l, bool nested) {
+static bool _should_print_as_pair(SCM_List *l, bool nested) {
   if (!l || !l->next || l->next->next) {
     return false; // Not a 2-element structure
   }
@@ -114,7 +113,7 @@ static bool should_print_as_pair(SCM_List *l, bool nested) {
   return nested || !is_num(car_val);
 }
 
-void print_list(SCM_List *l, bool nested) {
+static void _print_list(SCM_List *l, bool nested) {
   if (!l) {
     printf("()");
     return;
@@ -136,8 +135,8 @@ void print_list(SCM_List *l, bool nested) {
   }
   
   // Check if this should be printed as a dotted pair
-  if (should_print_as_pair(l, nested)) {
-    print_dotted_pair(l->data, l->next->data);
+  if (_should_print_as_pair(l, nested)) {
+    _print_dotted_pair(l->data, l->next->data);
     return;
   }
   
@@ -149,7 +148,7 @@ void print_list(SCM_List *l, bool nested) {
     }
     // When printing elements of a list, pass nested=true for nested pairs
     if (is_pair(current->data)) {
-      print_list(cast<SCM_List>(current->data), true);
+      _print_list(cast<SCM_List>(current->data), true);
     } else {
       print_ast(current->data);
     }
@@ -158,6 +157,6 @@ void print_list(SCM_List *l, bool nested) {
 }
 
 void print_list(SCM_List *l) {
-  print_list(l, false);
+  _print_list(l, false);
 }
 
