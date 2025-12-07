@@ -127,6 +127,46 @@ static void _print_list(SCM_List *l, bool nested) {
       last = last->next;
     }
     
+    // Check if cdr is a proper list - if so, expand it
+    SCM *cdr_val = last->data;
+    if (is_pair(cdr_val)) {
+      // cdr is a list - check if it's a proper list
+      SCM_List *cdr_list = cast<SCM_List>(cdr_val);
+      bool cdr_is_proper = !_is_dotted_pair(cdr_list);
+      
+      if (cdr_is_proper) {
+        // Expand: (a b . (c d)) -> (a b c d)
+        printf("(");
+        SCM_List *current = l;
+        while (current && current != last) {
+          if (current != l) {
+            printf(" ");
+          }
+          if (is_pair(current->data)) {
+            _print_list(cast<SCM_List>(current->data), true);
+          } else {
+            print_ast(current->data);
+          }
+          current = current->next;
+        }
+        // Now print the cdr list elements
+        SCM_List *cdr_current = cdr_list;
+        while (cdr_current) {
+          if (l != last || cdr_current != cdr_list) {
+            printf(" ");
+          }
+          if (is_pair(cdr_current->data)) {
+            _print_list(cast<SCM_List>(cdr_current->data), true);
+          } else {
+            print_ast(cdr_current->data);
+          }
+          cdr_current = cdr_current->next;
+        }
+        printf(")");
+        return;
+      }
+    }
+    
     // Print as dotted pair: (a b c . d)
     printf("(");
     SCM_List *current = l;

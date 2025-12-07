@@ -406,14 +406,14 @@ static SCM *parse_list(Parser *p) {
       
       // Create node for cdr and mark it as dotted pair
       if (is_pair(cdr)) {
-        tail->next = cast<SCM_List>(cdr);
-        // If cdr is a pair, we need to mark the last node of that pair
-        // Find the last node and mark it
-        SCM_List *last = tail->next;
-        while (last->next) {
-          last = last->next;
-        }
-        last->is_dotted = true;
+        // When cdr is a pair, wrap it in a node to store it
+        // This allows us to mark the wrapper as dotted, while keeping the
+        // cdr list itself unmarked (if it's a proper list)
+        tail->next = make_list(cdr);
+        tail->next->is_dotted = true;  // Mark the wrapper node as dotted
+        // The cdr list itself (cdr) is not modified - its internal structure
+        // remains unchanged. The printing code will check if cdr is a proper
+        // list and expand it: (a b . (c d)) -> (a b c d)
       } else {
         tail->next = make_list(cdr);
         tail->next->is_dotted = true;  // Mark as dotted pair's cdr
