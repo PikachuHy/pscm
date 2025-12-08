@@ -195,33 +195,87 @@ static SCM *eval_call_cc(SCM_Environment *env, SCM_List *l, SCM **ast) {
 static SCM *eval_for_each(SCM_Environment *env, SCM_List *l) {
   assert(l->next);
   auto f = eval_with_env(env, l->next->data);
-  auto proc = cast<SCM_Procedure>(f);
-  int arg_count = count_list_length(proc->args);
-  SCM_List dummy = make_list_dummy();
-  auto result_tail = &dummy;
+  int arg_count;
+  if (is_proc(f)) {
+    auto proc = cast<SCM_Procedure>(f);
+    arg_count = count_list_length(proc->args);
+  } else if (is_func(f)) {
+    auto func = cast<SCM_Function>(f);
+    // Count the number of argument lists provided
+    int list_count = 0;
+    auto temp = l->next->next;
+    while (temp) {
+      list_count++;
+      temp = temp->next;
+    }
+    // For functions, use the number of lists provided
+    // For variable-arg functions (n_args < 0), use list_count
+    if (func->n_args < 0) {
+      arg_count = list_count;
+    } else {
+      arg_count = func->n_args;
+    }
+  } else {
+    eval_error("for-each: first argument must be a procedure or function");
+    return nullptr;
+  }
   l = l->next->next;
 
-  SCM_List args_dummy = make_list_dummy();
-  auto args_iter = &args_dummy;
-
-  // Evaluate all argument lists
+  // Evaluate all argument lists and store them
+  // Use stack allocation with a reasonable limit to avoid heap allocation issues with continuations
+  const int MAX_FOR_EACH_ARGS = 10;
+  if (arg_count > MAX_FOR_EACH_ARGS) {
+    eval_error("for-each: too many arguments (max %d)", MAX_FOR_EACH_ARGS);
+    return nullptr;
+  }
+  SCM_List *arg_lists[MAX_FOR_EACH_ARGS];
   for (int i = 0; i < arg_count; i++) {
     if (!l) {
       eval_error("args count not match, require %d, but got %d", arg_count, i);
     }
-    auto item = make_list(eval_with_env(env, l->data));
-    result_tail->next = item;
-    result_tail = item;
+    auto evaluated_list = eval_with_env(env, l->data);
+    arg_lists[i] = cast<SCM_List>(evaluated_list);
     l = l->next;
-    auto arg = make_list();
-    args_iter->next = arg;
-    args_iter = arg;
   }
-  args_dummy.data = f;
-  assert(arg_count == 1);
-  auto arg_l = cast<SCM_List>(dummy.next->data);
-  while (arg_l) {
-    args_dummy.next->data = arg_l->data;
+
+  // Iterate through all lists simultaneously
+  bool done = false;
+  while (!done) {
+    // Check if all lists are exhausted
+    done = true;
+    for (int i = 0; i < arg_count; i++) {
+      if (arg_lists[i] != nullptr && !is_nil(arg_lists[i]->data)) {
+        done = false;
+        break;
+      }
+    }
+    if (done) {
+      break;
+    }
+
+    // Check if any list is exhausted (all should have same length)
+    for (int i = 0; i < arg_count; i++) {
+      if (arg_lists[i] == nullptr || is_nil(arg_lists[i]->data)) {
+        eval_error("for-each: lists must have the same length");
+      }
+    }
+
+    // Build args_dummy structure for function calls (rebuild each iteration to avoid issues with continuations)
+    SCM_List args_dummy = make_list_dummy();
+    args_dummy.data = f;
+    auto args_tail = &args_dummy;
+    
+    // Build argument list with quoted arguments
+    for (int i = 0; i < arg_count; i++) {
+      // Wrap argument in quote to avoid re-evaluation
+      auto quoted_arg = scm_list2(scm_sym_quote(), arg_lists[i]->data);
+      auto arg_node = make_list(quoted_arg);
+      args_tail->next = arg_node;
+      args_tail = arg_node;
+      arg_lists[i] = arg_lists[i]->next;
+    }
+
+    // Build and evaluate call expression
     SCM call_expr;
     call_expr.type = SCM::LIST;
     call_expr.value = &args_dummy;
@@ -229,12 +283,21 @@ static SCM *eval_for_each(SCM_Environment *env, SCM_List *l) {
       SCM_DEBUG_EVAL("for-each ");
       print_ast(f);
       printf(" ");
-      print_ast(arg_l->data);
+      for (int i = 0; i < arg_count; i++) {
+        auto args_iter2 = args_dummy.next;
+        for (int j = 0; j < i; j++) {
+          args_iter2 = args_iter2->next;
+        }
+        print_ast(args_iter2->data);
+        if (i < arg_count - 1) {
+          printf(" ");
+        }
+      }
       printf("\n");
     }
     eval_with_env(env, &call_expr);
-    arg_l = arg_l->next;
   }
+
   return scm_none();
 }
 

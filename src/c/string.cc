@@ -115,10 +115,17 @@ SCM *scm_c_string_set(SCM *str, SCM *k, SCM *chr) {
   return scm_none(); // Return unspecified value
 }
 
+// display: Output the argument using display format (without quotes for strings)
+SCM *scm_c_display(SCM *arg) {
+  print_ast(arg, false); // Use display format (write_mode = false)
+  return scm_none(); // Return unspecified value
+}
+
 void init_string() {
   scm_define_function("string-length", 1, 0, 0, scm_c_string_length);
   scm_define_vararg_function("make-string", scm_c_make_string);
   scm_define_function("string-ref", 2, 0, 0, scm_c_string_ref);
   scm_define_function("string-set!", 3, 0, 0, scm_c_string_set);
+  scm_define_function("display", 1, 0, 0, scm_c_display);
 }
 
