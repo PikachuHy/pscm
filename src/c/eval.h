@@ -8,6 +8,9 @@ SCM *eval_do(SCM_Environment *env, SCM_List *l);
 // map special form
 SCM *eval_map(SCM_Environment *env, SCM_List *l);
 
+// for-each special form
+SCM *eval_for_each(SCM_Environment *env, SCM_List *l);
+
 // apply special form
 SCM *eval_apply(SCM_Environment *env, SCM_List *l);
 
