@@ -15,7 +15,7 @@ struct SCM_SourceLocation {
 };
 
 struct SCM {
-  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, CHAR, BOOL, SYM, STR, MACRO } type;
+  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, CHAR, BOOL, SYM, STR, MACRO, HASH_TABLE } type;
 
   void *value;
   SCM_SourceLocation *source_loc;  // Optional source location
@@ -64,6 +64,12 @@ struct SCM_Macro {
   SCM_Symbol *name;
   SCM_Procedure *transformer;  // Macro transformer procedure
   SCM_Environment *env;        // Environment where macro was defined
+};
+
+struct SCM_HashTable {
+  SCM **buckets;        // Array of buckets (each bucket is a list of (key . value) pairs)
+  size_t capacity;      // Number of buckets
+  size_t size;          // Number of entries in the table
 };
 
 struct SCM_Environment {
@@ -140,6 +146,10 @@ inline bool is_none(SCM *scm) {
 
 inline bool is_macro(SCM *scm) {
   return scm->type == SCM::MACRO;
+}
+
+inline bool is_hash_table(SCM *scm) {
+  return scm->type == SCM::HASH_TABLE;
 }
 
 SCM *create_sym(const char *data, int len);
@@ -410,6 +420,23 @@ inline SCM *wrap(SCM_Macro *macro) {
   auto data = new SCM();
   data->type = SCM::MACRO;
   data->value = macro;
+  data->source_loc = nullptr;
+  return data;
+}
+
+template <>
+inline SCM_HashTable *cast<SCM_HashTable>(SCM *data) {
+  assert(is_hash_table(data));
+  auto l = (SCM_HashTable *)data->value;
+  return l;
+}
+
+template <>
+inline SCM *wrap(SCM_HashTable *hash_table) {
+  assert(hash_table);
+  auto data = new SCM();
+  data->type = SCM::HASH_TABLE;
+  data->value = hash_table;
   data->source_loc = nullptr;
   return data;
 }
@@ -692,6 +719,7 @@ void init_alist();
 void init_char();
 void init_string();
 void init_eval();
+void init_hash_table();
 
 extern SCM_Environment g_env;
 

@@ -206,6 +206,10 @@ entry:
   if (!is_pair(ast)) {
     if (is_sym(ast)) {
       SCM_Symbol *sym = cast<SCM_Symbol>(ast);
+      // Keywords (symbols starting with ':') are self-evaluating
+      if (sym->data && sym->data[0] == ':') {
+        RETURN_WITH_CONTEXT(ast);
+      }
       SCM *result = lookup_symbol(env, sym);
       RETURN_WITH_CONTEXT(result);
     }

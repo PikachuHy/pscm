@@ -19,32 +19,21 @@ SCM *apply_procedure(SCM_Environment *env, SCM_Procedure *proc, SCM_List *args) 
   SCM_Symbol *rest_param_sym = nullptr;
   SCM_List *penultimate_param = nullptr;
   if (args_l) {
-    // Count parameters and find the last one
-    int param_count = 0;
+    // Check if the last parameter is a rest parameter by checking is_dotted flag
+    // For (a b . rest): the last node has is_dotted = true
+    // For (a b c): all nodes have is_dotted = false
     SCM_List *last_param = args_l;
+    SCM_List *penultimate = nullptr;
     while (last_param->next) {
+      penultimate = last_param;
       last_param = last_param->next;
-      param_count++;
     }
-    param_count++; // Include the first parameter
     
-    // A rest parameter requires at least 2 parameters before it: (a b . rest)
-    // And the structure must have the rest symbol as the last node's data
-    // For (a b . rest): param_count >= 3, last_param->data is the rest symbol
-    // For (a b): param_count == 2, last_param->data is b (regular param)
-    if (param_count >= 3 && is_sym(last_param->data)) {
-      // Check if this is really a rest parameter by verifying the structure
-      // Find the penultimate parameter
-      SCM_List *penultimate = args_l;
-      while (penultimate->next != last_param) {
-        penultimate = penultimate->next;
-      }
-      // If penultimate is also a symbol (regular param), then last is rest param
-      if (is_sym(penultimate->data)) {
-        has_rest_param = true;
-        rest_param_sym = cast<SCM_Symbol>(last_param->data);
-        penultimate_param = penultimate;
-      }
+    // Check if last parameter is marked as dotted (rest parameter)
+    if (last_param->is_dotted && is_sym(last_param->data)) {
+      has_rest_param = true;
+      rest_param_sym = cast<SCM_Symbol>(last_param->data);
+      penultimate_param = penultimate;
     }
   }
   

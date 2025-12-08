@@ -1,5 +1,6 @@
 ;; TODO: %pscm_main -m REGISTER_MACHINE --test %s | FileCheck %s
 ;; RUN: %pscm_main --test %s | FileCheck %s
+;; RUN: %pscm_cc --test %s | FileCheck %s
 
 (define h (make-hash-table 31))
 ;; CHECK: #<hash-table 0/31
@@ -19,7 +20,7 @@ h
 (hash-set! h 'braz "zonk")
 ;; CHECK: 2
 (hash-fold (lambda (key value seed) (+ 1 seed)) 0 h)
-;; CHECk: (frob . #f)
+;; CHECK: (frob . #f)
 (hashq-create-handle! h 'frob #f)
 ;; CHECK: (foo . "bar")
 (hashq-get-handle h 'foo)
@@ -33,9 +34,8 @@ h
 ;; CHECK: 2
 (hash-fold (lambda (key value seed) (+ 1 seed)) 0 h)
 
-
 (define (ahash-table->list h)
-	(hash-fold acons '() (car h)))
+  (hash-fold acons '() (car h)))
 (define h (make-hash-table 31))
 (hash-set! h 'foo "bar")
 (hash-set! h 'braz "zonk")

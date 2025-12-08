@@ -103,6 +103,11 @@ void print_ast(SCM *ast, bool write_mode) {
     printf(">");
     return;
   }
+  if (is_hash_table(ast)) {
+    auto hash_table = cast<SCM_HashTable>(ast);
+    printf("#<hash-table %zu/%zu>", hash_table->size, hash_table->capacity);
+    return;
+  }
   printf("%s:%d not supported %d\n", __FILE__, __LINE__, ast->type);
   exit(1);
 }
