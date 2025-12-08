@@ -2,7 +2,7 @@
 
 pscm cc 是重新写的一套PikachuHy's Scheme的实现。
 这个版本最大的特性是学习类似Guile 1.8的方式，基于`longjmp/setjmp`实现了continuation。
-代码规模约4300行。
+代码规模约4800行。
 
 cc后缀表示使用C++编写。实际上，这版本实现是使用尽可能少的C++特性来实现，目前用到了模板、重载、inline函数和lambda表达式等。
 
@@ -24,7 +24,7 @@ pscm 依然处于非常简陋的状态
 ### 类型系统
 
 - 所有的类型都是`struct SCM`(内部是`void*`)。通过`cast<Type>(scm)`可以将`struct SCM`类型转换为具体的`Type`类型；通过`wrap(type)`可以将具体的`Type`类型转换为`struct SCM`(数字类型暂不支持)。
-- 支持的数据类型：`NONE`, `NIL`, `LIST`, `PROC`, `CONT`, `FUNC`, `NUM`, `FLOAT`, `CHAR`, `BOOL`, `SYM`, `STR`, `MACRO`
+- 支持的数据类型：`NONE`, `NIL`, `LIST`, `PROC`, `CONT`, `FUNC`, `NUM`, `FLOAT`, `CHAR`, `BOOL`, `SYM`, `STR`, `MACRO`, `HASH_TABLE`
 - 每个AST节点都携带可选的源位置信息（文件名、行号、列号），用于错误报告和调试
 - 支持整数和浮点数混合运算，自动进行类型提升
 
@@ -32,6 +32,7 @@ pscm 依然处于非常简陋的状态
 
 - List直接用链表实现(`SCM_List`)，不再是pair套pair，操作时更加简便。
 - 环境(Environment)使用链表结构，支持词法作用域(通过parent指针实现作用域链)。
+- 哈希表(`SCM_HashTable`)使用链式哈希表实现，支持三种比较方式（`eq?`、`eqv?`、`equal?`），采用C风格数据结构，避免使用C++标准库容器。
 
 ### 求值器
 
@@ -46,7 +47,7 @@ pscm 依然处于非常简陋的状态
   - **Continuation**：`call/cc`/`call-with-current-continuation`
 - 代码结构高度模块化：
   - 每个特殊形式都有独立的处理函数（`eval_define`, `eval_lambda`, `eval_if`, `eval_cond`, `eval_do`, `eval_map`, `eval_apply`等）
-  - 特殊形式已拆分到独立文件：`do.cc`（do特殊形式）、`cond.cc`（cond特殊形式）、`map.cc`（map特殊形式）、`apply.cc`（apply特殊形式）、`quasiquote.cc`（准引用）、`macro.cc`（宏展开）、`let.cc`（let系列宏展开）
+  - 特殊形式已拆分到独立文件：`do.cc`（do特殊形式）、`cond.cc`（cond特殊形式）、`map.cc`（map特殊形式）、`apply.cc`（apply特殊形式）、`quasiquote.cc`（准引用）、`macro.cc`（宏展开）、`let.cc`（let系列宏展开）、`for_each.cc`（for-each特殊形式）
   - 公共接口统一在`eval.h`中声明
 - 统一的错误处理机制：
   - 使用`eval_error`函数提供清晰的错误信息
@@ -83,9 +84,17 @@ pscm 依然处于非常简陋的状态
   - 比较运算：`=`, `<`, `>`, `<=`, `>=`, `negative?`
   - 支持整数和浮点数混合运算，自动类型提升
 - **字符操作**：`char?`, `char->integer`, `integer->char`
-- **字符串操作**：`string-length`, `make-string`（可变参数，支持可选填充字符）, `string-ref`, `string-set!`
+- **字符串操作**：`string-length`, `make-string`（可变参数，支持可选填充字符）, `string-ref`, `string-set!`, `display`
 - **相等性判断**：`eq?`, `eqv?`, `equal?`
 - **关联列表**：`assv`, `assoc`, `acons`, `assoc-ref`, `assoc-set!`, `assq-set!`, `assoc-remove!`
+- **哈希表操作**：
+  - 创建：`make-hash-table`（可变参数，支持可选容量参数）
+  - 设置值：`hash-set!`, `hashq-set!`, `hashv-set!`（分别使用`equal?`、`eq?`、`eqv?`比较）
+  - 获取值：`hash-ref`, `hashq-ref`, `hashv-ref`
+  - 获取句柄：`hash-get-handle`, `hashq-get-handle`, `hashv-get-handle`（返回`(key . value)`对）
+  - 创建句柄：`hash-create-handle!`, `hashq-create-handle!`, `hashv-create-handle!`
+  - 删除：`hash-remove!`, `hashq-remove!`, `hashv-remove!`
+  - 遍历：`hash-fold`（支持对哈希表所有条目进行折叠操作）
 - **其他**：`gensym`, `not`, `eval`
 
 ## 代码优化
@@ -115,9 +124,11 @@ pscm 依然处于非常简陋的状态
      - `procedure.cc`：过程应用
      - `continuation.cc`：continuation实现
      - `source_location.cc`：源位置跟踪
+     - `hash_table.cc`：哈希表实现（支持eq?/eqv?/equal?三种比较方式）
    - 公共接口统一在`eval.h`中声明，遵循"先include pscm.h再include其他头文件"的规范
    - 提取了公共辅助函数（`lookup_symbol`, `apply_procedure`, `count_list_length`, `update_do_variables`等）
    - 统一使用`make_list_dummy()`辅助函数创建dummy list，减少代码重复
+   - 哈希表实现中提取了通用辅助函数（`validate_and_get_bucket_idx`, `update_entry_value`, `insert_entry_to_bucket`等），消除代码重复
 
 2. **错误处理改进**：
    - 统一使用`eval_error`函数进行错误报告
@@ -132,6 +143,8 @@ pscm 依然处于非常简陋的状态
    - 移除C++标准库依赖，完全使用C风格函数（`printf`/`fprintf`替代`std::cout`）
    - 改进REPL输入处理，支持更大的输入缓冲区
    - 统一的include顺序规范，提高代码一致性
+   - 哈希表实现采用C风格数据结构，避免使用`std::map`、`std::set`、`std::unordered_map`等C++标准库容器
+   - 优化符号比较，使用`memcmp`替代`strncmp`提升性能
 
 4. **解析器重写**：
    - 完全从零实现，不依赖旧的解析器
@@ -152,6 +165,9 @@ pscm 依然处于非常简陋的状态
    - 实现了`equal?`函数，支持深度相等性比较
    - 实现了`eval`函数，支持动态求值
    - 实现了源位置跟踪系统，提升错误报告质量
+   - 实现了完整的哈希表功能集，支持三种比较方式（`eq?`、`eqv?`、`equal?`），兼容Guile 1.8的哈希表API
+   - 实现了`for-each`特殊形式，支持多列表参数，与`map`类似但用于副作用操作
+   - 实现了`display`函数，用于输出Scheme对象
 
 ## 已知限制
 
@@ -160,8 +176,8 @@ pscm 依然处于非常简陋的状态
 2. **错误处理**：错误处理机制虽然已改进，包含详细的源位置信息，但多数情况下仍直接`exit(1)`，缺少优雅的错误恢复机制（如异常捕获）。
 
 3. **性能**：
-   - 环境查找使用线性搜索（O(n)复杂度），符号比较使用`strcmp`，在大规模代码中可能成为性能瓶颈
-   - 建议使用哈希表优化环境查找性能
+   - 环境查找使用线性搜索（O(n)复杂度），符号比较使用`memcmp`，在大规模代码中可能成为性能瓶颈
+   - 哈希表已实现，可用于优化环境查找性能（待集成）
 
 4. **代码组织**：代码已高度模块化，特殊形式和内置函数都已拆分到独立文件，提高了可维护性。
 
@@ -169,7 +185,7 @@ pscm 依然处于非常简陋的状态
 
 ### 高优先级
 - **实现垃圾回收机制**：这是当前最紧迫的任务，解决内存泄漏问题
-- **优化环境查找性能**：使用哈希表替代链表，将查找复杂度从O(n)降至O(1)
+- **集成哈希表到环境查找**：哈希表已实现，需要将其集成到环境查找中，将查找复杂度从O(n)降至O(1)
 
 ### 中优先级
 - **改进错误处理机制**：支持异常处理和错误恢复（如`catch`/`throw`）
