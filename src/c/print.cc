@@ -63,7 +63,12 @@ void print_ast(SCM *ast, bool write_mode) {
   }
   if (is_sym(ast)) {
     auto sym = cast<SCM_Symbol>(ast);
-    printf("%s", sym->data);
+    // Keywords (symbols starting with ':') should be printed as #:keyword-name
+    if (sym->data && sym->data[0] == ':') {
+      printf("#%s", sym->data);
+    } else {
+      printf("%s", sym->data);
+    }
     return;
   }
   if (is_str(ast)) {
