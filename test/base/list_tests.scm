@@ -1,5 +1,4 @@
-;; RUN: %pscm_main -m REGISTER_MACHINE --test %s | FileCheck %s
-;; RUN: %pscm_main --test %s | FileCheck %s
+;; RUN: %pscm_cc --test %s | FileCheck %s
 
 ;; CHECK: ()
 (append)
@@ -29,7 +28,7 @@ b
 
 (define a '(a b c d))
 (define b (list-tail a 3))
-;; CHECK: (b c d)
+;; CHECK: (d)
 b
 
 ;; CHECK: (d)

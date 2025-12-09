@@ -1,4 +1,5 @@
 #include "pscm.h"
+#include "eval.h"
 
 SCM *scm_list1(SCM *arg) {
   auto l = make_list(arg);
@@ -189,6 +190,129 @@ SCM *scm_append(SCM_List *args) {
   return scm_nil();
 }
 
+// list-head: Copy the first k elements from lst into a new list
+SCM *scm_c_list_head(SCM *lst, SCM *k) {
+  if (!is_pair(lst)) {
+    eval_error("list-head: first argument must be a pair");
+    return nullptr;
+  }
+  if (!is_num(k)) {
+    eval_error("list-head: second argument must be a number");
+    return nullptr;
+  }
+  
+  size_t count = (size_t)(int64_t)k->value;
+  SCM_List dummy = make_list_dummy();
+  SCM_List *tail = &dummy;
+  SCM_List *current = cast<SCM_List>(lst);
+  
+  while (count > 0 && current) {
+    SCM_List *node = make_list(current->data);
+    tail->next = node;
+    tail = node;
+    current = current->next;
+    count--;
+  }
+  
+  if (count > 0) {
+    eval_error("list-head: list too short");
+    return nullptr;
+  }
+  
+  if (dummy.next) {
+    return wrap(dummy.next);
+  }
+  return scm_nil();
+}
+
+// list-tail: Return the tail of lst beginning with its kth element (shared structure)
+SCM *scm_c_list_tail(SCM *lst, SCM *k) {
+  if (!is_pair(lst) && !is_nil(lst)) {
+    eval_error("list-tail: first argument must be a pair or nil");
+    return nullptr;
+  }
+  if (!is_num(k)) {
+    eval_error("list-tail: second argument must be a number");
+    return nullptr;
+  }
+  
+  size_t count = (size_t)(int64_t)k->value;
+  SCM_List *current = cast<SCM_List>(lst);
+  
+  while (count > 0) {
+    if (!current || is_nil(wrap(current))) {
+      eval_error("list-tail: list too short");
+      return nullptr;
+    }
+    current = current->next;
+    count--;
+  }
+  
+  if (current) {
+    return wrap(current);
+  }
+  return scm_nil();
+}
+
+// set-cdr!: Store value in the cdr field of pair
+SCM *scm_c_set_cdr(SCM *pair, SCM *value) {
+  if (!is_pair(pair)) {
+    eval_error("set-cdr!: first argument must be a pair");
+    return nullptr;
+  }
+  
+  auto l = cast<SCM_List>(pair);
+  if (is_pair(value)) {
+    l->next = cast<SCM_List>(value);
+  } else if (is_nil(value)) {
+    l->next = nullptr;
+  } else {
+    // Create a dotted pair: (car . value)
+    l->next = make_list(value);
+    l->next->is_dotted = true;
+  }
+  
+  return scm_none();
+}
+
+// last-pair: Return the last pair in lst (using Floyd's cycle detection)
+SCM *scm_c_last_pair(SCM *lst) {
+  if (is_nil(lst)) {
+    return scm_nil();
+  }
+  if (!is_pair(lst)) {
+    eval_error("last-pair: argument must be a pair or nil");
+    return nullptr;
+  }
+  
+  SCM_List *tortoise = cast<SCM_List>(lst);
+  SCM_List *hare = cast<SCM_List>(lst);
+  
+  // Floyd's cycle detection algorithm
+  while (true) {
+    // Move hare two steps
+    if (!hare->next || is_nil(wrap(hare->next))) {
+      // Reached end, return tortoise (last pair)
+      return wrap(tortoise);
+    }
+    hare = hare->next;
+    if (!hare->next || is_nil(wrap(hare->next))) {
+      // Reached end, return hare (last pair)
+      return wrap(hare);
+    }
+    hare = hare->next;
+    
+    // Move tortoise one step
+    tortoise = tortoise->next;
+    
+    // Check for cycle
+    if (hare == tortoise) {
+      eval_error("last-pair: circular structure detected");
+      return nullptr;
+    }
+  }
+}
+
 void init_list() {
   scm_define_function("car", 1, 0, 0, car);
   scm_define_function("cdr", 1, 0, 0, cdr);
@@ -198,4 +322,8 @@ void init_list() {
   scm_define_function("cons", 2, 0, 0, scm_cons);
   scm_define_vararg_function("list", scm_list);
   scm_define_vararg_function("append", scm_append);
+  scm_define_function("list-head", 2, 0, 0, scm_c_list_head);
+  scm_define_function("list-tail", 2, 0, 0, scm_c_list_tail);
+  scm_define_function("set-cdr!", 2, 0, 0, scm_c_set_cdr);
+  scm_define_function("last-pair", 1, 0, 0, scm_c_last_pair);
 }
