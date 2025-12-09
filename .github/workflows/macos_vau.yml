@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         mode: [ Debug ]
-    runs-on: [ macos-13 ]
+    runs-on: [ macos-15 ]
 
     steps:
       - uses: actions/checkout@v4
@@ -51,7 +51,7 @@ jobs:
           key: ${{ github.job }}-${{ matrix.mode}}
 
       - name: Configure CMake
-        run: PKG_CONFIG_PATH=/usr/local/opt/icu4c/lib/pkgconfig cmake -S ${{github.workspace}}/../vau -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON
+        run: PKG_CONFIG_PATH=/opt/homebrew/Cellar/icu4c@78/78.1/lib/pkgconfig cmake -S ${{github.workspace}}/../vau -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --config ${{matrix.mode}} -j --verbose
