@@ -15,7 +15,7 @@ struct SCM_SourceLocation {
 };
 
 struct SCM {
-  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, CHAR, BOOL, SYM, STR, MACRO, HASH_TABLE } type;
+  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, CHAR, BOOL, SYM, STR, MACRO, HASH_TABLE, RATIO } type;
 
   void *value;
   SCM_SourceLocation *source_loc;  // Optional source location
@@ -36,6 +36,11 @@ struct SCM_Symbol {
 struct SCM_String {
   char *data;
   int len;
+};
+
+struct SCM_Rational {
+  int64_t numerator;
+  int64_t denominator;
 };
 
 struct SCM_Procedure {
@@ -105,6 +110,10 @@ inline bool is_num(SCM *scm) {
 
 inline bool is_float(SCM *scm) {
   return scm->type == SCM::FLOAT;
+}
+
+inline bool is_ratio(SCM *scm) {
+  return scm->type == SCM::RATIO;
 }
 
 inline bool is_char(SCM *scm) {
@@ -268,12 +277,15 @@ inline SCM *scm_from_double(double val) {
   return scm;
 }
 
-// Convert SCM to double (handles both NUM and FLOAT)
+// Convert SCM to double (handles NUM, FLOAT, and RATIO)
 inline double scm_to_double(SCM *scm) {
   if (is_float(scm)) {
     return ptr_to_double(scm->value);
   } else if (is_num(scm)) {
     return (double)(int64_t)scm->value;
+  } else if (is_ratio(scm)) {
+    SCM_Rational *rat = (SCM_Rational *)scm->value;
+    return (double)rat->numerator / (double)rat->denominator;
   }
   return 0.0;
 }
@@ -445,6 +457,12 @@ template <>
 inline SCM_Macro *cast<SCM_Macro>(SCM *data) {
   assert(is_macro(data));
   return (SCM_Macro *)data->value;
+}
+
+template <>
+inline SCM_Rational *cast<SCM_Rational>(SCM *data) {
+  assert(is_ratio(data));
+  return (SCM_Rational *)data->value;
 }
 
 inline SCM *car(SCM *data) {

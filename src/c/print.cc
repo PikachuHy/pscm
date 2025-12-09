@@ -40,6 +40,11 @@ void print_ast(SCM *ast, bool write_mode) {
     }
     return;
   }
+  if (is_ratio(ast)) {
+    SCM_Rational *rat = cast<SCM_Rational>(ast);
+    printf("%lld/%lld", rat->numerator, rat->denominator);
+    return;
+  }
   if (is_char(ast)) {
     char ch = ptr_to_char(ast->value);
     // write_mode: print as #\A, #\., etc. (write format)

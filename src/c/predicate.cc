@@ -24,6 +24,10 @@ SCM *scm_c_is_pair(SCM *arg) {
   return scm_c_type_check(arg, is_pair);
 }
 
+SCM *scm_c_is_number(SCM *arg) {
+  return scm_c_type_check(arg, [](SCM *a) { return is_num(a) || is_float(a); });
+}
+
 SCM *scm_c_not(SCM *arg) {
   if (is_false(arg) || is_nil(arg)) {
     return scm_bool_true();
@@ -36,6 +40,7 @@ void init_predicate() {
   scm_define_function("boolean?", 1, 0, 0, scm_c_is_boolean);
   scm_define_function("null?", 1, 0, 0, scm_c_is_null);
   scm_define_function("pair?", 1, 0, 0, scm_c_is_pair);
+  scm_define_function("number?", 1, 0, 0, scm_c_is_number);
   scm_define_function("not", 1, 0, 0, scm_c_not);
 }
 
