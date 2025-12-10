@@ -738,6 +738,7 @@ void init_char();
 void init_string();
 void init_eval();
 void init_hash_table();
+void init_procedure();
 
 extern SCM_Environment g_env;
 

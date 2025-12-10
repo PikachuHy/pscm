@@ -35,6 +35,10 @@ SCM *scm_c_not(SCM *arg) {
   return scm_bool_false();
 }
 
+SCM *scm_c_noop() {
+  return scm_bool_false();
+}
+
 void init_predicate() {
   scm_define_function("procedure?", 1, 0, 0, scm_c_is_procedure);
   scm_define_function("boolean?", 1, 0, 0, scm_c_is_boolean);
@@ -42,5 +46,6 @@ void init_predicate() {
   scm_define_function("pair?", 1, 0, 0, scm_c_is_pair);
   scm_define_function("number?", 1, 0, 0, scm_c_is_number);
   scm_define_function("not", 1, 0, 0, scm_c_not);
+  scm_define_function("noop", 0, 0, 0, scm_c_noop);
 }
 

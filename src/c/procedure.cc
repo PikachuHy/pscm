@@ -99,3 +99,19 @@ SCM *apply_procedure(SCM_Environment *env, SCM_Procedure *proc, SCM_List *args) 
   return eval_with_list(proc_env, proc->body);
 }
 
+SCM *scm_c_procedure_name(SCM *arg) {
+  if (!is_proc(arg)) {
+    eval_error("procedure-name: expected procedure");
+    return nullptr;
+  }
+  SCM_Procedure *proc = cast<SCM_Procedure>(arg);
+  if (proc->name) {
+    return wrap(proc->name);
+  }
+  return scm_bool_false();
+}
+
+void init_procedure() {
+  scm_define_function("procedure-name", 1, 0, 0, scm_c_procedure_name);
+}
+

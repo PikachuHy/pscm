@@ -18,5 +18,6 @@ void init_scm() {
   init_string();
   init_eval();
   init_hash_table();
+  init_procedure();
 }
 

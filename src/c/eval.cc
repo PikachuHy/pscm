@@ -81,7 +81,7 @@ static SCM *eval_set(SCM_Environment *env, SCM_List *l) {
   return scm_nil();
 }
 
-static SCM *eval_lambda(SCM_Environment *env, SCM_List *l) {
+SCM *eval_lambda(SCM_Environment *env, SCM_List *l) {
   auto proc_sig = cast<SCM_List>(l->next->data);
   auto proc = make_proc(nullptr, proc_sig, l->next->next, env);
   auto ret = wrap(proc);
@@ -92,44 +92,6 @@ static SCM *eval_lambda(SCM_Environment *env, SCM_List *l) {
     print_list(l);
     printf("\n");
   }
-  return ret;
-}
-
-static SCM *eval_define(SCM_Environment *env, SCM_List *l) {
-  if (l->next && is_sym(l->next->data)) {
-    // Define variable: (define var value)
-    SCM_Symbol *varname = cast<SCM_Symbol>(l->next->data);
-    SCM_DEBUG_EVAL("define variable %s\n", varname->data);
-    auto val = eval_with_env(env, l->next->next->data);
-    assert(val);
-    if (is_proc(val)) {
-      auto proc = cast<SCM_Procedure>(val);
-      if (proc->name == nullptr) {
-        proc->name = varname;
-        SCM_DEBUG_EVAL("define proc from lambda\n");
-      }
-    }
-    scm_env_insert(env, varname, val);
-    return scm_none();
-  }
-  // Define procedure: (define (name args...) body...)
-  SCM_List *proc_sig = cast<SCM_List>(l->next->data);
-  SCM_DEBUG_EVAL("define a procedure");
-  if (!is_sym(proc_sig->data)) {
-    eval_error("not supported define form");
-  }
-  SCM_Symbol *proc_name = cast<SCM_Symbol>(proc_sig->data);
-  SCM_DEBUG_EVAL(" %s with params ", proc_name->data);
-  if (debug_enabled) {
-    printf("(");
-    if (proc_sig->next) {
-      print_ast(proc_sig->next->data);
-    }
-    printf(")\n");
-  }
-  auto proc = make_proc(proc_name, proc_sig->next, l->next->next, env);
-  SCM *ret = wrap(proc);
-  scm_env_insert(env, proc_name, ret);
   return ret;
 }
 
