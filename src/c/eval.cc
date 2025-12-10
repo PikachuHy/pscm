@@ -250,6 +250,25 @@ entry:
       }
       goto entry;
     }
+    else if (is_sym_val(l->data, "begin")) {
+      // begin: evaluate all expressions in sequence, return the last one
+      if (!l->next) {
+        // No expressions, return #f
+        RETURN_WITH_CONTEXT(scm_bool_false());
+      }
+      SCM_List *current = l->next;
+      SCM *result = scm_bool_false();
+      // Evaluate all expressions except the last one
+      while (current && current->next) {
+        eval_with_env(env, current->data);
+        current = current->next;
+      }
+      // Evaluate and return the last expression
+      if (current) {
+        result = eval_with_env(env, current->data);
+      }
+      RETURN_WITH_CONTEXT(result);
+    }
     else if (is_sym_val(l->data, "for-each")) {
       SCM *result = eval_for_each(env, l);
       RETURN_WITH_CONTEXT(result);

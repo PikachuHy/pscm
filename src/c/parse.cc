@@ -609,6 +609,21 @@ static SCM *parse_expr(Parser *p) {
     return result;
   }
   
+  // Special case: check for 1+ and 1- symbols before parsing as number
+  // These are valid Scheme identifiers that start with a digit
+  if ((strncmp(p->pos, "1+", 2) == 0 && 
+       (p->pos[2] == '\0' || isspace((unsigned char)p->pos[2]) || 
+        p->pos[2] == ')' || p->pos[2] == '(' || p->pos[2] == ';')) ||
+      (strncmp(p->pos, "1-", 2) == 0 && 
+       (p->pos[2] == '\0' || isspace((unsigned char)p->pos[2]) || 
+        p->pos[2] == ')' || p->pos[2] == '(' || p->pos[2] == ';'))) {
+    // Parse as symbol instead of number
+    result = parse_symbol(p);
+    if (result) {
+      return result;
+    }
+  }
+  
   // Number
   result = parse_number(p);
   if (result) {
