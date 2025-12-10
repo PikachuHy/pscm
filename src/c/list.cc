@@ -254,6 +254,19 @@ SCM *scm_c_list_tail(SCM *lst, SCM *k) {
   return scm_nil();
 }
 
+// set-car!: Store value in the car field of pair
+SCM *scm_c_set_car(SCM *pair, SCM *value) {
+  if (!is_pair(pair)) {
+    eval_error("set-car!: first argument must be a pair");
+    return nullptr;
+  }
+  
+  auto l = cast<SCM_List>(pair);
+  l->data = value;
+  
+  return scm_none();
+}
+
 // set-cdr!: Store value in the cdr field of pair
 SCM *scm_c_set_cdr(SCM *pair, SCM *value) {
   if (!is_pair(pair)) {
@@ -324,6 +337,7 @@ void init_list() {
   scm_define_vararg_function("append", scm_append);
   scm_define_function("list-head", 2, 0, 0, scm_c_list_head);
   scm_define_function("list-tail", 2, 0, 0, scm_c_list_tail);
+  scm_define_function("set-car!", 2, 0, 0, scm_c_set_car);
   scm_define_function("set-cdr!", 2, 0, 0, scm_c_set_cdr);
   scm_define_function("last-pair", 1, 0, 0, scm_c_last_pair);
 }

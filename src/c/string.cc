@@ -121,11 +121,29 @@ SCM *scm_c_display(SCM *arg) {
   return scm_none(); // Return unspecified value
 }
 
+// newline: Output a newline character (optionally to a port)
+SCM *scm_c_newline(SCM_List *args) {
+  // args is the list of arguments (not including function name)
+  // If no arguments, args is nullptr or args->data is nullptr
+  if (!args) {
+    // No arguments: output to stdout
+    printf("\n");
+  } else if (!args->data) {
+    // Empty argument list: output to stdout
+    printf("\n");
+  } else {
+    // One argument: port (not yet implemented, just output to stdout for now)
+    printf("\n");
+  }
+  return scm_none();
+}
+
 void init_string() {
   scm_define_function("string-length", 1, 0, 0, scm_c_string_length);
   scm_define_vararg_function("make-string", scm_c_make_string);
   scm_define_function("string-ref", 2, 0, 0, scm_c_string_ref);
   scm_define_function("string-set!", 3, 0, 0, scm_c_string_set);
   scm_define_function("display", 1, 0, 0, scm_c_display);
+  scm_define_vararg_function("newline", scm_c_newline);
 }
 

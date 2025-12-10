@@ -1,6 +1,6 @@
 ;; RUN: %pscm_main -m REGISTER_MACHINE --test %s | FileCheck %s
 ;; TODO: %pscm_main --test %s | FileCheck %s
-
+;; RUN: %pscm_cc --test %s | FileCheck %s
 ;;; Test code from https://www.shido.info/lisp/scheme_cc_e.html 4.3. Coroutine
 
 (define (1+ x) (+ x 1))
