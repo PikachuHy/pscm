@@ -20,7 +20,7 @@ void print_ast(SCM *ast, bool write_mode) {
   }
   if (is_cont(ast)) {
     auto cont = cast<SCM_Continuation>(ast);
-    printf("<continuation@%p>", cont);
+    printf("#<continuation@%p>", cont);
     return;
   }
   if (is_num(ast)) {
