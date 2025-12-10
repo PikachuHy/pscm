@@ -144,6 +144,7 @@ static SCM *eval_call_cc(SCM_Environment *env, SCM_List *l, SCM **ast) {
   return nullptr; // Signal to continue evaluation
 }
 
+
 SCM *eval_with_env(SCM_Environment *env, SCM *ast) {
   assert(env);
   assert(ast);
@@ -283,6 +284,10 @@ entry:
     }
     else if (is_sym_val(l->data, "apply")) {
       SCM *result = eval_apply(env, l);
+      RETURN_WITH_CONTEXT(result);
+    }
+    else if (is_sym_val(l->data, "call-with-values")) {
+      SCM *result = eval_call_with_values(env, l);
       RETURN_WITH_CONTEXT(result);
     }
     else {

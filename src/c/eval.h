@@ -14,6 +14,9 @@ SCM *eval_for_each(SCM_Environment *env, SCM_List *l);
 // apply special form
 SCM *eval_apply(SCM_Environment *env, SCM_List *l);
 
+// call-with-values special form
+SCM *eval_call_with_values(SCM_Environment *env, SCM_List *l);
+
 // cond special form
 SCM *eval_cond(SCM_Environment *env, SCM_List *l, SCM **ast);
 

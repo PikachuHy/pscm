@@ -737,6 +737,7 @@ void init_alist();
 void init_char();
 void init_string();
 void init_eval();
+void init_values();
 void init_hash_table();
 void init_procedure();
 

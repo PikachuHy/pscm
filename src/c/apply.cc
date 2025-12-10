@@ -32,10 +32,76 @@ SCM *eval_apply(SCM_Environment *env, SCM_List *l) {
   // Evaluate the procedure
   SCM *proc = eval_with_env(env, l->next->data);
   
-  // When args are evaluated, proc might already be a procedure
+  // When args are evaluated, proc might already be a procedure or continuation
   // But we still need to check
-  if (!is_proc(proc) && !is_func(proc)) {
+  if (!is_proc(proc) && !is_func(proc) && !is_cont(proc)) {
     eval_error("apply: first argument must be a procedure");
+  }
+  
+  // Special handling for continuation: it accepts a single argument (a list)
+  if (is_cont(proc)) {
+    if (!l->next->next) {
+      eval_error("apply: requires at least 2 arguments (procedure and arguments list)");
+    }
+    // For continuation, if there's only one argument after proc, use it directly
+    // Otherwise, collect all arguments (before the last one) and the last list
+    if (!l->next->next->next) {
+      // Only one argument: (apply cont things) -> use things directly
+      SCM *arg = eval_with_env(env, l->next->next->data);
+      if (!is_pair(arg) && !is_nil(arg)) {
+        eval_error("apply: last argument must be a list");
+      }
+      scm_dynthrow(proc, arg);
+      return nullptr;
+    }
+    
+    // Multiple arguments: collect them
+    SCM_List *args_before_last = l->next->next;
+    SCM_List *last_arg_node = nullptr;
+    
+    // Find the last argument (which should be a list)
+    SCM_List *current = args_before_last;
+    while (current->next) {
+      current = current->next;
+    }
+    last_arg_node = current;
+    
+    // Evaluate the last argument (should be a list)
+    SCM *last_arg = eval_with_env(env, last_arg_node->data);
+    if (!is_pair(last_arg) && !is_nil(last_arg)) {
+      eval_error("apply: last argument must be a list");
+    }
+    
+    // Build combined list: args_before_last elements + last_arg elements
+    SCM_List args_dummy = make_list_dummy();
+    SCM_List *args_tail = &args_dummy;
+    
+    // Add all arguments before the last one
+    current = args_before_last;
+    while (current != last_arg_node) {
+      SCM *arg_val = eval_with_env(env, current->data);
+      SCM_List *node = make_list(arg_val);
+      args_tail->next = node;
+      args_tail = node;
+      current = current->next;
+    }
+    
+    // Append all elements from the last argument list
+    if (is_pair(last_arg)) {
+      SCM_List *last_list = cast<SCM_List>(last_arg);
+      while (last_list) {
+        SCM *elem = last_list->data;
+        SCM_List *node = make_list(elem);
+        args_tail->next = node;
+        args_tail = node;
+        last_list = last_list->next;
+      }
+    }
+    
+    // Pass the combined list to continuation
+    SCM *combined_list = args_dummy.next ? wrap(args_dummy.next) : scm_nil();
+    scm_dynthrow(proc, combined_list);
+    return nullptr;  // Never reached, but satisfies compiler
   }
   
   // Collect all arguments before the last one
