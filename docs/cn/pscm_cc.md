@@ -2,7 +2,7 @@
 
 pscm cc 是重新写的一套PikachuHy's Scheme的实现。
 这个版本最大的特性是学习类似Guile 1.8的方式，基于`longjmp/setjmp`实现了continuation。
-代码规模约4800行。
+代码规模约6500行。
 
 cc后缀表示使用C++编写。实际上，这版本实现是使用尽可能少的C++特性来实现，目前用到了模板、重载、inline函数和lambda表达式等。
 
@@ -40,15 +40,25 @@ pscm 依然处于非常简陋的状态
 - eval部分，用了goto，在部分情况下可以减小栈的深度，做到类似尾递归的效果。
 - 支持的特殊形式：
   - **定义和绑定**：`define`, `define-macro`, `lambda`, `set!`
-  - **控制流**：`if`, `cond`(支持`else`和`=>`语法)
+  - **控制流**：`if`, `cond`(支持`else`和`=>`语法), `begin`
   - **作用域**：`let`/`let*`/`letrec`(通过宏展开实现)
   - **循环**：`do`, `for-each`, `map`
   - **引用**：`quote`, `quasiquote`
   - **函数应用**：`apply`
   - **Continuation**：`call/cc`/`call-with-current-continuation`
+  - **多值处理**：`call-with-values`
 - 代码结构高度模块化：
-  - 每个特殊形式都有独立的处理函数（`eval_define`, `eval_lambda`, `eval_if`, `eval_cond`, `eval_do`, `eval_map`, `eval_apply`等）
-  - 特殊形式已拆分到独立文件：`do.cc`（do特殊形式）、`cond.cc`（cond特殊形式）、`map.cc`（map特殊形式）、`apply.cc`（apply特殊形式）、`quasiquote.cc`（准引用）、`macro.cc`（宏展开）、`let.cc`（let系列宏展开）、`for_each.cc`（for-each特殊形式）
+  - 每个特殊形式都有独立的处理函数（`eval_define`, `eval_lambda`, `eval_if`, `eval_cond`, `eval_do`, `eval_map`, `eval_apply`, `eval_call_with_values`等）
+  - 特殊形式已拆分到独立文件：
+     - `do.cc`：do特殊形式
+     - `cond.cc`：cond特殊形式（支持`else`和`=>`语法）
+     - `map.cc`：map特殊形式
+     - `apply.cc`：apply特殊形式
+     - `quasiquote.cc`：准引用处理
+     - `macro.cc`：宏展开和定义
+     - `let.cc`：let/let*/letrec宏展开
+     - `for_each.cc`：for-each特殊形式
+     - `values.cc`：call-with-values特殊形式和values函数实现
   - 公共接口统一在`eval.h`中声明
 - 统一的错误处理机制：
   - 使用`eval_error`函数提供清晰的错误信息
@@ -58,11 +68,14 @@ pscm 依然处于非常简陋的状态
 ### Continuation实现
 
 - 基于`setjmp/longjmp`实现continuation，通过栈复制的方式保存和恢复执行上下文。
+- 支持continuation的打印，格式为`#<continuation@地址>`
+- `apply`函数支持对continuation的调用，可以将参数列表传递给continuation
 
 ### 解析器
 
 - 完全从零实现的递归下降解析器，不依赖任何外部解析库。
 - 支持完整的Scheme语法：数字、符号、字符串、布尔值、列表、引号、准引用、点对、注释等。
+- 特殊处理：支持`1+`和`1-`作为符号（在数字解析之前检查，避免被解析为数字`1`和符号`+`/`-`），这在定义函数名时很有用（如`(define (1+ x) (+ x 1))`）。
 - 提供清晰的错误报告，包含文件名、行号和列号信息。
 - 支持文件解析和字符串解析两种模式。
 - 解析时自动记录每个AST节点的源位置信息，用于后续错误报告。
@@ -79,14 +92,14 @@ pscm 依然处于非常简陋的状态
 
 当前实现的内置函数包括：
 - **类型检查**：`procedure?`, `boolean?`, `null?`, `pair?`, `char?`, `number?`
-- **列表操作**：`car`, `cdr`, `cadr`, `cddr`, `caddr`, `cons`, `list`, `append`
+- **列表操作**：`car`, `cdr`, `cadr`, `cddr`, `caddr`, `cons`, `list`, `append`, `list-head`, `list-tail`, `last-pair`, `set-car!`, `set-cdr!`
 - **数字运算**：
   - 算术运算：`+`（泛型，支持可变参数）、`-`（可变参数，支持一元取反和多元减法）、`*`（泛型，支持可变参数，支持分数运算）、`/`（可变参数，支持分数运算，返回分数或浮点数）、`expt`（幂运算，支持负指数）、`abs`
   - 比较运算：`=`, `<`, `>`, `<=`, `>=`, `negative?`
   - 支持整数、浮点数和分数混合运算，自动类型提升
   - 分数运算：除法运算（`/`）会自动返回分数类型（如`1/3`），分数与整数、浮点数之间的运算会自动处理
 - **字符操作**：`char?`, `char->integer`, `integer->char`
-- **字符串操作**：`string-length`, `make-string`（可变参数，支持可选填充字符）, `string-ref`, `string-set!`, `display`
+- **字符串操作**：`string-length`, `make-string`（可变参数，支持可选填充字符）, `string-ref`, `string-set!`, `display`, `newline`（可变参数，支持可选端口参数）
 - **相等性判断**：`eq?`, `eqv?`, `equal?`
 - **关联列表**：`assv`, `assoc`, `acons`, `assoc-ref`, `assoc-set!`, `assq-set!`, `assoc-remove!`
 - **哈希表操作**：
@@ -97,6 +110,7 @@ pscm 依然处于非常简陋的状态
   - 创建句柄：`hash-create-handle!`, `hashq-create-handle!`, `hashv-create-handle!`
   - 删除：`hash-remove!`, `hashq-remove!`, `hashv-remove!`
   - 遍历：`hash-fold`（支持对哈希表所有条目进行折叠操作）
+- **多值处理**：`values`（可变参数，返回参数列表，用于`call-with-values`）
 - **其他**：`gensym`, `not`, `eval`
 
 ## 代码优化
@@ -104,7 +118,7 @@ pscm 依然处于非常简陋的状态
 ### 已完成优化
 
 1. **代码模块化**：
-   - 所有特殊形式处理函数都已提取为独立函数（`eval_define`, `eval_lambda`, `eval_if`, `eval_cond`, `eval_do`, `eval_for_each`, `eval_map`, `eval_apply`等）
+   - 所有特殊形式处理函数都已提取为独立函数（`eval_define`, `eval_lambda`, `eval_if`, `eval_cond`, `eval_do`, `eval_for_each`, `eval_map`, `eval_apply`, `eval_call_with_values`等）
    - 特殊形式已拆分到独立文件：
      - `do.cc`：do特殊形式
      - `cond.cc`：cond特殊形式（支持`else`和`=>`语法）
@@ -113,6 +127,8 @@ pscm 依然处于非常简陋的状态
      - `quasiquote.cc`：准引用处理
      - `macro.cc`：宏展开和定义
      - `let.cc`：let/let*/letrec宏展开
+     - `for_each.cc`：for-each特殊形式
+     - `values.cc`：call-with-values特殊形式和values函数实现
    - 内置函数按功能分类到独立文件：
      - `predicate.cc`：类型检查谓词
      - `number.cc`：数字运算（支持整数和浮点数）
@@ -127,6 +143,7 @@ pscm 依然处于非常简陋的状态
      - `continuation.cc`：continuation实现
      - `source_location.cc`：源位置跟踪
      - `hash_table.cc`：哈希表实现（支持eq?/eqv?/equal?三种比较方式）
+     - `values.cc`：call-with-values特殊形式和values函数实现
    - 公共接口统一在`eval.h`中声明，遵循"先include pscm.h再include其他头文件"的规范
    - 提取了公共辅助函数（`lookup_symbol`, `apply_procedure`, `count_list_length`, `update_do_variables`等）
    - 统一使用`make_list_dummy()`辅助函数创建dummy list，减少代码重复
@@ -151,6 +168,7 @@ pscm 依然处于非常简陋的状态
 4. **解析器重写**：
    - 完全从零实现，不依赖旧的解析器
    - 支持完整的Scheme语法特性（包括准引用）
+   - 特殊处理`1+`和`1-`符号，避免被误解析为数字和运算符
    - 清晰的错误报告机制
    - 自动记录每个AST节点的源位置信息
 
@@ -178,6 +196,14 @@ pscm 依然处于非常简陋的状态
    - 实现了完整的哈希表功能集，支持三种比较方式（`eq?`、`eqv?`、`equal?`），兼容Guile 1.8的哈希表API
    - 实现了`for-each`特殊形式，支持多列表参数，与`map`类似但用于副作用操作
    - 实现了`display`函数，用于输出Scheme对象
+   - 实现了`begin`特殊形式，支持顺序执行多个表达式
+   - 实现了`set-car!`和`set-cdr!`函数，支持修改pair的car和cdr字段
+   - 实现了`newline`函数，用于输出换行符（支持可选端口参数）
+   - 实现了`call-with-values`特殊形式，支持多值传递机制
+   - 实现了`values`函数，用于返回多个值（作为列表）
+   - 改进了`apply`函数，支持对continuation的调用
+   - 修复了rest参数的处理，支持只有rest参数的情况（如`(values . things)`）
+   - 修复了continuation的打印格式，添加了`#`前缀（`#<continuation@...>`）
 
 ## 已知限制
 
@@ -200,7 +226,7 @@ pscm 依然处于非常简陋的状态
 ### 中优先级
 - **改进错误处理机制**：支持异常处理和错误恢复（如`catch`/`throw`）
 - **代码进一步模块化**：继续拆分`eval.cc`，提高可维护性
-- **支持更多Scheme标准特性**：`case`, `and`, `or`, `begin`等
+- **支持更多Scheme标准特性**：`case`, `and`, `or`等
 
 ### 低优先级
 - **优化解析器性能**：支持更大的文件
