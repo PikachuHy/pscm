@@ -1,12 +1,13 @@
-;; RUN: %pscm_main -m REGISTER_MACHINE --test %s | FileCheck %s
+;; TODO: %pscm_main -m REGISTER_MACHINE --test %s | FileCheck %s
 ;; TODO: %pscm_main --test %s | FileCheck %s
+;; RUN: %pscm_cc --test %s | FileCheck %s
 
 (define cc #f)
 ;; CHECK: #f
 cc
 ;; CHECK: 14
 (+ (call/cc (lambda (return) (set! cc return) (* 2 3)))(+ 1 7))
-;; CHECK: 
+;; CHECK: #<continuation@
 cc
 ;; CHECK: 18
 (cc 10)
