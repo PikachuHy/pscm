@@ -33,6 +33,23 @@ static bool is_constant_expr(SCM *expr) {
   return false;
 }
 
+// Helper function to check if expr is (quote symbol) and return the symbol, or NULL
+static SCM *get_quoted_symbol(SCM *expr) {
+  if (!is_pair(expr)) {
+    return NULL;
+  }
+  SCM_List *l = cast<SCM_List>(expr);
+  if (l->data && is_sym(l->data)) {
+    SCM_Symbol *sym = cast<SCM_Symbol>(l->data);
+    if (strcmp(sym->data, "quote") == 0 && l->next && !l->next->next) {
+      if (is_sym(l->next->data)) {
+        return l->next->data;
+      }
+    }
+  }
+  return NULL;
+}
+
 // Helper function to combine skeletons in quasiquote expansion
 static SCM *combine_skeletons(SCM_Environment *env, SCM *left, SCM *right, SCM *original) {
   // If both are constants, evaluate and quote
@@ -48,24 +65,105 @@ static SCM *combine_skeletons(SCM_Environment *env, SCM *left, SCM *right, SCM *
     return scm_list2(create_sym("list", 4), left);
   }
   
-  // If right is (list ...), merge left into it
-  if (is_pair(right)) {
-    SCM_List *right_list = cast<SCM_List>(right);
-    if (right_list->data && is_sym(right_list->data)) {
-      SCM_Symbol *sym = cast<SCM_Symbol>(right_list->data);
-      if (strcmp(sym->data, "list") == 0) {
-        // Merge: (list left ...rest)
-        SCM_List *new_list = make_list(create_sym("list", 4));
-        new_list->next = make_list(left);
-        SCM_List *tail = new_list->next;
-        SCM_List *rest = right_list->next;
-        while (rest) {
-          tail->next = make_list(rest->data);
-          tail = tail->next;
-          rest = rest->next;
+  // Check if left is (quote list) - this happens when we have (list ,@expr)
+  // When we have (list ,@items), we want to produce (list ...items...)
+  // The right side will be (append items rest) or just items
+  SCM *left_quoted_sym = get_quoted_symbol(left);
+  if (left_quoted_sym && is_sym(left_quoted_sym)) {
+    SCM_Symbol *left_sym = cast<SCM_Symbol>(left_quoted_sym);
+    if (strcmp(left_sym->data, "list") == 0) {
+      // left is (quote list), right should be merged into (list ...)
+      // If right is (list ...), merge left's elements (none) into it
+      if (is_pair(right)) {
+        SCM_List *right_list = cast<SCM_List>(right);
+        if (right_list->data && is_sym(right_list->data)) {
+          SCM_Symbol *sym = cast<SCM_Symbol>(right_list->data);
+          if (strcmp(sym->data, "list") == 0) {
+            // right is already (list ...), just return it
+            return right;
+          }
+          // If right is (append items rest), we need to handle it specially
+          // For (list ,@items), we want (list ...items...)
+          // If right is (append items nil), convert to (apply list items)
+          // If right is (append items rest), convert to (append (list) (append items rest))
+          // or use apply: (apply list (append items rest))
+          if (strcmp(sym->data, "append") == 0) {
+            // right is (append items rest)
+            SCM_List *rest = right_list->next;
+            if (rest && rest->data) {
+              SCM *items = rest->data;
+              SCM *rest_expr = rest->next ? wrap(rest->next) : scm_nil();
+              if (is_nil(rest_expr)) {
+                // (append items nil) -> use (apply list items)
+                // This will properly construct (list ...items...)
+                return scm_list3(create_sym("apply", 5), 
+                               create_sym("list", 4), 
+                               items);
+              } else {
+                // (append items rest) -> use (apply list (append items rest))
+                return scm_list3(create_sym("apply", 5), 
+                               create_sym("list", 4), 
+                               right);
+              }
+            } else {
+              // Malformed append, shouldn't happen - use apply list for consistency
+              return scm_list3(create_sym("apply", 5),
+                             create_sym("list", 4),
+                             right);
+            }
+          }
         }
-        return wrap(new_list);
       }
+      // Case 3: Otherwise, right represents a single list of arguments or a single argument.
+      // Check if right is a list of symbols (from a quoted list like '(c d))
+      // If so, construct the list directly using cons to preserve symbols as literals
+      if (is_pair(right)) {
+        SCM_List *right_list = cast<SCM_List>(right);
+        // Check if this is a list containing only symbols (likely from a quoted list)
+        bool all_symbols = true;
+        int symbol_count = 0;
+        SCM_List *check = right_list;
+        while (check && all_symbols) {
+          if (!is_sym(check->data)) {
+            all_symbols = false;
+          } else {
+            symbol_count++;
+          }
+          check = check->next;
+        }
+        
+        if (all_symbols && right_list && symbol_count > 0) {
+          // Build (list 'list 'elem1 'elem2 ...) to produce (list elem1 elem2 ...)
+          // This creates a list structure containing the symbol 'list' and the elements
+          SCM_List dummy = make_list_dummy();
+          SCM_List *tail = &dummy;
+          
+          // Start with 'list' (the list function symbol)
+          tail->next = make_list(create_sym("list", 4));
+          tail = tail->next;
+          
+          // Add 'list' symbol quoted (so it becomes a literal symbol, not a function call)
+          SCM *quoted_list_sym = scm_list2(scm_sym_quote(), create_sym("list", 4));
+          tail->next = make_list(quoted_list_sym);
+          tail = tail->next;
+          
+          // Add each element quoted, in order
+          SCM_List *current = right_list;
+          while (current) {
+            SCM *quoted_elem = scm_list2(scm_sym_quote(), current->data);
+            tail->next = make_list(quoted_elem);
+            tail = tail->next;
+            current = current->next;
+          }
+          
+          return wrap(dummy.next);
+        }
+      }
+      
+      // Default: use (apply list right) for other cases
+      return scm_list3(create_sym("apply", 5),
+                      create_sym("list", 4),
+                      right);
     }
   }
   
@@ -95,7 +193,13 @@ static SCM *expand_quasiquote(SCM_Environment *env, SCM *expr, int nesting) {
     if (strcmp(sym->data, "unquote") == 0 && l->next && !l->next->next) {
       if (nesting == 0) {
         // Evaluate the unquoted expression
-        return eval_with_env(env, l->next->data);
+        SCM *eval_result = eval_with_env(env, l->next->data);
+        // If the result is a symbol, quote it to preserve it as a literal
+        // This prevents symbols from being looked up as variables in the final result
+        if (is_sym(eval_result)) {
+          return scm_list2(scm_sym_quote(), eval_result);
+        }
+        return eval_result;
       } else {
         // Nested: reduce nesting and continue
         SCM *new_right = expand_quasiquote(env, l->next->data, nesting - 1);
