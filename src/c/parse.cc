@@ -520,7 +520,63 @@ static SCM *parse_list(Parser *p) {
     skip_whitespace(p);
     
     // Check for dotted pair
+    // But first, check if the dot is part of a symbol (like ... or !..)
+    // A dot is a dotted pair marker only if it's followed by whitespace and then an expression
     if (*p->pos == '.') {
+      // Peek ahead to see if this is part of a symbol
+      const char *peek_pos = p->pos + 1;
+      
+      // Check if dot is immediately followed by another dot or symbol character
+      // If so, it's part of a symbol (like ...)
+      if (*peek_pos == '.' || 
+          isalnum((unsigned char)*peek_pos) || 
+          strchr("!$%&*+-./:<=>?@^_~", *peek_pos) != nullptr) {
+        // This dot is part of a symbol, continue parsing the next element
+        // The dot will be consumed as part of the symbol
+        continue;
+      }
+      
+      // Skip whitespace to check what comes after the dot
+      while (isspace((unsigned char)*peek_pos)) {
+        peek_pos++;
+      }
+      
+      // If dot is followed by ')' or end of input, it's a dotted pair marker
+      if (*peek_pos == ')' || *peek_pos == '\0') {
+        // This is a dotted pair marker
+        p->pos++;
+        p->column++;
+        skip_whitespace(p);
+        
+        // Check for unquote/unquote-splicing in dotted pair context
+        SCM *cdr = parse_unquote_in_list(p);
+        if (!cdr) {
+          cdr = parse_expr(p);
+        }
+        if (!cdr) {
+          parse_error(p, "expected expression after dot");
+        }
+        
+        // Create node for cdr and mark it as dotted pair
+        if (is_pair(cdr)) {
+          // When cdr is a pair, wrap it in a node to store it
+          // This allows us to mark the wrapper as dotted, while keeping the
+          // cdr list itself unmarked (if it's a proper list)
+          tail->next = make_list(cdr);
+          tail->next->is_dotted = true;  // Mark the wrapper node as dotted
+          // The cdr list itself (cdr) is not modified - its internal structure
+          // remains unchanged. The printing code will check if cdr is a proper
+          // list and expand it: (a b . (c d)) -> (a b c d)
+        } else {
+          tail->next = make_list(cdr);
+          tail->next->is_dotted = true;  // Mark as dotted pair's cdr
+        }
+        skip_whitespace(p);
+        break;
+      }
+      
+      // Otherwise, the dot is followed by something else (might be part of symbol or dotted pair)
+      // Try to parse as dotted pair first
       p->pos++;
       p->column++;
       skip_whitespace(p);
@@ -536,17 +592,11 @@ static SCM *parse_list(Parser *p) {
       
       // Create node for cdr and mark it as dotted pair
       if (is_pair(cdr)) {
-        // When cdr is a pair, wrap it in a node to store it
-        // This allows us to mark the wrapper as dotted, while keeping the
-        // cdr list itself unmarked (if it's a proper list)
         tail->next = make_list(cdr);
-        tail->next->is_dotted = true;  // Mark the wrapper node as dotted
-        // The cdr list itself (cdr) is not modified - its internal structure
-        // remains unchanged. The printing code will check if cdr is a proper
-        // list and expand it: (a b . (c d)) -> (a b c d)
+        tail->next->is_dotted = true;
       } else {
         tail->next = make_list(cdr);
-        tail->next->is_dotted = true;  // Mark as dotted pair's cdr
+        tail->next->is_dotted = true;
       }
       skip_whitespace(p);
       break;
