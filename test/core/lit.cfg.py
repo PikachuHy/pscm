@@ -1,6 +1,6 @@
 import lit.formats
 
-config.name = 'pscm JIT Tests'
+config.name = 'pscm Core Tests'
 
 config.test_format = lit.formats.ShTest(True)
 
