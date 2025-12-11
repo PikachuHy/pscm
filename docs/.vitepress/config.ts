@@ -118,6 +118,10 @@ function sidebarGuideZh() {
           link: '/cn/pscm_cc'
         },
         {
+          text: 'pscm-cc 功能现状与开发规划',
+          link: '/cn/pscm_cc_roadmap'
+        },
+        {
           text: 'pscm-cc 字符支持实现说明',
           link: '/cn/char_support'
         },
