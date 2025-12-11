@@ -250,6 +250,88 @@ static SCM *parse_char(Parser *p) {
   return scm;
 }
 
+// Forward declaration
+static SCM *parse_expr(Parser *p);
+
+// Parse a vector (#(element1 element2 ...))
+static SCM *parse_vector(Parser *p) {
+  // Must match '#('
+  if (p->pos[0] != '#' || p->pos[1] != '(') {
+    return nullptr;
+  }
+  
+  const char *start = p->pos;
+  int start_line = p->line;
+  int start_column = p->column;
+  
+  p->pos += 2;  // Skip #(
+  p->column += 2;
+  
+  skip_whitespace(p);
+  
+  // Check for empty vector
+  if (*p->pos == ')') {
+    p->pos++; // consume ')'
+    p->column++;
+    
+    auto vec = new SCM_Vector();
+    vec->elements = nullptr;
+    vec->length = 0;
+    
+    SCM *scm = wrap(vec);
+    set_source_location(scm, p->filename, start_line, start_column);
+    return scm;
+  }
+  
+  // Parse vector elements
+  SCM_List dummy = make_list_dummy();
+  SCM_List *tail = &dummy;
+  
+  while (*p->pos && *p->pos != ')') {
+    SCM *elem = parse_expr(p);
+    if (!elem) {
+      parse_error(p, "expected expression in vector");
+    }
+    
+    SCM_List *node = make_list(elem);
+    tail->next = node;
+    tail = node;
+    
+    skip_whitespace(p);
+  }
+  
+  if (*p->pos != ')') {
+    parse_error(p, "expected ')' to close vector");
+  }
+  p->pos++; // consume ')'
+  p->column++;
+  
+  // Convert list to vector
+  int count = 0;
+  SCM_List *current = dummy.next;
+  while (current) {
+    count++;
+    current = current->next;
+  }
+  
+  auto vec = new SCM_Vector();
+  vec->length = count;
+  if (count > 0) {
+    vec->elements = new SCM*[count];
+    current = dummy.next;
+    for (int i = 0; i < count; i++) {
+      vec->elements[i] = current->data;
+      current = current->next;
+    }
+  } else {
+    vec->elements = nullptr;
+  }
+  
+  SCM *scm = wrap(vec);
+  set_source_location(scm, p->filename, start_line, start_column);
+  return scm;
+}
+
 // Parse a string
 static SCM *parse_string(Parser *p) {
   if (*p->pos != '"') {
@@ -383,7 +465,7 @@ static SCM *parse_symbol(Parser *p) {
 }
 
 
-// Forward declaration
+// Forward declarations
 static SCM *parse_expr(Parser *p);
 
 // Parse a quoted expression
@@ -655,6 +737,12 @@ static SCM *parse_expr(Parser *p) {
   
   // Character literal (#\A, #\., etc.)
   result = parse_char(p);
+  if (result) {
+    return result;
+  }
+  
+  // Vector literal (#(element1 element2 ...))
+  result = parse_vector(p);
   if (result) {
     return result;
   }

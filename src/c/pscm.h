@@ -15,7 +15,7 @@ struct SCM_SourceLocation {
 };
 
 struct SCM {
-  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, CHAR, BOOL, SYM, STR, MACRO, HASH_TABLE, RATIO } type;
+  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, CHAR, BOOL, SYM, STR, MACRO, HASH_TABLE, RATIO, VECTOR } type;
 
   void *value;
   SCM_SourceLocation *source_loc;  // Optional source location
@@ -76,6 +76,11 @@ struct SCM_HashTable {
   SCM **buckets;        // Array of buckets (each bucket is a list of (key . value) pairs)
   size_t capacity;      // Number of buckets
   size_t size;          // Number of entries in the table
+};
+
+struct SCM_Vector {
+  SCM **elements;       // Array of SCM pointers
+  size_t length;        // Number of elements
 };
 
 struct SCM_Environment {
@@ -160,6 +165,10 @@ inline bool is_macro(SCM *scm) {
 
 inline bool is_hash_table(SCM *scm) {
   return scm->type == SCM::HASH_TABLE;
+}
+
+inline bool is_vector(SCM *scm) {
+  return scm->type == SCM::VECTOR;
 }
 
 SCM *create_sym(const char *data, int len);
@@ -465,6 +474,22 @@ template <>
 inline SCM_Rational *cast<SCM_Rational>(SCM *data) {
   assert(is_ratio(data));
   return (SCM_Rational *)data->value;
+}
+
+template <>
+inline SCM_Vector *cast<SCM_Vector>(SCM *data) {
+  assert(is_vector(data));
+  return (SCM_Vector *)data->value;
+}
+
+template <>
+inline SCM *wrap(SCM_Vector *vec) {
+  assert(vec);
+  auto data = new SCM();
+  data->type = SCM::VECTOR;
+  data->value = vec;
+  data->source_loc = nullptr;
+  return data;
 }
 
 inline SCM *car(SCM *data) {

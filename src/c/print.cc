@@ -92,6 +92,18 @@ void print_ast(SCM *ast, bool write_mode) {
     print_list(l);
     return;
   }
+  if (is_vector(ast)) {
+    auto vec = cast<SCM_Vector>(ast);
+    printf("#(");
+    for (size_t i = 0; i < vec->length; i++) {
+      if (i > 0) {
+        printf(" ");
+      }
+      print_ast(vec->elements[i], write_mode);
+    }
+    printf(")");
+    return;
+  }
   if (is_nil(ast)) {
     printf("()");
     return;
