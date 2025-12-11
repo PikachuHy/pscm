@@ -534,6 +534,7 @@ static SCM *parse_quasiquote(Parser *p) {
 
 // Parse an unquote expression (comma ,)
 // This is called when we encounter a comma in a list context
+// Handles nested unquotes: ,,name means (unquote (unquote name))
 static SCM *parse_unquote_in_list(Parser *p) {
   if (*p->pos != ',') {
     return nullptr;
@@ -562,6 +563,47 @@ static SCM *parse_unquote_in_list(Parser *p) {
   // Regular unquote
   p->pos++; // consume comma
   p->column++;
+  
+  // Check if next token is an unquote (for nested unquotes)
+  // But also check for quote (for ,'name syntax)
+  skip_whitespace(p);
+  
+  // Check for quote after comma (,'name syntax)
+  if (*p->pos == '\'') {
+    // Parse the quote, which will handle the unquote inside
+    SCM *quoted = parse_quote(p);
+    if (!quoted) {
+      parse_error(p, "expected expression after unquote");
+    }
+    
+    // Build (unquote quoted)
+    SCM *unquote_sym = scm_sym_unquote();
+    SCM_List *list = make_list(unquote_sym, quoted);
+    
+    SCM *scm = new SCM();
+    scm->type = SCM::LIST;
+    scm->value = list;
+    return scm;
+  }
+  
+  // Check for another comma (nested unquote: ,,name means (unquote (unquote name)))
+  // This happens in nested quasiquotes: `(a `(b ,,name d) e)
+  if (*p->pos == ',') {
+    // Recursively parse the inner unquote
+    SCM *inner_unquote = parse_unquote_in_list(p);
+    if (!inner_unquote) {
+      parse_error(p, "expected expression after nested unquote");
+    }
+    
+    // Build (unquote inner_unquote)
+    SCM *unquote_sym = scm_sym_unquote();
+    SCM_List *list = make_list(unquote_sym, inner_unquote);
+    
+    SCM *scm = new SCM();
+    scm->type = SCM::LIST;
+    scm->value = list;
+    return scm;
+  }
   
   SCM *expr = parse_expr(p);
   if (!expr) {

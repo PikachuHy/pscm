@@ -61,3 +61,27 @@
 ;; Test quasiquote with only quoted unquote
 ;; CHECK: (quasiquote ('(unquote expr)))
 '`(',expr)
+
+;; Test nested unquote (double comma: ,,name means (unquote (unquote name)))
+;; CHECK: (quasiquote (unquote (unquote name1)))
+'`,,name1
+
+;; Test nested quasiquote with nested unquote
+;; CHECK: (quasiquote (a (quasiquote (b (unquote (unquote name1)) (unquote '(unquote name2)) d)) e))
+'`(a `(b ,,name1 ,',name2 d) e)
+
+;; Test triple nested unquote (three commas)
+;; CHECK: (quasiquote (unquote (unquote (unquote name))))
+'`,,,name
+
+;; Test nested quasiquote with triple nested unquote
+;; CHECK: (quasiquote (a (quasiquote (b (quasiquote (c (unquote (unquote (unquote name))) d)) e)) f))
+'`(a `(b `(c ,,,name d) e) f)
+
+;; Test nested unquote with expression
+;; CHECK: (quasiquote (unquote (unquote (+ 1 2))))
+'`,,(+ 1 2)
+
+;; Test nested unquote-splicing (not valid in standard Scheme, but test parsing)
+;; CHECK: (quasiquote (unquote (unquote-splicing items)))
+'`,,@items
