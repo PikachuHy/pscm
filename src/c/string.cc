@@ -121,6 +121,12 @@ SCM *scm_c_display(SCM *arg) {
   return scm_none(); // Return unspecified value
 }
 
+// write: Output the argument using write format (with quotes for strings)
+SCM *scm_c_write(SCM *arg) {
+  print_ast(arg, true); // Use write format (write_mode = true)
+  return scm_none(); // Return unspecified value
+}
+
 // newline: Output a newline character (optionally to a port)
 SCM *scm_c_newline(SCM_List *args) {
   // args is the list of arguments (not including function name)
@@ -144,6 +150,7 @@ void init_string() {
   scm_define_function("string-ref", 2, 0, 0, scm_c_string_ref);
   scm_define_function("string-set!", 3, 0, 0, scm_c_string_set);
   scm_define_function("display", 1, 0, 0, scm_c_display);
+  scm_define_function("write", 1, 0, 0, scm_c_write);
   scm_define_vararg_function("newline", scm_c_newline);
 }
 
