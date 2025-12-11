@@ -1,6 +1,6 @@
 import lit.formats
 
-config.name = 'pscm Tests'
+config.name = 'pscm Macro Tests'
 
 config.test_format = lit.formats.ShTest(True)
 
