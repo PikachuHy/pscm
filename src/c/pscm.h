@@ -63,6 +63,7 @@ struct SCM_Continuation {
   void *stack_data;
   void *dst;
   SCM *arg;
+  SCM_List *wind_chain;  // Saved wind chain when continuation was created
 };
 
 struct SCM_Macro {
@@ -223,6 +224,7 @@ inline SCM_Continuation *make_cont(size_t stack_len, void *stack_data) {
   auto cont = new SCM_Continuation();
   cont->stack_len = stack_len;
   cont->stack_data = stack_data;
+  cont->wind_chain = nullptr;
   return cont;
 }
 
@@ -742,6 +744,7 @@ void init_hash_table();
 void init_procedure();
 
 extern SCM_Environment g_env;
+extern SCM_List *g_wind_chain;  // Global wind chain for dynamic-wind
 
 template <typename F>
 SCM_Function *_create_func(const char *name, F func_ptr) {

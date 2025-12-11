@@ -1,12 +1,13 @@
-;; RUN: %pscm_main -m REGISTER_MACHINE --test %s | FileCheck %s
-;; TODO: %pscm_main --test %s | FileCheck %s
+;; RUN: %pscm_cc --test %s | FileCheck %s
 
 ;;; dynamic-wind
+;;; CHECK: (a b c)
 (let* ((path '())
            (add (lambda (s) (set! path (cons s path)))))
       (dynamic-wind (lambda () (add 'a)) (lambda () (add 'b)) (lambda () (add 'c)))
       (reverse path))
 
+;;; CHECK: (connect talk1 disconnect connect talk2 disconnect)
 (let ((path '())
           (c #f))
       (let ((add (lambda (s)
@@ -25,5 +26,7 @@
 
 
 (define (f c) c)
+;;; CHECK: #<continuation
 (call/cc f)
+;;; CHECK: #<continuation
 (call/cc (call/cc f))

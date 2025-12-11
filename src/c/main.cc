@@ -12,6 +12,7 @@ bool ast_debug_enabled = false;
 long *cont_base;
 
 SCM_Environment g_env;
+SCM_List *g_wind_chain = nullptr;
 
 SCM *eval(SCM *ast) {
   long stack_base;

@@ -326,6 +326,66 @@ SCM *scm_c_last_pair(SCM *lst) {
   }
 }
 
+SCM *scm_c_reverse(SCM *lst) {
+  if (is_nil(lst)) {
+    return scm_nil();
+  }
+  if (!is_pair(lst)) {
+    eval_error("reverse: argument must be a pair or nil");
+    return nullptr;
+  }
+  
+  SCM_List *result = nullptr;
+  SCM_List *current = cast<SCM_List>(lst);
+  
+  while (current) {
+    auto new_node = make_list(current->data);
+    new_node->next = result;
+    result = new_node;
+    
+    if (!current->next || is_nil(wrap(current->next))) {
+      break;
+    }
+    current = current->next;
+  }
+  
+  if (result) {
+    return wrap(result);
+  }
+  return scm_nil();
+}
+
+SCM *scm_c_length(SCM *lst) {
+  if (is_nil(lst)) {
+    SCM *result = new SCM();
+    result->type = SCM::NUM;
+    result->value = (void *)0;
+    result->source_loc = nullptr;
+    return result;
+  }
+  if (!is_pair(lst)) {
+    eval_error("length: argument must be a list");
+    return nullptr;
+  }
+  
+  int count = 0;
+  SCM_List *current = cast<SCM_List>(lst);
+  
+  while (current) {
+    count++;
+    if (!current->next || is_nil(wrap(current->next))) {
+      break;
+    }
+    current = current->next;
+  }
+  
+  SCM *result = new SCM();
+  result->type = SCM::NUM;
+  result->value = (void *)(intptr_t)count;
+  result->source_loc = nullptr;
+  return result;
+}
+
 void init_list() {
   scm_define_function("car", 1, 0, 0, car);
   scm_define_function("cdr", 1, 0, 0, cdr);
@@ -340,4 +400,6 @@ void init_list() {
   scm_define_function("set-car!", 2, 0, 0, scm_c_set_car);
   scm_define_function("set-cdr!", 2, 0, 0, scm_c_set_cdr);
   scm_define_function("last-pair", 1, 0, 0, scm_c_last_pair);
+  scm_define_function("reverse", 1, 0, 0, scm_c_reverse);
+  scm_define_function("length", 1, 0, 0, scm_c_length);
 }

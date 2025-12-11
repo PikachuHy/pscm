@@ -4,12 +4,18 @@
 #include <string.h>
 
 extern long *cont_base;
+extern SCM_List *g_wind_chain;
 
 long scm_stack_size(long *start) {
   long stack;
   SCM_DEBUG_CONT("stack_top: %p\n", &stack);
   return start - &stack;
 }
+
+// Forward declaration
+SCM_List *copy_wind_chain(SCM_List *chain);
+SCM_List *unwind_wind_chain(SCM_List *target);
+void rewind_wind_chain(SCM_List *common, SCM_List *target);
 
 SCM *scm_make_continuation(int *first) {
   long stack_size = scm_stack_size(cont_base);
@@ -20,6 +26,10 @@ SCM *scm_make_continuation(int *first) {
   src = cont_base;
   src -= stack_size;
   memcpy((void *)cont->stack_data, src, sizeof(long) * cont->stack_len);
+  
+  // Save current wind chain
+  cont->wind_chain = copy_wind_chain(g_wind_chain);
+  
   *first = !setjmp(cont->cont_jump_buffer);
   if (*first) {
     return data;
@@ -42,6 +52,11 @@ void copy_stack_and_call(SCM_Continuation *cont, SCM *args, long *dst) {
 
 void scm_dynthrow(SCM *cont, SCM *args) {
   auto continuation = cast<SCM_Continuation>(cont);
+  
+  // Handle wind chain: unwind current to common prefix, then rewind to continuation's wind chain
+  SCM_List *common = unwind_wind_chain(continuation->wind_chain);
+  rewind_wind_chain(common, continuation->wind_chain);
+  
   long *dst = cont_base;
   long stack_top_element;
   dst -= continuation->stack_len;

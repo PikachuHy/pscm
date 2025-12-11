@@ -290,6 +290,10 @@ entry:
       SCM *result = eval_call_with_values(env, l);
       RETURN_WITH_CONTEXT(result);
     }
+    else if (is_sym_val(l->data, "dynamic-wind")) {
+      SCM *result = eval_dynamic_wind(env, l);
+      RETURN_WITH_CONTEXT(result);
+    }
     else {
       // Variable reference: resolve symbol and build call expression
       // (val was already looked up above for macro check)
