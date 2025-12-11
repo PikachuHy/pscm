@@ -121,6 +121,54 @@ static SCM *eval_if(SCM_Environment *env, SCM_List *l, SCM **ast) {
   return scm_none();
 }
 
+// Helper function for and special form
+static SCM *eval_and(SCM_Environment *env, SCM_List *l, SCM **ast) {
+  if (!l->next) {
+    // No arguments, return #t
+    return scm_bool_true();
+  }
+  SCM_List *current = l->next;
+  // Evaluate all expressions except the last one
+  while (current && current->next) {
+    SCM *result = eval_with_env(env, current->data);
+    // If any expression evaluates to #f, return #f immediately
+    if (is_false(result)) {
+      return scm_bool_false();
+    }
+    current = current->next;
+  }
+  // Evaluate and return the last expression
+  if (current) {
+    *ast = current->data;
+    return nullptr; // Signal to continue evaluation
+  }
+  return scm_bool_true();
+}
+
+// Helper function for or special form
+static SCM *eval_or(SCM_Environment *env, SCM_List *l, SCM **ast) {
+  if (!l->next) {
+    // No arguments, return #f
+    return scm_bool_false();
+  }
+  SCM_List *current = l->next;
+  // Evaluate all expressions except the last one
+  while (current && current->next) {
+    SCM *result = eval_with_env(env, current->data);
+    // If any expression evaluates to true (non-#f), return it immediately
+    if (is_true(result)) {
+      return result;
+    }
+    current = current->next;
+  }
+  // Evaluate and return the last expression
+  if (current) {
+    *ast = current->data;
+    return nullptr; // Signal to continue evaluation
+  }
+  return scm_bool_false();
+}
+
 // Helper function for call/cc special form
 static SCM *eval_call_cc(SCM_Environment *env, SCM_List *l, SCM **ast) {
   assert(l->next);
@@ -239,6 +287,20 @@ entry:
     }
     else if (is_sym_val(l->data, "if")) {
       auto ret = eval_if(env, l, &ast);
+      if (ret) {
+        RETURN_WITH_CONTEXT(ret);
+      }
+      goto entry;
+    }
+    else if (is_sym_val(l->data, "and")) {
+      auto ret = eval_and(env, l, &ast);
+      if (ret) {
+        RETURN_WITH_CONTEXT(ret);
+      }
+      goto entry;
+    }
+    else if (is_sym_val(l->data, "or")) {
+      auto ret = eval_or(env, l, &ast);
       if (ret) {
         RETURN_WITH_CONTEXT(ret);
       }
