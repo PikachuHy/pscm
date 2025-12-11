@@ -250,8 +250,9 @@ static SCM *parse_char(Parser *p) {
   return scm;
 }
 
-// Forward declaration
+// Forward declarations
 static SCM *parse_expr(Parser *p);
+static SCM *parse_unquote_in_list(Parser *p);
 
 // Parse a vector (#(element1 element2 ...))
 static SCM *parse_vector(Parser *p) {
@@ -288,7 +289,11 @@ static SCM *parse_vector(Parser *p) {
   SCM_List *tail = &dummy;
   
   while (*p->pos && *p->pos != ')') {
-    SCM *elem = parse_expr(p);
+    // Check for unquote/unquote-splicing in vector context
+    SCM *elem = parse_unquote_in_list(p);
+    if (!elem) {
+      elem = parse_expr(p);
+    }
     if (!elem) {
       parse_error(p, "expected expression in vector");
     }
@@ -467,6 +472,7 @@ static SCM *parse_symbol(Parser *p) {
 
 // Forward declarations
 static SCM *parse_expr(Parser *p);
+static SCM *parse_unquote_in_list(Parser *p);
 
 // Parse a quoted expression
 static SCM *parse_quote(Parser *p) {
@@ -476,7 +482,14 @@ static SCM *parse_quote(Parser *p) {
   p->pos++; // consume quote
   p->column++;
   
-  SCM *quoted = parse_expr(p);
+  // After quote, we need to parse the expression
+  // But in list context (like in quasiquote), we might have ',name
+  // which should be parsed as (quote ,name) where ,name is an unquote
+  // So we need to check for unquote first
+  SCM *quoted = parse_unquote_in_list(p);
+  if (!quoted) {
+    quoted = parse_expr(p);
+  }
   if (!quoted) {
     parse_error(p, "expected expression after quote");
   }
@@ -499,7 +512,12 @@ static SCM *parse_quasiquote(Parser *p) {
   p->pos++; // consume backquote
   p->column++;
   
-  SCM *quoted = parse_expr(p);
+  // After quasiquote, we might have unquote directly (like `,expr)
+  // Check for unquote first
+  SCM *quoted = parse_unquote_in_list(p);
+  if (!quoted) {
+    quoted = parse_expr(p);
+  }
   if (!quoted) {
     parse_error(p, "expected expression after quasiquote");
   }
@@ -586,10 +604,14 @@ static SCM *parse_list(Parser *p) {
   
   // Parse list elements
   while (*p->pos && *p->pos != ')') {
-    // Check for unquote/unquote-splicing in list context
-    SCM *elem = parse_unquote_in_list(p);
+    // Check for quote first (since ',name should be parsed as (quote ,name))
+    SCM *elem = parse_quote(p);
     if (!elem) {
-      elem = parse_expr(p);
+      // Check for unquote/unquote-splicing in list context
+      elem = parse_unquote_in_list(p);
+      if (!elem) {
+        elem = parse_expr(p);
+      }
     }
     if (!elem) {
       parse_error(p, "expected expression in list");
