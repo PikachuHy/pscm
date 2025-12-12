@@ -538,16 +538,24 @@ inline SCM *wrap(SCM_Vector *vec) {
 }
 
 inline SCM *car(SCM *data) {
-  assert(is_pair(data));
+  if (!data || !is_pair(data)) {
+    type_error(data, "pair");
+  }
   auto l = cast<SCM_List>(data);
-  assert(l);
+  if (!l) {
+    type_error(data, "pair");
+  }
   return l->data;
 }
 
 inline SCM *cdr(SCM *data) {
-  assert(is_pair(data));
+  if (!data || !is_pair(data)) {
+    type_error(data, "pair");
+  }
   auto l = cast<SCM_List>(data);
-  assert(l);
+  if (!l) {
+    type_error(data, "pair");
+  }
   if (l->next == nullptr) {
     return scm_nil();
   }
@@ -561,10 +569,13 @@ inline SCM *cdr(SCM *data) {
 }
 
 inline SCM *cadr(SCM *data) {
-  assert(is_pair(data));
+  if (!data || !is_pair(data)) {
+    type_error(data, "pair");
+  }
   auto l = cast<SCM_List>(data);
-  assert(l);
-  assert(l->next);
+  if (!l || !l->next) {
+    type_error(data, "pair with at least 2 elements");
+  }
   SCM *result = l->next->data;
   // Copy source location if result doesn't have one
   if (result && !result->source_loc && data->source_loc) {

@@ -1,4 +1,5 @@
 #include "pscm.h"
+#include "eval.h"
 
 SCM *expand_let(SCM *expr) {
   auto l = cast<SCM_List>(expr);
@@ -121,10 +122,24 @@ SCM *expand_letstar(SCM *expr) {
   assert(l->next);
   assert(l->next->next);
   SCM *ast = nullptr;
-  auto argl = car(l->next->data);
+  auto bindings = l->next->data;
+  
+  // Handle empty bindings list
+  if (is_nil(bindings)) {
+    // (let* () body) -> body
+    return l->next->next->data;
+  }
+  
+  // Check if bindings is a pair
+  if (!is_pair(bindings)) {
+    eval_error("let*: bindings must be a list");
+    return nullptr;
+  }
+  
+  auto argl = car(bindings);
   // auto param = car(argl);
   // auto arg = cadr(argl);
-  auto rest_argl = cdr(l->next->data);
+  auto rest_argl = cdr(bindings);
   if (debug_enabled) {
     printf("argl ");
     print_ast(argl);
