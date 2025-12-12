@@ -3,6 +3,18 @@
 #include "eval.h"
 #include <stdarg.h>
 
+// Helper function to print AST to stderr
+static void print_ast_to_stderr(SCM *ast) {
+  // Temporarily redirect stdout to stderr for print_ast
+  // This is safe in single-threaded context
+  fflush(stdout);
+  FILE *saved_stdout = stdout;
+  stdout = stderr;
+  print_ast(ast);
+  fflush(stderr);
+  stdout = saved_stdout;
+}
+
 SCM *eval_with_list(SCM_Environment *env, SCM_List *l) {
   assert(l);
   SCM *ret = nullptr;
@@ -506,7 +518,52 @@ entry:
     goto entry;
   }
   else {
-    eval_error("not supported expression type");
+    // Enhanced error reporting for unsupported expression types
+    SCM *expr = l->data;
+    const char *type_name = get_type_name(expr ? expr->type : SCM::NONE);
+    const char *loc_str = nullptr;
+    
+    // Try to get source location from the expression or current context
+    if (expr) {
+      loc_str = get_source_location_str(expr);
+    }
+    if (!loc_str && g_current_eval_context) {
+      loc_str = get_source_location_str(g_current_eval_context);
+    }
+    
+    // Print location if available
+    if (loc_str) {
+      fprintf(stderr, "%s: ", loc_str);
+    } else {
+      fprintf(stderr, "<unknown location>: ");
+    }
+    
+    // Print error message with type information
+    fprintf(stderr, "Error: not supported expression type: %s", type_name);
+    
+    // Print the problematic expression
+    if (expr) {
+      fprintf(stderr, "\n  Expression value: ");
+      print_ast_to_stderr(expr);
+    } else {
+      fprintf(stderr, "\n  Expression is null");
+    }
+    
+    // Print the full expression being evaluated (if different from expr)
+    if (g_current_eval_context) {
+      SCM *ctx_wrapped = wrap(l);
+      if (g_current_eval_context != expr && g_current_eval_context != ctx_wrapped) {
+        fprintf(stderr, "\n  While evaluating: ");
+        print_ast_to_stderr(g_current_eval_context);
+      }
+    }
+    
+    // Print the full list structure for context
+    fprintf(stderr, "\n  Full expression: ");
+    print_ast_to_stderr(wrap(l));
+    fprintf(stderr, "\n");
+    
+    abort();
     return nullptr;  // Never reached, but satisfies compiler
   }
 }
