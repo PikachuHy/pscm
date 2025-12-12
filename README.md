@@ -1,4 +1,5 @@
 <p align="center">
+<img alt="logo" src="docs/logo.png">
 <h1 align="center">PikachuHy's Scheme</h1>
 <h6 align="center">a scheme language implementation </h6>
 </p>
