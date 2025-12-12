@@ -24,6 +24,8 @@ void update_do_variables(SCM_Environment *do_env, SCM_List *var_update_list) {
 
 // Helper function for do special form
 SCM *eval_do(SCM_Environment *env, SCM_List *l) {
+  assert(env);
+  assert(l);
   assert(l->next && l->next->next);
   auto var_init_l = cast<SCM_List>(l->next->data);
   auto test_clause = l->next->next->data;
@@ -48,15 +50,32 @@ SCM *eval_do(SCM_Environment *env, SCM_List *l) {
   auto var_update_it = &var_update_dummy;
 
   while (var_init_it) {
+    
+    if (!is_pair(var_init_it->data)) {
+      eval_error("do: variable initialization must be a list");
+      return nullptr;
+    }
+    
     auto var_init_expr = cast<SCM_List>(var_init_it->data);
+    
+    if (!is_sym(var_init_expr->data)) {
+      eval_error("do: variable name must be a symbol");
+      return nullptr;
+    }
+    
     auto var_name = cast<SCM_Symbol>(var_init_expr->data);
     auto var_init_val = eval_with_env(env, var_init_expr->next->data);
-    auto var_update_step = var_init_expr->next->next->data;
+    SCM *var_update_step = nullptr;
+    if (var_init_expr->next->next) {
+      var_update_step = var_init_expr->next->next->data;
+    }
 
     scm_env_insert(do_env, var_name, var_init_val);
-    var_update_it->next = make_list(scm_list2(wrap(var_name), var_update_step));
-    var_update_it = var_update_it->next;
-    var_update_it->next = nullptr;
+    if (var_update_step) {
+      var_update_it->next = make_list(scm_list2(wrap(var_name), var_update_step));
+      var_update_it = var_update_it->next;
+      var_update_it->next = nullptr;
+    }
     var_init_it = var_init_it->next;
   }
 
@@ -65,13 +84,42 @@ SCM *eval_do(SCM_Environment *env, SCM_List *l) {
     eval_error("do: test clause must be a list");
     return nullptr;
   }
-  auto ret = eval_with_env(do_env, car(test_clause));
+  
+  if (debug_enabled) {
+    SCM_DEBUG_EVAL("do: test_clause_list: ");
+    print_list(test_clause_list);
+    printf("\n");
+  }
+  
+  // Use test_clause (SCM*) for car/cdr, not test_clause_list (SCM_List*)
+  auto test_expr = car(test_clause);
+  auto ret = eval_with_env(do_env, test_expr);
+  if (debug_enabled) {
+    SCM_DEBUG_EVAL("do: initial test result: ");
+    print_ast(ret);
+    printf("\n");
+  }
+  
+  int loop_count = 0;
   while (is_false(ret)) {
+    if (debug_enabled) {
+      SCM_DEBUG_EVAL("do: loop iteration %d\n", loop_count++);
+    }
     if (body_clause) {
+      if (debug_enabled) {
+        SCM_DEBUG_EVAL("do: executing body: ");
+        print_list(body_clause);
+        printf("\n");
+      }
       eval_list_with_env(do_env, body_clause);
     }
     update_do_variables(do_env, &var_update_dummy);
     ret = eval_with_env(do_env, car(test_clause));
+    if (debug_enabled) {
+      SCM_DEBUG_EVAL("do: test result after update: ");
+      print_ast(ret);
+      printf("\n");
+    }
   }
   // Evaluate and return the result expressions from the test clause
   auto return_exprs = cdr(test_clause);
