@@ -20,5 +20,6 @@ void init_scm() {
   init_values();
   init_hash_table();
   init_procedure();
+  init_vector();
 }
 

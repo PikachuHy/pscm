@@ -24,10 +24,10 @@ void update_do_variables(SCM_Environment *do_env, SCM_List *var_update_list) {
 
 // Helper function for do special form
 SCM *eval_do(SCM_Environment *env, SCM_List *l) {
-  assert(l->next && l->next->next && l->next->next->next);
+  assert(l->next && l->next->next);
   auto var_init_l = cast<SCM_List>(l->next->data);
   auto test_clause = l->next->next->data;
-  auto body_clause = l->next->next->next;
+  auto body_clause = l->next->next->next;  // May be null if no body
 
   if (debug_enabled) {
     SCM_DEBUG_EVAL("eval do\n");
@@ -60,9 +60,16 @@ SCM *eval_do(SCM_Environment *env, SCM_List *l) {
     var_init_it = var_init_it->next;
   }
 
+  auto test_clause_list = cast<SCM_List>(test_clause);
+  if (!test_clause_list) {
+    eval_error("do: test clause must be a list");
+    return nullptr;
+  }
   auto ret = eval_with_env(do_env, car(test_clause));
   while (is_false(ret)) {
-    eval_list_with_env(do_env, body_clause);
+    if (body_clause) {
+      eval_list_with_env(do_env, body_clause);
+    }
     update_do_variables(do_env, &var_update_dummy);
     ret = eval_with_env(do_env, car(test_clause));
   }

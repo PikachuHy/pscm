@@ -823,6 +823,7 @@ void init_eval();
 void init_values();
 void init_hash_table();
 void init_procedure();
+void init_vector();
 
 extern SCM_Environment g_env;
 extern SCM_List *g_wind_chain;  // Global wind chain for dynamic-wind
