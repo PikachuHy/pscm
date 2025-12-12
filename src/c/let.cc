@@ -27,8 +27,21 @@ SCM *expand_let(SCM *expr) {
     assert(l->next->next->next);
     auto argl = l->next->next->data;
     auto body = l->next->next->next->data;
-    auto params = map(argl, car);
-    auto args = map(argl, cadr);
+    
+    // Handle empty bindings list for named let: (let name () body)
+    SCM *params = scm_nil();
+    SCM *args = scm_nil();
+    
+    if (!is_nil(argl)) {
+      // Only map if bindings list is not empty
+      if (!is_pair(argl)) {
+        eval_error("let: bindings must be a list");
+        return nullptr;
+      }
+      params = map(argl, car);
+      args = map(argl, cadr);
+    }
+    
     if (debug_enabled) {
       SCM_ERROR_EVAL("expand named let\n");
       printf("params ");
@@ -42,7 +55,16 @@ SCM *expand_let(SCM *expr) {
     }
     auto val = scm_list3(scm_sym_lambda(), params, body);
     auto letrec_arg = scm_list2(func_args, val);
-    auto call_fn = scm_concat_list2(scm_list1(func_args), args);
+    
+    // For empty args, just call the function: (name)
+    // For non-empty args, concatenate: (name arg1 arg2 ...)
+    SCM *call_fn;
+    if (is_nil(args)) {
+      call_fn = scm_list1(func_args);
+    } else {
+      call_fn = scm_concat_list2(scm_list1(func_args), args);
+    }
+    
     auto new_expr = scm_list3(scm_sym_letrec(), scm_list1(letrec_arg), call_fn);
     if (debug_enabled) {
       printf("expand -> ");
