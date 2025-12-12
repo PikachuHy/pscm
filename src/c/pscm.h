@@ -614,6 +614,9 @@ SCM_List *map(SCM_List *l, F f) {
 
 template <typename F>
 SCM *map(SCM *data, F f) {
+  if (!data || !is_pair(data)) {
+    type_error(data, "pair");
+  }
   assert(is_pair(data));
   auto l = cast<SCM_List>(data);
   assert(l);

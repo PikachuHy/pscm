@@ -1,4 +1,5 @@
 #include "pscm.h"
+#include "eval.h"
 #include <type_traits>
 extern bool _number_eq(SCM *lhs, SCM *rhs);
 bool _eq(SCM *lhs, SCM *rhs);
@@ -46,6 +47,25 @@ bool _list_eq(SCM *lhs, SCM *rhs) {
   return true;
 }
 
+bool _vector_eq(SCM *lhs, SCM *rhs) {
+  auto v1 = cast<SCM_Vector>(lhs);
+  auto v2 = cast<SCM_Vector>(rhs);
+  
+  // Vectors must have the same length
+  if (v1->length != v2->length) {
+    return false;
+  }
+  
+  // Compare each element recursively
+  for (size_t i = 0; i < v1->length; i++) {
+    if (!_eq(v1->elements[i], v2->elements[i])) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
 bool _eq(SCM *lhs, SCM *rhs) {
   assert(lhs);
   assert(rhs);
@@ -85,8 +105,20 @@ bool _eq(SCM *lhs, SCM *rhs) {
   case SCM::SYM:
   case SCM::STR:
     return _sym_eq(lhs, rhs);
+  case SCM::VECTOR:
+    return _vector_eq(lhs, rhs);
+  case SCM::MACRO:
+    // Macros are compared by reference (same as procedures)
+    return lhs == rhs;
+  case SCM::HASH_TABLE:
+    // Hash tables are compared by reference
+    return lhs == rhs;
+  case SCM::RATIO:
+    // Ratios are compared numerically
+    return _number_eq(lhs, rhs);
   default:
     SCM_ERROR_EVAL("unsupported scheme type %d", lhs->type);
+    eval_error("unsupported scheme type %d", lhs->type);
     return false;
   }
 }
