@@ -178,6 +178,7 @@ void set_source_location(SCM *scm, const char *filename, int line, int column);
 void copy_source_location(SCM *dest, SCM *src);
 void copy_source_location_recursive(SCM *dest, SCM *src);
 const char *get_source_location_str(SCM *scm);
+[[noreturn]] void type_error(SCM *data, const char *expected_type);
 
 // Inline helper function
 inline SCM_List make_list_dummy() {
@@ -397,42 +398,54 @@ T *cast(SCM *);
 
 template <>
 inline SCM_List *cast<SCM_List>(SCM *data) {
-  assert(is_pair(data) || is_nil(data));
+  if (!data || (!is_pair(data) && !is_nil(data))) {
+    type_error(data, "pair or nil");
+  }
   auto l = (SCM_List *)data->value;
   return l;
 }
 
 template <>
 inline SCM_String *cast<SCM_String>(SCM *data) {
-  assert(is_str(data));
+  if (!data || !is_str(data)) {
+    type_error(data, "string");
+  }
   auto l = (SCM_String *)data->value;
   return l;
 }
 
 template <>
 inline SCM_Symbol *cast<SCM_Symbol>(SCM *data) {
-  assert(is_sym(data));
+  if (!data || !is_sym(data)) {
+    type_error(data, "symbol");
+  }
   auto l = (SCM_Symbol *)data->value;
   return l;
 }
 
 template <>
 inline SCM_Procedure *cast<SCM_Procedure>(SCM *data) {
-  assert(is_proc(data));
+  if (!data || !is_proc(data)) {
+    type_error(data, "procedure");
+  }
   auto l = (SCM_Procedure *)data->value;
   return l;
 }
 
 template <>
 inline SCM_Function *cast<SCM_Function>(SCM *data) {
-  assert(is_func(data));
+  if (!data || !is_func(data)) {
+    type_error(data, "function");
+  }
   auto l = (SCM_Function *)data->value;
   return l;
 }
 
 template <>
 inline SCM_Continuation *cast<SCM_Continuation>(SCM *data) {
-  assert(is_cont(data));
+  if (!data || !is_cont(data)) {
+    type_error(data, "continuation");
+  }
   auto l = (SCM_Continuation *)data->value;
   return l;
 }
@@ -449,7 +462,9 @@ inline SCM *wrap(SCM_Macro *macro) {
 
 template <>
 inline SCM_HashTable *cast<SCM_HashTable>(SCM *data) {
-  assert(is_hash_table(data));
+  if (!data || !is_hash_table(data)) {
+    type_error(data, "hash-table");
+  }
   auto l = (SCM_HashTable *)data->value;
   return l;
 }
@@ -466,19 +481,25 @@ inline SCM *wrap(SCM_HashTable *hash_table) {
 
 template <>
 inline SCM_Macro *cast<SCM_Macro>(SCM *data) {
-  assert(is_macro(data));
+  if (!data || !is_macro(data)) {
+    type_error(data, "macro");
+  }
   return (SCM_Macro *)data->value;
 }
 
 template <>
 inline SCM_Rational *cast<SCM_Rational>(SCM *data) {
-  assert(is_ratio(data));
+  if (!data || !is_ratio(data)) {
+    type_error(data, "ratio");
+  }
   return (SCM_Rational *)data->value;
 }
 
 template <>
 inline SCM_Vector *cast<SCM_Vector>(SCM *data) {
-  assert(is_vector(data));
+  if (!data || !is_vector(data)) {
+    type_error(data, "vector");
+  }
   return (SCM_Vector *)data->value;
 }
 

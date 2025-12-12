@@ -30,6 +30,74 @@ SCM_List *eval_list_with_env(SCM_Environment *env, SCM_List *l) {
 // Error handling helper with context
 static SCM *g_current_eval_context = nullptr;
 
+// Helper function to get type name as string
+static const char *get_type_name(SCM::Type type) {
+  switch (type) {
+    case SCM::NONE: return "none";
+    case SCM::NIL: return "nil";
+    case SCM::LIST: return "pair/list";
+    case SCM::PROC: return "procedure";
+    case SCM::CONT: return "continuation";
+    case SCM::FUNC: return "function";
+    case SCM::NUM: return "number";
+    case SCM::FLOAT: return "float";
+    case SCM::CHAR: return "character";
+    case SCM::BOOL: return "boolean";
+    case SCM::SYM: return "symbol";
+    case SCM::STR: return "string";
+    case SCM::MACRO: return "macro";
+    case SCM::HASH_TABLE: return "hash-table";
+    case SCM::RATIO: return "ratio";
+    case SCM::VECTOR: return "vector";
+    default: return "unknown";
+  }
+}
+
+[[noreturn]] void type_error(SCM *data, const char *expected_type) {
+  // Try to get source location from the data itself first
+  const char *loc_str = nullptr;
+  if (data) {
+    loc_str = get_source_location_str(data);
+  }
+  
+  // If not available, try current eval context
+  if (!loc_str && g_current_eval_context) {
+    loc_str = get_source_location_str(g_current_eval_context);
+  }
+  
+  if (loc_str) {
+    fprintf(stderr, "%s: ", loc_str);
+  } else {
+    fprintf(stderr, "<unknown location>: ");
+  }
+  
+  fprintf(stderr, "Type error: expected %s, but got ", expected_type);
+  
+  if (data) {
+    const char *actual_type = get_type_name(data->type);
+    fprintf(stderr, "%s", actual_type);
+    fprintf(stderr, "\n  Value: ");
+    print_ast(data);
+    fprintf(stderr, "\n");
+  } else {
+    fprintf(stderr, "null\n");
+  }
+  
+  // Also print current eval context if available and different
+  if (g_current_eval_context && g_current_eval_context != data) {
+    const char *ctx_loc = get_source_location_str(g_current_eval_context);
+    if (ctx_loc) {
+      fprintf(stderr, "  While evaluating at %s: ", ctx_loc);
+    } else {
+      fprintf(stderr, "  While evaluating: ");
+    }
+    print_ast(g_current_eval_context);
+    fprintf(stderr, "\n");
+  }
+  
+  exit(1);
+}
+
 [[noreturn]] void eval_error(const char *format, ...) {
   va_list args;
   va_start(args, format);

@@ -29,6 +29,7 @@ SCM *eval_with_func(SCM_Function *func, SCM_List *l);
 
 // Error handling (used by special forms)
 [[noreturn]] void eval_error(const char *format, ...);
+[[noreturn]] void type_error(SCM *data, const char *expected_type);
 
 // Macro expansion and definition
 SCM *expand_macro_call(SCM_Environment *env, SCM_Macro *macro, SCM_List *args, SCM *original_call);
