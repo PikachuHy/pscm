@@ -27,3 +27,36 @@
 (define (add a b) (+ a b))
 ;; CHECK: 4
 (add 1 3)
+
+;; Test zero? function
+;; CHECK: #t
+(zero? 0)
+
+;; CHECK: #f
+(zero? 1)
+
+;; CHECK: #f
+(zero? -1)
+
+;; CHECK: #t
+(zero? 0.0)
+
+;; CHECK: #f
+(zero? 0.5)
+
+;; CHECK: #f
+(zero? -0.5)
+
+;; CHECK: #t
+(zero? -0)
+
+;; Test zero? with negative zero (should be true)
+;; CHECK: #t
+(zero? (- 0))
+
+;; Test zero? in conditional expressions
+;; CHECK: #t
+(if (zero? 0) #t #f)
+
+;; CHECK: #f
+(if (zero? 1) #t #f)

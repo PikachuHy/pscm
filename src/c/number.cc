@@ -6,9 +6,24 @@
 SCM *scm_make_ratio(int64_t numerator, int64_t denominator);
 
 SCM *scm_c_is_negative(SCM *arg) {
-  assert(is_num(arg));
-  int64_t val = (int64_t)arg->value;
+  if (!is_num(arg) && !is_float(arg)) {
+    eval_error("negative?: expected number");
+    return nullptr;
+  }
+  double val = scm_to_double(arg);
   if (val < 0) {
+    return scm_bool_true();
+  }
+  return scm_bool_false();
+}
+
+SCM *scm_c_is_zero(SCM *arg) {
+  if (!is_num(arg) && !is_float(arg) && !is_ratio(arg)) {
+    eval_error("zero?: expected number");
+    return nullptr;
+  }
+  double val = scm_to_double(arg);
+  if (val == 0.0) {
     return scm_bool_true();
   }
   return scm_bool_false();
@@ -530,6 +545,7 @@ SCM *scm_c_div(SCM_List *args) {
 
 void init_number() {
   scm_define_function("negative?", 1, 0, 0, scm_c_is_negative);
+  scm_define_function("zero?", 1, 0, 0, scm_c_is_zero);
   scm_define_generic_function("+", scm_c_add_number, _create_num(0));
   scm_define_function("=", 2, 0, 0, scm_c_eq_number);
   scm_define_vararg_function("-", scm_c_minus_wrapper);
