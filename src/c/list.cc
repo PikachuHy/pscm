@@ -386,6 +386,35 @@ SCM *scm_c_length(SCM *lst) {
   return result;
 }
 
+// memq: Return the first sublist of list whose car is obj (using eq? for comparison)
+// Returns #f if obj is not found
+SCM *scm_c_memq(SCM *obj, SCM *lst) {
+  if (is_nil(lst)) {
+    return scm_bool_false();
+  }
+  if (!is_pair(lst)) {
+    eval_error("memq: second argument must be a list");
+    return nullptr;
+  }
+  
+  extern bool _eq(SCM *lhs, SCM *rhs);
+  SCM_List *current = cast<SCM_List>(lst);
+  
+  while (current) {
+    if (current->data && _eq(obj, current->data)) {
+      // Found a match, return the sublist starting from this element
+      return wrap(current);
+    }
+    if (!current->next || is_nil(wrap(current->next))) {
+      break;
+    }
+    current = current->next;
+  }
+  
+  // Not found, return #f
+  return scm_bool_false();
+}
+
 void init_list() {
   scm_define_function("car", 1, 0, 0, car);
   scm_define_function("cdr", 1, 0, 0, cdr);
@@ -402,4 +431,5 @@ void init_list() {
   scm_define_function("last-pair", 1, 0, 0, scm_c_last_pair);
   scm_define_function("reverse", 1, 0, 0, scm_c_reverse);
   scm_define_function("length", 1, 0, 0, scm_c_length);
+  scm_define_function("memq", 2, 0, 0, scm_c_memq);
 }
