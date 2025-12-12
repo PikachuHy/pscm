@@ -63,3 +63,24 @@
   3)
 ;; CHECK: 3
 (f (lambda (x) x))
+
+;; Test lambda with single symbol parameter (rest parameter)
+;; CHECK: (3 4 5 6)
+((lambda x x) 3 4 5 6)
+
+;; CHECK: ()
+((lambda x x))
+
+;; CHECK: (a b c)
+((lambda args args) 'a 'b 'c)
+
+;; Test lambda with normal parameter list (should still work)
+;; CHECK: 7
+((lambda (x y) (+ x y)) 3 4)
+
+;; Test lambda with rest parameter (dotted pair syntax)
+;; CHECK: (5 6)
+((lambda (x y . z) z) 3 4 5 6)
+
+;; CHECK: ()
+((lambda (x y . z) z) 3 4)

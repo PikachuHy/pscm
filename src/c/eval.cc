@@ -150,7 +150,24 @@ static SCM *eval_set(SCM_Environment *env, SCM_List *l) {
 }
 
 SCM *eval_lambda(SCM_Environment *env, SCM_List *l) {
-  auto proc_sig = cast<SCM_List>(l->next->data);
+  SCM *param_spec = l->next->data;
+  SCM_List *proc_sig = nullptr;
+  
+  // Check if parameter is a single symbol (e.g., (lambda x body))
+  // In Scheme, (lambda x body) is equivalent to (lambda (. x) body)
+  if (is_sym(param_spec)) {
+    // Convert single symbol to a rest parameter list: (. symbol)
+    auto rest_sym = cast<SCM_Symbol>(param_spec);
+    SCM_List *rest_param_node = make_list(param_spec);
+    rest_param_node->is_dotted = true;  // Mark as rest parameter
+    proc_sig = rest_param_node;
+  } else if (is_pair(param_spec) || is_nil(param_spec)) {
+    // Normal parameter list (list or nil)
+    proc_sig = cast<SCM_List>(param_spec);
+  } else {
+    type_error(param_spec, "symbol, pair, or nil");
+  }
+  
   auto proc = make_proc(nullptr, proc_sig, l->next->next, env);
   auto ret = wrap(proc);
   if (debug_enabled) {
