@@ -398,6 +398,10 @@ entry:
       }
       goto entry;
     }
+    else if (is_sym_val(l->data, "case")) {
+      SCM *result = eval_case(env, l);
+      RETURN_WITH_CONTEXT(result);
+    }
     else if (is_sym_val(l->data, "begin")) {
       // begin: evaluate all expressions in sequence, return the last one
       if (!l->next) {
