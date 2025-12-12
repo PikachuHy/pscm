@@ -21,7 +21,8 @@ SCM *eval_cond(SCM_Environment *env, SCM_List *l, SCM **ast) {
       return eval_with_list(env, clause->next);
     }
     auto pred = eval_with_env(env, clause->data);
-    if (is_bool(pred) && is_false(pred)) {
+    // In Scheme, only #f is falsy, everything else is truthy
+    if (is_falsy(pred)) {
       continue;
     }
     if (!clause->next) {

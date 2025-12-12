@@ -195,7 +195,8 @@ static SCM *lookup_symbol(SCM_Environment *env, SCM_Symbol *sym) {
 static SCM *eval_if(SCM_Environment *env, SCM_List *l, SCM **ast) {
   assert(l->next);
   auto pred = eval_with_env(env, l->next->data);
-  if (is_true(pred)) {
+  // In Scheme, only #f is falsy, everything else is truthy
+  if (is_truthy(pred)) {
     *ast = l->next->next->data;
     return nullptr; // Signal to continue evaluation
   }
@@ -216,8 +217,9 @@ static SCM *eval_and(SCM_Environment *env, SCM_List *l, SCM **ast) {
   // Evaluate all expressions except the last one
   while (current && current->next) {
     SCM *result = eval_with_env(env, current->data);
-    // If any expression evaluates to #f, return #f immediately
-    if (is_false(result)) {
+    // If any expression evaluates to #f (falsy), return #f immediately
+    // In Scheme, only #f is falsy, everything else is truthy
+    if (is_falsy(result)) {
       return scm_bool_false();
     }
     current = current->next;
@@ -237,11 +239,12 @@ static SCM *eval_or(SCM_Environment *env, SCM_List *l, SCM **ast) {
     return scm_bool_false();
   }
   SCM_List *current = l->next;
-  // Evaluate all expressions except the last one
+  // Evaluate expressions until we find one that's truthy
   while (current && current->next) {
     SCM *result = eval_with_env(env, current->data);
-    // If any expression evaluates to true (non-#f), return it immediately
-    if (is_true(result)) {
+    // If any expression evaluates to truthy (not #f), return it immediately
+    // In Scheme, only #f is falsy, everything else is truthy
+    if (is_truthy(result)) {
       return result;
     }
     current = current->next;

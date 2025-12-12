@@ -20,6 +20,10 @@ struct SCM {
   void *value;
   SCM_SourceLocation *source_loc;  // Optional source location
 };
+
+// Forward declaration for type_error (implemented in eval.cc)
+[[noreturn]] void type_error(SCM *data, const char *expected_type);
+
 struct SCM_Environment;
 
 struct SCM_List {
@@ -146,13 +150,34 @@ inline bool is_bool(SCM *scm) {
   return scm->type == SCM::BOOL;
 }
 
+// Check if a value is truthy (in Scheme, only #f is falsy, everything else is truthy)
+inline bool is_truthy(SCM *scm) {
+  if (!scm) return false;
+  // Only #f is falsy in Scheme
+  return !(is_bool(scm) && scm->value == nullptr);
+}
+
+// Check if a value is falsy (only #f is falsy in Scheme)
+inline bool is_falsy(SCM *scm) {
+  if (!scm) return true;
+  // Only #f is falsy in Scheme
+  return is_bool(scm) && scm->value == nullptr;
+}
+
+// Legacy functions - these assume the value is a boolean
+// Use is_truthy/is_falsy for general truthiness checks
 inline bool is_true(SCM *scm) {
-  assert(is_bool(scm));
+  if (!scm || !is_bool(scm)) {
+    type_error(scm, "boolean");
+  }
   return scm->value;
 }
 
 inline bool is_false(SCM *scm) {
-  return !is_true(scm);
+  if (!scm || !is_bool(scm)) {
+    type_error(scm, "boolean");
+  }
+  return !scm->value;
 }
 
 inline bool is_none(SCM *scm) {
@@ -178,7 +203,6 @@ void set_source_location(SCM *scm, const char *filename, int line, int column);
 void copy_source_location(SCM *dest, SCM *src);
 void copy_source_location_recursive(SCM *dest, SCM *src);
 const char *get_source_location_str(SCM *scm);
-[[noreturn]] void type_error(SCM *data, const char *expected_type);
 
 // Inline helper function
 inline SCM_List make_list_dummy() {
