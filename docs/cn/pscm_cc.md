@@ -1,6 +1,8 @@
 # pscm cc
 
-pscm cc 是 PikachuHy's Scheme 的 C++ 实现版本，代码规模约 6400 行。该版本参考 Guile 1.8，基于 `setjmp/longjmp` 实现了 continuation 支持。
+![logo](/logo.png)
+
+pscm cc 是 PikachuHy's Scheme 的 C++ 实现版本，代码规模约 7000+ 行。该版本参考 Guile 1.8，基于 `setjmp/longjmp` 实现了 continuation 支持。
 
 ::: warning
 pscm 依然处于非常简陋的状态
@@ -32,7 +34,7 @@ pscm 依然处于非常简陋的状态
 
 - **尾递归优化**：使用 `goto` 减少栈深度
 - **模块化设计**：每个特殊形式独立文件，统一接口在 `eval.h` 声明
-- **支持的特殊形式**：`define`, `lambda`, `if`, `cond`, `let`/`let*`/`letrec`, `do`, `for-each`, `map`, `quote`, `quasiquote`, `apply`, `call/cc`, `call-with-values`, `dynamic-wind` 等
+- **支持的特殊形式**：`define`, `lambda`, `if`, `cond`, `case`, `and`, `or`, `begin`, `let`/`let*`/`letrec`, `do`, `for-each`, `map`, `quote`, `quasiquote`, `apply`, `call/cc`, `call-with-values`, `dynamic-wind` 等
 
 ### Continuation 实现
 
@@ -63,6 +65,7 @@ pscm 依然处于非常简陋的状态
 - **列表操作**：`car`, `cdr`, `cons`, `list`, `append`, `set-car!`, `set-cdr!` 等
 - **数字运算**：`+`, `-`, `*`, `/`, `expt`, `abs` 等（支持整数、浮点数、分数混合运算）
 - **字符串操作**：`string-length`, `make-string`, `string-ref`, `string-set!`, `display`, `write` 等
+- **向量操作**：`make-vector`, `vector-length`, `vector-ref`, `vector-set!` 等
 - **哈希表**：完整的哈希表操作集（创建、设置、获取、删除、遍历）
 - **其他**：`gensym`, `not`, `eval`, `equal?`, `eq?`, `eqv?` 等
 
@@ -71,8 +74,8 @@ pscm 依然处于非常简陋的状态
 ### 模块划分
 
 - **核心**：`pscm.h`（类型定义）、`eval.h`（求值接口）、`eval.cc`（主求值器）
-- **特殊形式**：`do.cc`, `cond.cc`, `map.cc`, `apply.cc`, `quasiquote.cc`, `macro.cc`, `let.cc`, `for_each.cc`, `values.cc`
-- **内置函数**：`predicate.cc`, `number.cc`, `list.cc`, `string.cc`, `char.cc`, `eq.cc`, `alist.cc`, `hash_table.cc`
+- **特殊形式**：`do.cc`, `cond.cc`, `case.cc`, `map.cc`, `apply.cc`, `quasiquote.cc`, `macro.cc`, `let.cc`, `for_each.cc`, `values.cc`
+- **内置函数**：`predicate.cc`, `number.cc`, `list.cc`, `string.cc`, `char.cc`, `eq.cc`, `alist.cc`, `hash_table.cc`, `vector.cc`
 - **基础设施**：`parse.cc`（解析器）、`print.cc`（打印）、`continuation.cc`（continuation）、`environment.cc`（环境）、`source_location.cc`（源位置）
 
 ### 错误处理
@@ -80,6 +83,8 @@ pscm 依然处于非常简陋的状态
 - 统一使用 `eval_error` 函数
 - 错误信息包含完整源位置
 - 宏展开时自动传播源位置
+- **调用栈追踪**：自动追踪表达式求值路径，错误时显示完整调用栈（最多 20 层）
+- **增强的错误报告**：包含表达式类型、值、源位置和完整求值上下文
 
 ## 已知限制
 
@@ -97,5 +102,5 @@ pscm 依然处于非常简陋的状态
 
 ### 中优先级
 - 模块系统（代码组织）
-- 错误处理机制（异常捕获）
-- 更多 Scheme 标准特性（`case`, `and`, `or` 等）
+- 错误处理机制（异常捕获，当前已有调用栈追踪）
+- 更多 Scheme 标准特性（`delay`/`force` 等）

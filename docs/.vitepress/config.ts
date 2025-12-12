@@ -133,6 +133,10 @@ function sidebarGuideZh() {
           text: 'pscm-cc 点对支持实现说明',
           link: '/cn/dotted_pair_support'
         },
+        {
+          text: 'pscm-cc dynamic-wind 实现方案',
+          link: '/cn/dynamic_wind_support'
+        }
       ]
     },
     {

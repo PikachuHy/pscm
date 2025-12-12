@@ -1,4 +1,4 @@
-# Dynamic-Wind 实现方案
+# pscm dynamic-wind 实现方案
 
 ## 概述
 
