@@ -42,6 +42,113 @@ SCM_List *eval_list_with_env(SCM_Environment *env, SCM_List *l) {
 // Error handling helper with context
 static SCM *g_current_eval_context = nullptr;
 
+// Call stack for tracking evaluation path
+struct EvalStackFrame {
+  char *source_location;        // Source location string (owned, must be freed)
+  char *expr_str;               // String representation of expression (owned, must be freed)
+  EvalStackFrame *next;         // Next frame in stack
+};
+
+static EvalStackFrame *g_eval_stack = nullptr;
+static const int MAX_STACK_DEPTH = 100;  // Prevent infinite recursion
+static int g_stack_depth = 0;
+
+// Push a frame onto the evaluation stack
+static void push_eval_stack(SCM *expr) {
+  if (g_stack_depth >= MAX_STACK_DEPTH) {
+    return;  // Stack too deep, don't add more frames
+  }
+  
+  if (!expr) {
+    return;  // Skip null expressions
+  }
+  
+  // Only track expressions with source location to avoid saving pointers
+  // to temporary stack-allocated expressions (which become invalid after return)
+  // The problem: expr might be a stack-allocated temporary (like in hash_table.cc:359)
+  // where `SCM call_expr;` is a local variable on the stack.
+  // 
+  // Solution: Try to get source location, but if it fails or crashes,
+  // we'll skip tracking this expression. We use a conservative approach:
+  // only track if we can safely get the source location.
+  //
+  // Note: get_source_location_str checks for null and source_loc existence,
+  // so it should be safe. But if expr is corrupted, even this could crash.
+  // In practice, if expr is valid enough to be passed to eval_with_env,
+  // it should be safe to check source_loc.
+  const char *loc = get_source_location_str(expr);
+  if (!loc) {
+    // Skip expressions without source location (usually temporary expressions)
+    // This avoids saving pointers to stack-allocated expressions that become invalid
+    return;
+  }
+  
+  // Immediately copy the location string before any other function calls
+  // that might overwrite the static buffer in get_source_location_str
+  size_t loc_len = strlen(loc);
+  char *loc_copy = new char[loc_len + 1];
+  if (!loc_copy) {
+    return;  // Memory allocation failed
+  }
+  strcpy(loc_copy, loc);
+  
+  EvalStackFrame *frame = new EvalStackFrame();
+  if (!frame) {
+    delete[] loc_copy;  // Clean up on failure
+    return;
+  }
+  
+  // Don't save expr pointer - it might point to a temporary stack-allocated object
+  // Only save the source location string, which is safe
+  frame->source_location = loc_copy;
+  frame->expr_str = nullptr;  // Not saving expression string to avoid complexity
+  frame->next = g_eval_stack;
+  g_eval_stack = frame;
+  g_stack_depth++;
+}
+
+// Pop a frame from the evaluation stack
+static void pop_eval_stack() {
+  if (g_eval_stack) {
+    EvalStackFrame *old = g_eval_stack;
+    g_eval_stack = g_eval_stack->next;
+    if (old->source_location) {
+      delete[] old->source_location;
+    }
+    delete old;
+    g_stack_depth--;
+  }
+}
+
+// Print the evaluation call stack
+static void print_eval_stack() {
+  if (!g_eval_stack) {
+    fprintf(stderr, "\nEvaluation call stack: (empty)\n");
+    return;
+  }
+  
+  fprintf(stderr, "\nEvaluation call stack (most recent first):\n");
+  EvalStackFrame *frame = g_eval_stack;
+  int depth = 0;
+  while (frame && depth < 20) {  // Limit to 20 frames for readability
+    fprintf(stderr, "  #%d: ", depth);
+    if (frame->source_location) {
+      fprintf(stderr, "%s\n", frame->source_location);
+    } else {
+      fprintf(stderr, "<no source location>\n");
+    }
+    // Expression pointer is not saved to avoid dangling pointer issues
+    // Source location is sufficient for debugging
+    fprintf(stderr, "\n");
+    frame = frame->next;
+    depth++;
+  }
+  if (frame) {
+    fprintf(stderr, "  ... (%d more frames)\n", g_stack_depth - depth);
+  }
+  fflush(stderr);
+}
+
 // Helper function to get type name as string
 static const char *get_type_name(SCM::Type type) {
   switch (type) {
@@ -297,6 +404,9 @@ SCM *eval_with_env(SCM_Environment *env, SCM *ast) {
   assert(env);
   assert(ast);
 
+  // Push onto evaluation stack for call trace
+  push_eval_stack(ast);
+
   // Save current context for error reporting
   SCM *old_context = g_current_eval_context;
   g_current_eval_context = ast;
@@ -305,6 +415,7 @@ SCM *eval_with_env(SCM_Environment *env, SCM *ast) {
 #define RETURN_WITH_CONTEXT(val)                                                                                       \
   do {                                                                                                                 \
     g_current_eval_context = old_context;                                                                              \
+    pop_eval_stack();                                                                                                  \
     return (val);                                                                                                      \
   } while (0)
 
@@ -563,7 +674,20 @@ entry:
     print_ast_to_stderr(wrap(l));
     fprintf(stderr, "\n");
     
-    abort();
+    // Print the evaluation call stack to show the evaluation path
+    fprintf(stderr, "\n=== Evaluation Call Stack (showing how we got here) ===\n");
+    if (g_eval_stack) {
+      print_eval_stack();
+    } else {
+      fprintf(stderr, "Call stack is empty (error occurred at top level)\n");
+    }
+    fprintf(stderr, "=== End of Call Stack ===\n");
+    
+    // Flush stderr to ensure all output is visible before exiting
+    fflush(stderr);
+    
+    // Use exit instead of abort to ensure output is flushed
+    exit(1);
     return nullptr;  // Never reached, but satisfies compiler
   }
 }

@@ -121,6 +121,7 @@ SCM *eval_for_each(SCM_Environment *env, SCM_List *l) {
     SCM call_expr;
     call_expr.type = SCM::LIST;
     call_expr.value = &args_dummy;
+    call_expr.source_loc = nullptr;  // Mark as temporary to skip call stack tracking
     
     if (debug_enabled) {
       SCM_DEBUG_EVAL("for-each ");

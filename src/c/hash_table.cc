@@ -359,6 +359,7 @@ SCM *scm_c_hash_fold(SCM *proc, SCM *init, SCM *table,
             SCM call_expr;
             call_expr.type = SCM::LIST;
             call_expr.value = &args_dummy;
+            call_expr.source_loc = nullptr;  // Mark as temporary to skip call stack tracking
             result = eval_with_env(&g_env, &call_expr);
           }
         }
