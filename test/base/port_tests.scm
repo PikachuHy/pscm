@@ -189,3 +189,67 @@
   (close-output-port port)
   (let ((port2 (open-input-file "/tmp/test_write_newline.txt")))
     (read-char port2)))
+
+;; Test read with comments from string port
+;; CHECK: hello
+(let ((port (open-input-string "; This is a comment\nhello")))
+  (read port))
+
+;; CHECK: 42
+(let ((port (open-input-string "; Comment before\n42; comment after")))
+  (read port))
+
+;; CHECK: (a b c)
+(let ((port (open-input-string "; First comment\n; Second comment\n(a b c); trailing comment")))
+  (read port))
+
+;; CHECK: 123
+(let ((port (open-input-string "123")))
+  (read port))
+
+;; CHECK: (define x 42)
+(let ((port (open-input-string ";;; Multiple semicolons\n(define x 42)")))
+  (read port))
+
+;; Test read with comments from file port
+;; First create a test file with comments
+(let ((port (open-output-file "/tmp/test_read_comment.txt")))
+  (display "; This is a comment line\n" port)
+  (display "(define test-value 100)\n" port)
+  (display "; Another comment\n" port)
+  (display "(define another 200)\n" port)
+  (close-output-port port))
+
+;; CHECK: (define test-value 100)
+(let ((port (open-input-file "/tmp/test_read_comment.txt")))
+  (read port))
+
+;; CHECK: (define another 200)
+(let ((port (open-input-file "/tmp/test_read_comment.txt")))
+  (read port)
+  (read port))
+
+;; Test read with multiple consecutive comments
+;; CHECK: final-value
+(let ((port (open-input-string "; Comment 1\n; Comment 2\n; Comment 3\nfinal-value")))
+  (read port))
+
+;; Test read with comment and whitespace
+;; CHECK: spaced
+(let ((port (open-input-string "  ; comment\n  spaced  ")))
+  (read port))
+
+;; Test read with comment containing special characters
+;; CHECK: (test "string")
+(let ((port (open-input-string "; Comment with (parens) and \"quotes\"\n(test \"string\")")))
+  (read port))
+
+;; Test read empty file (only comments)
+(let ((port (open-output-file "/tmp/test_read_empty_comment.txt")))
+  (display "; Only comments here\n" port)
+  (display "; No actual code\n" port)
+  (close-output-port port))
+
+;; CHECK: #t
+(let ((port (open-input-file "/tmp/test_read_empty_comment.txt")))
+  (eof-object? (read port)))

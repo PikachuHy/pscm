@@ -323,7 +323,7 @@ static SCM *read_expr_from_port(SCM_Port *port) {
   bool escaped = false;
   bool started = false;
   
-  // Skip leading whitespace
+  // Skip leading whitespace and comments
   while (true) {
     int ch = peek_char_from_port(port);
     if (ch == EOF) {
@@ -332,11 +332,35 @@ static SCM *read_expr_from_port(SCM_Port *port) {
       }
       break;
     }
-    if (!isspace(ch)) {
-      started = true;
-      break;
+    
+    // Skip whitespace
+    if (isspace(ch)) {
+      read_char_from_port(port);  // Consume whitespace
+      continue;
     }
-    read_char_from_port(port);  // Consume whitespace
+    
+    // Skip comments (lines starting with ;)
+    if (ch == ';') {
+      // Read until end of line
+      while (true) {
+        int comment_ch = read_char_from_port(port);
+        if (comment_ch == EOF || comment_ch == '\n' || comment_ch == '\r') {
+          // Skip the newline if we read it
+          if (comment_ch == '\r') {
+            int next_ch = peek_char_from_port(port);
+            if (next_ch == '\n') {
+              read_char_from_port(port);
+            }
+          }
+          break;
+        }
+      }
+      continue;
+    }
+    
+    // Found non-whitespace, non-comment character
+    started = true;
+    break;
   }
   
   if (!started) {
