@@ -256,16 +256,24 @@ SCM *scm_c_write(SCM_List *args) {
 
 // newline: Output a newline character (optionally to a port)
 SCM *scm_c_newline(SCM_List *args) {
-  // args is the list of arguments (not including function name)
-  // If no arguments, args is nullptr or args->data is nullptr
-  if (!args) {
-    // No arguments: output to stdout
-    printf("\n");
-  } else if (!args->data) {
-    // Empty argument list: output to stdout
-    printf("\n");
+  SCM *port_arg = nullptr;
+  if (args && args->data && !is_nil(args->data)) {
+    port_arg = args->data;
+  }
+  
+  if (port_arg) {
+    if (!is_port(port_arg)) {
+      eval_error("newline: argument must be a port");
+      return nullptr;
+    }
+    SCM_Port *port = cast<SCM_Port>(port_arg);
+    if (port->is_input) {
+      eval_error("newline: expected output port");
+      return nullptr;
+    }
+    write_char_to_port_string(port, '\n');
   } else {
-    // One argument: port (not yet implemented, just output to stdout for now)
+    // No arguments: output to stdout
     printf("\n");
   }
   return scm_none();

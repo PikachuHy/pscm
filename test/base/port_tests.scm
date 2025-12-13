@@ -94,3 +94,98 @@
   (lambda (port)
     (display port)
     (display "test" port)))
+
+;; Test input-port?
+;; CHECK: #t
+(input-port? (open-input-string "test"))
+
+;; CHECK: #f
+(input-port? (open-output-string))
+
+;; CHECK: #t
+(let ((port (open-input-file filename)))
+  (input-port? port))
+
+;; CHECK: #f
+(input-port? "not a port")
+
+;; CHECK: #f
+(input-port? 123)
+
+;; Test output-port?
+;; CHECK: #t
+(output-port? (open-output-string))
+
+;; CHECK: #f
+(output-port? (open-input-string "test"))
+
+;; CHECK: #t
+(let ((port (open-output-file "/tmp/test_output_port.txt")))
+  (output-port? port))
+
+;; CHECK: #f
+(output-port? "not a port")
+
+;; CHECK: #f
+(output-port? 123)
+
+;; Test write-char
+;; CHECK: "a"
+(let ((port (open-output-string)))
+  (write-char (integer->char 97) port)
+  (get-output-string port))
+
+;; CHECK: "abc"
+(let ((port (open-output-string)))
+  (write-char (integer->char 97) port)
+  (write-char (integer->char 98) port)
+  (write-char (integer->char 99) port)
+  (get-output-string port))
+
+;; Test write-char to file
+;; CHECK: #\;
+(let ((port (open-output-file "/tmp/test_write_char.txt")))
+  (write-char #\; port)
+  (close-output-port port)
+  (let ((port2 (open-input-file "/tmp/test_write_char.txt")))
+    (read-char port2)))
+
+;; Test newline with port
+;; CHECK: "
+(let ((port (open-output-string)))
+  (newline port)
+  (get-output-string port))
+
+;; CHECK: "a
+(let ((port (open-output-string)))
+  (write-char (integer->char 97) port)
+  (newline port)
+  (get-output-string port))
+
+;; CHECK: "a
+;; CHECK-NEXT: b
+;; CHECK-NEXT: "
+(let ((port (open-output-string)))
+  (write-char (integer->char 97) port)
+  (newline port)
+  (write-char (integer->char 98) port)
+  (newline port)
+  (get-output-string port))
+
+;; Test write-char, display, and newline together
+;; CHECK: ";;;
+(let ((port (open-output-string)))
+  (write-char (integer->char 59) port)
+  (display (integer->char 59) port)
+  (display ";" port)
+  (newline port)
+  (get-output-string port))
+
+;; Test write-char and newline to file
+;; CHECK: #\;
+(let ((port (open-output-file "/tmp/test_write_newline.txt")))
+  (write-char #\; port)
+  (newline port)
+  (close-output-port port)
+  (let ((port2 (open-input-file "/tmp/test_write_newline.txt")))
+    (read-char port2)))

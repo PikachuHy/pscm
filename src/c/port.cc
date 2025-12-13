@@ -288,8 +288,8 @@ static int peek_char_from_port(SCM_Port *port) {
   return EOF;
 }
 
-// Helper function to write a character to a port
-static void write_char_to_port(SCM_Port *port, char ch) {
+// Helper function to write a character to a port (exported for use in string.cc)
+void write_char_to_port_string(SCM_Port *port, char ch) {
   if (port->is_closed) {
     return;
   }
@@ -502,6 +502,63 @@ SCM *scm_c_read(SCM_List *args) {
 // eof-object?: Check if an object is the EOF object
 SCM *scm_c_is_eof_object(SCM *obj) {
   return is_eof_object(obj) ? scm_bool_true() : scm_bool_false();
+}
+
+// input-port?: Check if an object is an input port
+SCM *scm_c_is_input_port(SCM *obj) {
+  if (!is_port(obj)) {
+    return scm_bool_false();
+  }
+  SCM_Port *port = cast<SCM_Port>(obj);
+  return port->is_input ? scm_bool_true() : scm_bool_false();
+}
+
+// output-port?: Check if an object is an output port
+SCM *scm_c_is_output_port(SCM *obj) {
+  if (!is_port(obj)) {
+    return scm_bool_false();
+  }
+  SCM_Port *port = cast<SCM_Port>(obj);
+  return port->is_input ? scm_bool_false() : scm_bool_true();
+}
+
+// write-char: Write a character to a port
+SCM *scm_c_write_char(SCM_List *args) {
+  if (!args || !args->data) {
+    eval_error("write-char: requires at least 1 argument");
+    return nullptr;
+  }
+  
+  SCM *char_arg = args->data;
+  SCM *port_arg = nullptr;
+  if (args->next && args->next->data && !is_nil(args->next->data)) {
+    port_arg = args->next->data;
+  }
+  
+  if (!is_char(char_arg)) {
+    eval_error("write-char: first argument must be a character");
+    return nullptr;
+  }
+  
+  char ch = ptr_to_char(char_arg->value);
+  
+  if (port_arg) {
+    if (!is_port(port_arg)) {
+      eval_error("write-char: second argument must be a port");
+      return nullptr;
+    }
+    SCM_Port *port = cast<SCM_Port>(port_arg);
+    if (port->is_input) {
+      eval_error("write-char: expected output port");
+      return nullptr;
+    }
+    write_char_to_port_string(port, ch);
+  } else {
+    // Write to stdout
+    putchar(ch);
+  }
+  
+  return scm_none();
 }
 
 // char-ready?: Check if a character is ready to be read
@@ -761,6 +818,13 @@ void init_port() {
   scm_define_vararg_function("peek-char", scm_c_peek_char);
   scm_define_function("eof-object?", 1, 0, 0, scm_c_is_eof_object);
   scm_define_vararg_function("char-ready?", scm_c_char_ready);
+  
+  // Port predicates
+  scm_define_function("input-port?", 1, 0, 0, scm_c_is_input_port);
+  scm_define_function("output-port?", 1, 0, 0, scm_c_is_output_port);
+  
+  // Port write operations
+  scm_define_vararg_function("write-char", scm_c_write_char);
   
   // Port wrappers
   scm_define_vararg_function("call-with-input-file", scm_c_call_with_input_file);
