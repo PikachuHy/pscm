@@ -364,6 +364,44 @@ SCM *scm_c_reverse(SCM *lst) {
   return scm_nil();
 }
 
+SCM *scm_c_list_ref(SCM *lst, SCM *k) {
+  if (is_nil(lst)) {
+    eval_error("list-ref: index out of range");
+    return nullptr;
+  }
+  if (!is_pair(lst)) {
+    eval_error("list-ref: first argument must be a list");
+    return nullptr;
+  }
+  if (!is_num(k)) {
+    eval_error("list-ref: second argument must be an integer");
+    return nullptr;
+  }
+  
+  int64_t idx = (int64_t)k->value;
+  if (idx < 0) {
+    eval_error("list-ref: index must be non-negative");
+    return nullptr;
+  }
+  
+  SCM_List *current = cast<SCM_List>(lst);
+  int64_t i = 0;
+  
+  while (current) {
+    if (i == idx) {
+      return current->data;
+    }
+    i++;
+    if (!current->next || is_nil(wrap(current->next))) {
+      break;
+    }
+    current = current->next;
+  }
+  
+  eval_error("list-ref: index out of range");
+  return nullptr;
+}
+
 SCM *scm_c_length(SCM *lst) {
   if (is_nil(lst)) {
     SCM *result = new SCM();
@@ -435,6 +473,7 @@ void init_list() {
   scm_define_vararg_function("append", scm_append);
   scm_define_function("list-head", 2, 0, 0, scm_c_list_head);
   scm_define_function("list-tail", 2, 0, 0, scm_c_list_tail);
+  scm_define_function("list-ref", 2, 0, 0, scm_c_list_ref);
   scm_define_function("set-car!", 2, 0, 0, scm_c_set_car);
   scm_define_function("set-cdr!", 2, 0, 0, scm_c_set_cdr);
   scm_define_function("last-pair", 1, 0, 0, scm_c_last_pair);
