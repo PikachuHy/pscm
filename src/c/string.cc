@@ -221,6 +221,92 @@ SCM *scm_c_string(SCM_List *args) {
   return scm;
 }
 
+// string->number: Convert a string to a number
+// (string->number string [radix]) -> number or #f
+SCM *scm_c_string_to_number(SCM_List *args) {
+  if (!args || !args->data) {
+    eval_error("string->number: requires at least 1 argument");
+    return nullptr;
+  }
+  
+  SCM *str_scm = args->data;
+  if (!is_str(str_scm)) {
+    eval_error("string->number: expected string");
+    return nullptr;
+  }
+  
+  SCM_String *s = cast<SCM_String>(str_scm);
+  
+  // Check for optional radix argument
+  int radix = 10;
+  if (args->next && args->next->data) {
+    SCM *radix_scm = args->next->data;
+    if (!is_num(radix_scm)) {
+      eval_error("string->number: radix must be a number");
+      return nullptr;
+    }
+    radix = (int)(int64_t)radix_scm->value;
+    if (radix < 2 || radix > 36) {
+      eval_error("string->number: radix must be between 2 and 36");
+      return nullptr;
+    }
+  }
+  
+  // Empty string returns #f
+  if (s->len == 0) {
+    return scm_bool_false();
+  }
+  
+  // Create a null-terminated string for parsing
+  char *str = new char[s->len + 1];
+  memcpy(str, s->data, s->len);
+  str[s->len] = '\0';
+  
+  // Try to parse as number
+  // For now, we'll use a simple approach: try strtol/strtod
+  // This doesn't handle all Scheme number formats, but covers basic cases
+  char *endptr;
+  
+  // Check if it's a float (contains '.', 'e', or 'E')
+  bool is_float_str = false;
+  for (int i = 0; i < s->len; i++) {
+    if (str[i] == '.' || str[i] == 'e' || str[i] == 'E') {
+      is_float_str = true;
+      break;
+    }
+  }
+  
+  SCM *result = nullptr;
+  
+  if (is_float_str && radix == 10) {
+    // Parse as float
+    double val = strtod(str, &endptr);
+    if (endptr == str || *endptr != '\0') {
+      // Failed to parse
+      result = scm_bool_false();
+    } else {
+      result = scm_from_double(val);
+    }
+  } else {
+    // Parse as integer
+    long val = strtol(str, &endptr, radix);
+    if (endptr == str || *endptr != '\0') {
+      // Failed to parse
+      result = scm_bool_false();
+    } else {
+      // Create number directly
+      SCM *num = new SCM();
+      num->type = SCM::NUM;
+      num->value = (void *)(int64_t)val;
+      num->source_loc = nullptr;
+      result = num;
+    }
+  }
+  
+  delete[] str;
+  return result;
+}
+
 void init_string() {
   scm_define_function("string-length", 1, 0, 0, scm_c_string_length);
   scm_define_vararg_function("make-string", scm_c_make_string);
@@ -231,5 +317,6 @@ void init_string() {
   scm_define_function("display", 1, 0, 0, scm_c_display);
   scm_define_function("write", 1, 0, 0, scm_c_write);
   scm_define_vararg_function("newline", scm_c_newline);
+  scm_define_vararg_function("string->number", scm_c_string_to_number);
 }
 
