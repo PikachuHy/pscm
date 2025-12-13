@@ -307,6 +307,149 @@ SCM *scm_c_string_to_number(SCM_List *args) {
   return result;
 }
 
+// Helper function to convert integer to string in given radix
+static char* int_to_string_radix(int64_t val, int radix) {
+  if (val == 0) {
+    char *result = new char[2];
+    result[0] = '0';
+    result[1] = '\0';
+    return result;
+  }
+  
+  // Handle negative numbers
+  bool negative = false;
+  int64_t uval;
+  if (val < 0) {
+    negative = true;
+    uval = -val;
+  } else {
+    uval = val;
+  }
+  
+  // Calculate string length
+  int64_t temp = uval;
+  int len = 0;
+  while (temp > 0) {
+    len++;
+    temp /= radix;
+  }
+  if (negative) len++;
+  
+  char *result = new char[len + 1];
+  result[len] = '\0';
+  
+  // Convert to string (right to left)
+  int pos = len - 1;
+  temp = uval;
+  while (temp > 0) {
+    int digit = temp % radix;
+    if (digit < 10) {
+      result[pos--] = '0' + digit;
+    } else {
+      result[pos--] = 'a' + (digit - 10);
+    }
+    temp /= radix;
+  }
+  
+  if (negative) {
+    result[0] = '-';
+  }
+  
+  return result;
+}
+
+// number->string: Convert a number to a string
+// (number->string number [radix]) -> string
+SCM *scm_c_number_to_string(SCM_List *args) {
+  if (!args || !args->data) {
+    eval_error("number->string: requires at least 1 argument");
+    return nullptr;
+  }
+  
+  SCM *num_scm = args->data;
+  if (!is_num(num_scm) && !is_float(num_scm) && !is_ratio(num_scm)) {
+    eval_error("number->string: expected number");
+    return nullptr;
+  }
+  
+  // Check for optional radix argument
+  int radix = 10;
+  if (args->next && args->next->data) {
+    SCM *radix_scm = args->next->data;
+    if (!is_num(radix_scm)) {
+      eval_error("number->string: radix must be a number");
+      return nullptr;
+    }
+    radix = (int)(int64_t)radix_scm->value;
+    if (radix < 2 || radix > 36) {
+      eval_error("number->string: radix must be between 2 and 36");
+      return nullptr;
+    }
+  }
+  
+  char *str_data = nullptr;
+  int str_len = 0;
+  
+  if (is_num(num_scm)) {
+    int64_t val = (int64_t)num_scm->value;
+    str_data = int_to_string_radix(val, radix);
+    str_len = strlen(str_data);
+  } else if (is_float(num_scm)) {
+    if (radix != 10) {
+      eval_error("number->string: radix can only be 10 for floating-point numbers");
+      return nullptr;
+    }
+    double val = ptr_to_double(num_scm->value);
+    // Use snprintf to format float
+    // Allocate enough space (64 bytes should be enough for most floats)
+    str_data = new char[64];
+    if (val == (double)(int64_t)val) {
+      // Integer value stored as float: print with .0 to show it's a float
+      str_len = snprintf(str_data, 64, "%.1f", val);
+    } else {
+      str_len = snprintf(str_data, 64, "%g", val);
+    }
+  } else if (is_ratio(num_scm)) {
+    if (radix != 10) {
+      eval_error("number->string: radix can only be 10 for rational numbers");
+      return nullptr;
+    }
+    SCM_Rational *rat = cast<SCM_Rational>(num_scm);
+    // Format as "numerator/denominator"
+    // Calculate length needed
+    int num_len = 1, den_len = 1;
+    int64_t num = rat->numerator;
+    int64_t den = rat->denominator;
+    if (num < 0) num_len++;
+    if (num == 0) num_len = 1;
+    else {
+      while (num != 0) { num_len++; num /= 10; }
+    }
+    while (den != 0) { den_len++; den /= 10; }
+    
+    str_len = num_len + den_len + 1; // +1 for '/'
+    str_data = new char[str_len + 1];
+    snprintf(str_data, str_len + 1, "%lld/%lld", rat->numerator, rat->denominator);
+    str_len = strlen(str_data);
+  }
+  
+  if (!str_data) {
+    eval_error("number->string: internal error");
+    return nullptr;
+  }
+  
+  // Create SCM_String
+  SCM_String *s = new SCM_String();
+  s->data = str_data;
+  s->len = str_len;
+  
+  SCM *scm = new SCM();
+  scm->type = SCM::STR;
+  scm->value = s;
+  scm->source_loc = nullptr;
+  return scm;
+}
+
 void init_string() {
   scm_define_function("string-length", 1, 0, 0, scm_c_string_length);
   scm_define_vararg_function("make-string", scm_c_make_string);
@@ -318,5 +461,6 @@ void init_string() {
   scm_define_function("write", 1, 0, 0, scm_c_write);
   scm_define_vararg_function("newline", scm_c_newline);
   scm_define_vararg_function("string->number", scm_c_string_to_number);
+  scm_define_vararg_function("number->string", scm_c_number_to_string);
 }
 
