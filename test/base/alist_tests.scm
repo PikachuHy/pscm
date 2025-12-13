@@ -61,3 +61,38 @@ capitals
 (set! capitals (assoc-remove! capitals "Oregon"))
 ;; CHECK: (("South Dakota" . "Pierre") ("New York" . "Albany") ("Florida" . "Tallahassee"))
 capitals
+
+;; Test assq function (uses eq? for comparison)
+(define e '((a 1) (b 2) (c 3)))
+;; CHECK: (a 1)
+(assq 'a e)
+;; CHECK: (b 2)
+(assq 'b e)
+;; CHECK: #f
+(assq 'd e)
+
+;; Test assq with symbol keys (eq? comparison)
+(define sym-alist '((x 10) (y 20) (z 30)))
+;; CHECK: (x 10)
+(assq 'x sym-alist)
+;; CHECK: (y 20)
+(assq 'y sym-alist)
+;; CHECK: #f
+(assq 'w sym-alist)
+
+;; Test assq vs assoc: assq uses eq? (pointer comparison), assoc uses equal? (deep comparison)
+;; assq should return #f for list keys (because (list 'a) and '(a) are not eq?)
+;; CHECK: #f
+(assq (list 'a) '(((a)) ((b)) ((c))))
+;; assoc should find it (because (list 'a) and '(a) are equal?)
+;; CHECK: ((a))
+(assoc (list 'a) '(((a)) ((b)) ((c))))
+
+;; Test assq with numeric keys
+(define num-alist '((1 "one") (2 "two") (3 "three")))
+;; CHECK: (1 "one")
+(assq 1 num-alist)
+;; CHECK: (2 "two")
+(assq 2 num-alist)
+;; CHECK: #f
+(assq 4 num-alist)

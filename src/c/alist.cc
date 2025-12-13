@@ -4,6 +4,8 @@ bool _eq(SCM *lhs, SCM *rhs);
 
 // Helper function for eq? comparison (pointer/identity equality)
 // This implements the eq? predicate semantics: two objects are eq? if they are the same object
+// For symbols, use content-based comparison (same as hash_table.cc scm_cmp_eq)
+// because in Guile, symbols are interned so eq? compares by content
 static bool is_eq_pointer(SCM *lhs, SCM *rhs) {
   if (lhs == rhs) {
     return true;
@@ -11,8 +13,18 @@ static bool is_eq_pointer(SCM *lhs, SCM *rhs) {
   if (lhs->type != rhs->type) {
     return false;
   }
-  // For strings and symbols, compare pointers (value field points to the same object)
-  if (is_str(lhs) || is_sym(lhs)) {
+  // For symbols, compare by content (same as hash_table.cc scm_cmp_eq)
+  // This allows assq to work correctly with symbols
+  if (is_sym(lhs) && is_sym(rhs)) {
+    auto sym1 = cast<SCM_Symbol>(lhs);
+    auto sym2 = cast<SCM_Symbol>(rhs);
+    if (sym1->len != sym2->len) {
+      return false;
+    }
+    return memcmp(sym1->data, sym2->data, sym1->len) == 0;
+  }
+  // For strings, compare pointers (value field points to the same object)
+  if (is_str(lhs)) {
     return lhs->value == rhs->value;
   }
   // For numbers, compare values
@@ -34,7 +46,25 @@ SCM *scm_c_acons(SCM *key, SCM *value, SCM *alist) {
   return scm_cons(pair, alist);
 }
 
-// assoc: (assoc key alist) -> pair or #f
+// assq: (assq key alist) -> pair or #f (using eq? for comparison)
+SCM *scm_c_assq(SCM *key, SCM *alist) {
+  if (is_nil(alist)) {
+    return scm_bool_false();
+  }
+  auto l = cast<SCM_List>(alist);
+  while (l) {
+    if (is_pair(l->data)) {
+      auto pair = cast<SCM_List>(l->data);
+      if (pair->data && is_eq_pointer(key, pair->data)) {
+        return l->data; // Return the pair
+      }
+    }
+    l = l->next;
+  }
+  return scm_bool_false();
+}
+
+// assoc: (assoc key alist) -> pair or #f (using equal? for comparison)
 SCM *scm_c_assoc(SCM *key, SCM *alist) {
   if (is_nil(alist)) {
     return scm_bool_false();
@@ -234,6 +264,7 @@ SCM *scm_c_assv(SCM *key, SCM *alist) {
 }
 
 void init_alist() {
+  scm_define_function("assq", 2, 0, 0, scm_c_assq);
   scm_define_function("assv", 2, 0, 0, scm_c_assv);
   scm_define_function("acons", 3, 0, 0, scm_c_acons);
   scm_define_function("assoc", 2, 0, 0, scm_c_assoc);
