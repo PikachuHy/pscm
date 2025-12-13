@@ -861,6 +861,7 @@ void init_alist();
 void init_char();
 void init_string();
 void init_port();
+void init_exit();
 void init_eval();
 void init_values();
 void init_hash_table();
