@@ -15,7 +15,7 @@ struct SCM_SourceLocation {
 };
 
 struct SCM {
-  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, CHAR, BOOL, SYM, STR, MACRO, HASH_TABLE, RATIO, VECTOR } type;
+  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, CHAR, BOOL, SYM, STR, MACRO, HASH_TABLE, RATIO, VECTOR, PORT } type;
 
   void *value;
   SCM_SourceLocation *source_loc;  // Optional source location
@@ -89,6 +89,27 @@ struct SCM_HashTable {
 struct SCM_Vector {
   SCM **elements;       // Array of SCM pointers
   size_t length;        // Number of elements
+};
+
+// Port types
+enum PortType {
+  PORT_FILE_INPUT,
+  PORT_FILE_OUTPUT,
+  PORT_STRING_INPUT,
+  PORT_STRING_OUTPUT
+};
+
+struct SCM_Port {
+  PortType port_type;
+  bool is_input;         // true for input port, false for output port
+  bool is_closed;        // true if port is closed
+  FILE *file;            // For file ports
+  char *string_data;     // For string input ports (read-only)
+  int string_pos;        // Current position in string
+  int string_len;        // Length of string
+  char *output_buffer;   // For string output ports (growing buffer)
+  int output_len;        // Current length of output buffer
+  int output_capacity;   // Capacity of output buffer
 };
 
 struct SCM_Environment {
@@ -198,6 +219,10 @@ inline bool is_hash_table(SCM *scm) {
 
 inline bool is_vector(SCM *scm) {
   return scm->type == SCM::VECTOR;
+}
+
+inline bool is_port(SCM *scm) {
+  return scm->type == SCM::PORT;
 }
 
 SCM *create_sym(const char *data, int len);
@@ -532,6 +557,14 @@ inline SCM_Vector *cast<SCM_Vector>(SCM *data) {
 }
 
 template <>
+inline SCM_Port *cast<SCM_Port>(SCM *data) {
+  if (!data || !is_port(data)) {
+    type_error(data, "port");
+  }
+  return (SCM_Port *)data->value;
+}
+
+template <>
 inline SCM *wrap(SCM_Vector *vec) {
   assert(vec);
   auto data = new SCM();
@@ -827,6 +860,7 @@ void init_eq();
 void init_alist();
 void init_char();
 void init_string();
+void init_port();
 void init_eval();
 void init_values();
 void init_hash_table();

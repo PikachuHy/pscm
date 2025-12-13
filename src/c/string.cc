@@ -117,15 +117,140 @@ SCM *scm_c_string_set(SCM *str, SCM *k, SCM *chr) {
   return scm_none(); // Return unspecified value
 }
 
+// Helper function to write string to port
+static void write_string_to_port(SCM_Port *port, const char *str) {
+  if (!port || port->is_closed) {
+    return;
+  }
+  
+  if (port->port_type == PORT_FILE_OUTPUT) {
+    if (port->file) {
+      fputs(str, port->file);
+    }
+  } else if (port->port_type == PORT_STRING_OUTPUT) {
+    int len = strlen(str);
+    while (port->output_len + len + 1 >= port->output_capacity) {
+      port->output_capacity = port->output_capacity == 0 ? 256 : port->output_capacity * 2;
+      port->output_buffer = (char*)realloc(port->output_buffer, port->output_capacity);
+    }
+    memcpy(port->output_buffer + port->output_len, str, len);
+    port->output_len += len;
+    port->output_buffer[port->output_len] = '\0';
+  }
+}
+
+// Helper function to write character to port
+static void write_char_to_port_string(SCM_Port *port, char ch) {
+  if (!port || port->is_closed) {
+    return;
+  }
+  
+  if (port->port_type == PORT_FILE_OUTPUT) {
+    if (port->file) {
+      fputc(ch, port->file);
+    }
+  } else if (port->port_type == PORT_STRING_OUTPUT) {
+    if (port->output_len + 1 >= port->output_capacity) {
+      port->output_capacity = port->output_capacity == 0 ? 256 : port->output_capacity * 2;
+      port->output_buffer = (char*)realloc(port->output_buffer, port->output_capacity);
+    }
+    port->output_buffer[port->output_len++] = ch;
+    port->output_buffer[port->output_len] = '\0';
+  }
+}
+
 // display: Output the argument using display format (without quotes for strings)
-SCM *scm_c_display(SCM *arg) {
-  print_ast(arg, false); // Use display format (write_mode = false)
+// display obj [port]
+SCM *scm_c_display(SCM_List *args) {
+  if (!args || !args->data) {
+    eval_error("display: requires at least 1 argument");
+    return nullptr;
+  }
+  
+  SCM *obj = args->data;
+  SCM *port_arg = nullptr;
+  if (args->next && args->next->data && !is_nil(args->next->data)) {
+    port_arg = args->next->data;
+  }
+  
+  if (port_arg) {
+    if (!is_port(port_arg)) {
+      eval_error("display: second argument must be a port");
+      return nullptr;
+    }
+    SCM_Port *port = cast<SCM_Port>(port_arg);
+    if (port->is_input) {
+      eval_error("display: expected output port");
+      return nullptr;
+    }
+    // For now, use print_ast and capture output (simplified)
+    // In a full implementation, we'd need a port-aware print function
+    char buffer[4096];
+    FILE *old_stdout = stdout;
+    FILE *tmp_file = tmpfile();
+    if (!tmp_file) {
+      print_ast(obj, false);
+      return scm_none();
+    }
+    stdout = tmp_file;
+    print_ast(obj, false);
+    fflush(tmp_file);
+    rewind(tmp_file);
+    size_t len = fread(buffer, 1, sizeof(buffer) - 1, tmp_file);
+    buffer[len] = '\0';
+    stdout = old_stdout;
+    fclose(tmp_file);
+    write_string_to_port(port, buffer);
+  } else {
+    print_ast(obj, false); // Use display format (write_mode = false)
+  }
   return scm_none(); // Return unspecified value
 }
 
 // write: Output the argument using write format (with quotes for strings)
-SCM *scm_c_write(SCM *arg) {
-  print_ast(arg, true); // Use write format (write_mode = true)
+// write obj [port]
+SCM *scm_c_write(SCM_List *args) {
+  if (!args || !args->data) {
+    eval_error("write: requires at least 1 argument");
+    return nullptr;
+  }
+  
+  SCM *obj = args->data;
+  SCM *port_arg = nullptr;
+  if (args->next && args->next->data && !is_nil(args->next->data)) {
+    port_arg = args->next->data;
+  }
+  
+  if (port_arg) {
+    if (!is_port(port_arg)) {
+      eval_error("write: second argument must be a port");
+      return nullptr;
+    }
+    SCM_Port *port = cast<SCM_Port>(port_arg);
+    if (port->is_input) {
+      eval_error("write: expected output port");
+      return nullptr;
+    }
+    // For now, use print_ast and capture output (simplified)
+    char buffer[4096];
+    FILE *old_stdout = stdout;
+    FILE *tmp_file = tmpfile();
+    if (!tmp_file) {
+      print_ast(obj, true);
+      return scm_none();
+    }
+    stdout = tmp_file;
+    print_ast(obj, true);
+    fflush(tmp_file);
+    rewind(tmp_file);
+    size_t len = fread(buffer, 1, sizeof(buffer) - 1, tmp_file);
+    buffer[len] = '\0';
+    stdout = old_stdout;
+    fclose(tmp_file);
+    write_string_to_port(port, buffer);
+  } else {
+    print_ast(obj, true); // Use write format (write_mode = true)
+  }
   return scm_none(); // Return unspecified value
 }
 
@@ -892,8 +1017,8 @@ void init_string() {
   scm_define_vararg_function("string-append", scm_c_string_append);
   scm_define_function("string->list", 1, 0, 0, scm_c_string_to_list);
   scm_define_function("list->string", 1, 0, 0, scm_c_list_to_string);
-  scm_define_function("display", 1, 0, 0, scm_c_display);
-  scm_define_function("write", 1, 0, 0, scm_c_write);
+  scm_define_vararg_function("display", scm_c_display);
+  scm_define_vararg_function("write", scm_c_write);
   scm_define_vararg_function("newline", scm_c_newline);
   scm_define_vararg_function("string->number", scm_c_string_to_number);
   scm_define_vararg_function("number->string", scm_c_number_to_string);

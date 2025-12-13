@@ -108,6 +108,22 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
     }
     return;
   }
+  if (is_port(ast)) {
+    auto port = cast<SCM_Port>(ast);
+    printf("#<");
+    if (port->is_input) {
+      printf("input");
+    } else {
+      printf("output");
+    }
+    if (port->port_type == PORT_FILE_INPUT || port->port_type == PORT_FILE_OUTPUT) {
+      printf(": file");
+    } else if (port->port_type == PORT_STRING_INPUT || port->port_type == PORT_STRING_OUTPUT) {
+      printf(": string");
+    }
+    printf(" port>");
+    return;
+  }
   if (is_pair(ast)) {
     auto l = cast<SCM_List>(ast);
     _print_list(l, false, ctx);
