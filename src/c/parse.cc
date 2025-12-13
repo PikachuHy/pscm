@@ -193,7 +193,7 @@ static SCM *parse_number(Parser *p) {
   return scm;
 }
   
-// Parse a character literal (#\A, #\., #\space, etc.)
+// Parse a character literal (#\A, #\., #\space, #\Space, etc.)
 static SCM *parse_char(Parser *p) {
   // Must match '#\'
   if (p->pos[0] != '#' || p->pos[1] != '\\') {
@@ -213,8 +213,30 @@ static SCM *parse_char(Parser *p) {
   
   char ch;
   
-  // Check for named characters
-  if (isalpha((unsigned char)*p->pos)) {
+  // Check for whitespace character (space, tab, newline)
+  // This handles #\ followed by a space character
+  if (isspace((unsigned char)*p->pos)) {
+    if (*p->pos == ' ') {
+      ch = ' ';
+      p->pos++;
+      p->column++;
+    } else if (*p->pos == '\n') {
+      ch = '\n';
+      p->pos++;
+      p->column++;
+    } else if (*p->pos == '\t') {
+      ch = '\t';
+      p->pos++;
+      p->column++;
+    } else {
+      // Other whitespace, just use it as-is
+      ch = *p->pos;
+      p->pos++;
+      p->column++;
+    }
+  }
+  // Check for named characters (case-insensitive)
+  else if (isalpha((unsigned char)*p->pos)) {
     const char *name_start = p->pos;
     while (isalpha((unsigned char)*p->pos)) {
       p->pos++;
@@ -222,15 +244,61 @@ static SCM *parse_char(Parser *p) {
     }
     
     int len = p->pos - name_start;
-    // Check for common named characters
-    if (len == 5 && strncmp(name_start, "space", 5) == 0) {
-      ch = ' ';
-    } else if (len == 7 && strncmp(name_start, "newline", 7) == 0) {
-      ch = '\n';
-    } else if (len == 3 && strncmp(name_start, "tab", 3) == 0) {
-      ch = '\t';
+    // Check for common named characters (case-insensitive)
+    // Use case-insensitive comparison
+    if (len == 5) {
+      // Check for "space" (case-insensitive: space, Space, SPACE, etc.)
+      char name_lower[6];
+      for (int i = 0; i < 5; i++) {
+        name_lower[i] = (char)tolower((unsigned char)name_start[i]);
+      }
+      name_lower[5] = '\0';
+      if (strcmp(name_lower, "space") == 0) {
+        ch = ' ';
+      } else {
+        // Not a named character, treat the first character as the character value
+        p->pos = name_start;
+        p->column = start_column + 2;
+        ch = *p->pos;
+        p->pos++;
+        p->column++;
+      }
+    } else if (len == 7) {
+      // Check for "newline" (case-insensitive)
+      char name_lower[8];
+      for (int i = 0; i < 7; i++) {
+        name_lower[i] = (char)tolower((unsigned char)name_start[i]);
+      }
+      name_lower[7] = '\0';
+      if (strcmp(name_lower, "newline") == 0) {
+        ch = '\n';
+      } else {
+        // Not a named character, treat the first character as the character value
+        p->pos = name_start;
+        p->column = start_column + 2;
+        ch = *p->pos;
+        p->pos++;
+        p->column++;
+      }
+    } else if (len == 3) {
+      // Check for "tab" (case-insensitive)
+      char name_lower[4];
+      for (int i = 0; i < 3; i++) {
+        name_lower[i] = (char)tolower((unsigned char)name_start[i]);
+      }
+      name_lower[3] = '\0';
+      if (strcmp(name_lower, "tab") == 0) {
+        ch = '\t';
+      } else {
+        // Not a named character, treat the first character as the character value
+        p->pos = name_start;
+        p->column = start_column + 2;
+        ch = *p->pos;
+        p->pos++;
+        p->column++;
+      }
     } else {
-      // If not a named character, treat the first character as the character value
+      // Not a named character, treat the first character as the character value
       // This handles cases like #\A where A is a letter
       p->pos = name_start;
       p->column = start_column + 2;
@@ -482,12 +550,33 @@ static SCM *parse_quote(Parser *p) {
   p->pos++; // consume quote
   p->column++;
   
+  // Special case: '#\ followed by character literal
+  // In Scheme, '#\Space is valid, and '#\  (with space) is also valid
+  // where '#\  means a space character literal
+  if (p->pos[0] == '#' && p->pos[1] == '\\') {
+    // This is '#\... - parse as character literal
+    SCM *quoted = parse_char(p);
+    if (!quoted) {
+      parse_error(p, "expected character literal after '#\\");
+    }
+    
+    // Build (quote char)
+    SCM *quote_sym = scm_sym_quote();
+    SCM_List *list = make_list(quote_sym, quoted);
+    
+    SCM *scm = new SCM();
+    scm->type = SCM::LIST;
+    scm->value = list;
+    return scm;
+  }
+  
   // After quote, we need to parse the expression
   // But in list context (like in quasiquote), we might have ',name
   // which should be parsed as (quote ,name) where ,name is an unquote
   // So we need to check for unquote first
   SCM *quoted = parse_unquote_in_list(p);
   if (!quoted) {
+    // parse_expr will skip whitespace, which is correct for most cases
     quoted = parse_expr(p);
   }
   if (!quoted) {
