@@ -567,66 +567,78 @@ SCM *scm_c_expt(SCM *base, SCM *exp) {
 }
 
 SCM *scm_c_div(SCM_List *args) {
-  if (!args || !args->next) {
-    eval_error("/: requires at least one argument");
-    return nullptr;
+  // (/) -> 1
+  if (!args || !args->data) {
+    return _create_num(1);
   }
   
-  SCM *first = args->next->data;
+  SCM *first = args->data;
   if (!is_num(first) && !is_float(first) && !is_ratio(first)) {
     eval_error("/: expected number");
     return nullptr;
   }
   
-  // Convert first argument to numerator/denominator form
-  int64_t numerator, denominator;
-  if (is_num(first)) {
-    numerator = (int64_t)first->value;
-    denominator = 1;
-  } else if (is_ratio(first)) {
-      SCM_Rational *rat = cast<SCM_Rational>(first);
-    numerator = rat->numerator;
-    denominator = rat->denominator;
-  } else {
-    // For floats, we'll use rational approximation
-    // But for now, let's handle it as integer division if possible
-    double val = scm_to_double(first);
-    if (val == (double)(int64_t)val) {
-      numerator = (int64_t)val;
-      denominator = 1;
-    } else {
-      // For non-integer floats, return float result
-      double result = val;
-      SCM_List *current = args->next->next;
-      while (current) {
-        SCM *arg = current->data;
-        if (!is_num(arg) && !is_float(arg) && !is_ratio(arg)) {
-          eval_error("/: expected number");
-          return nullptr;
-        }
-        double divisor = scm_to_double(arg);
-        if (divisor == 0.0) {
-          eval_error("/: division by zero");
-          return nullptr;
-        }
-        result /= divisor;
-        current = current->next;
+  // Single argument: (/ n) -> 1/n
+  if (!args->next) {
+    if (is_num(first)) {
+      int64_t n = (int64_t)first->value;
+      if (n == 0) {
+        eval_error("/: division by zero");
+        return nullptr;
       }
-      return scm_from_double(result);
+      // (/ 2) = 1/2, so return scm_make_ratio(1, 2)
+      return scm_make_ratio(1, n);
+    } else if (is_ratio(first)) {
+      SCM_Rational *rat = cast<SCM_Rational>(first);
+      if (rat->numerator == 0) {
+        eval_error("/: division by zero");
+        return nullptr;
+      }
+      // (/ a/b) = 1/(a/b) = b/a
+      return scm_make_ratio(rat->denominator, rat->numerator);
+    } else {
+      double val = scm_to_double(first);
+      if (val == 0.0) {
+        eval_error("/: division by zero");
+        return nullptr;
+      }
+      return scm_from_double(1.0 / val);
     }
   }
   
-  // If only one argument, return 1/arg
-  if (!args->next->next) {
-    if (numerator == 0) {
-      eval_error("/: division by zero");
-      return nullptr;
+  // Multiple arguments: (/ n1 n2 n3 ...) -> n1 / n2 / n3 / ...
+  // Start with the first argument as the result
+  int64_t result_num, result_den;
+  if (is_num(first)) {
+    result_num = (int64_t)first->value;
+    result_den = 1;
+  } else if (is_ratio(first)) {
+    SCM_Rational *rat = cast<SCM_Rational>(first);
+    result_num = rat->numerator;
+    result_den = rat->denominator;
+  } else {
+    // For floats, use float arithmetic throughout
+    double result = scm_to_double(first);
+    SCM_List *current = args->next;
+    while (current) {
+      SCM *arg = current->data;
+      if (!is_num(arg) && !is_float(arg) && !is_ratio(arg)) {
+        eval_error("/: expected number");
+        return nullptr;
+      }
+      double divisor = scm_to_double(arg);
+      if (divisor == 0.0) {
+        eval_error("/: division by zero");
+        return nullptr;
+      }
+      result /= divisor;
+      current = current->next;
     }
-    return scm_make_ratio(denominator, numerator);
+    return scm_from_double(result);
   }
   
-  // Process remaining arguments
-  SCM_List *current = args->next->next;
+  // Process remaining arguments: divide result by each
+  SCM_List *current = args->next;
   while (current) {
     SCM *arg = current->data;
     if (!is_num(arg) && !is_float(arg) && !is_ratio(arg)) {
@@ -643,21 +655,13 @@ SCM *scm_c_div(SCM_List *args) {
       div_num = rat->numerator;
       div_den = rat->denominator;
     } else {
-      // For floats, convert to rational if possible
-      double val = scm_to_double(arg);
-      if (val == (double)(int64_t)val) {
-        div_num = (int64_t)val;
-        div_den = 1;
-      } else {
-        // For non-integer floats, use float arithmetic
-        double result = scm_to_double(first);
-        SCM_List *iter = args->next->next;
-        while (iter) {
-          result /= scm_to_double(iter->data);
-          iter = iter->next;
-        }
-        return scm_from_double(result);
+      // For floats, switch to float arithmetic
+      double result = (double)result_num / (double)result_den;
+      while (current) {
+        result /= scm_to_double(current->data);
+        current = current->next;
       }
+      return scm_from_double(result);
     }
     
     if (div_num == 0) {
@@ -665,14 +669,88 @@ SCM *scm_c_div(SCM_List *args) {
       return nullptr;
     }
     
-    // Multiply by reciprocal: (n/d) / (a/b) = (n/d) * (b/a) = (n*b)/(d*a)
-    numerator = numerator * div_den;
-    denominator = denominator * div_num;
+    // (result_num/result_den) / (div_num/div_den) = (result_num * div_den) / (result_den * div_num)
+    result_num = result_num * div_den;
+    result_den = result_den * div_num;
     
     current = current->next;
   }
   
-  return scm_make_ratio(numerator, denominator);
+  return scm_make_ratio(result_num, result_den);
+}
+
+SCM *scm_c_quotient(SCM *n1, SCM *n2) {
+  if (!is_num(n1)) {
+    eval_error("quotient: expected integer");
+    return nullptr;
+  }
+  if (!is_num(n2)) {
+    eval_error("quotient: expected integer");
+    return nullptr;
+  }
+  
+  int64_t num1 = (int64_t)n1->value;
+  int64_t num2 = (int64_t)n2->value;
+  
+  if (num2 == 0) {
+    eval_error("quotient: division by zero");
+    return nullptr;
+  }
+  
+  return _create_num(num1 / num2);
+}
+
+SCM *scm_c_modulo(SCM *n1, SCM *n2) {
+  if (!is_num(n1)) {
+    eval_error("modulo: expected integer");
+    return nullptr;
+  }
+  if (!is_num(n2)) {
+    eval_error("modulo: expected integer");
+    return nullptr;
+  }
+  
+  int64_t num1 = (int64_t)n1->value;
+  int64_t num2 = (int64_t)n2->value;
+  
+  if (num2 == 0) {
+    eval_error("modulo: division by zero");
+    return nullptr;
+  }
+  
+  int64_t m = num1 / num2;
+  int64_t ret = num1 - num2 * m;
+  
+  // Adjust sign according to Scheme's modulo semantics
+  if (ret > 0 && num2 < 0) {
+    ret += num2;
+  } else if (ret < 0 && num2 > 0) {
+    ret += num2;
+  }
+  
+  return _create_num(ret);
+}
+
+SCM *scm_c_remainder(SCM *n1, SCM *n2) {
+  if (!is_num(n1)) {
+    eval_error("remainder: expected integer");
+    return nullptr;
+  }
+  if (!is_num(n2)) {
+    eval_error("remainder: expected integer");
+    return nullptr;
+  }
+  
+  int64_t num1 = (int64_t)n1->value;
+  int64_t num2 = (int64_t)n2->value;
+  
+  if (num2 == 0) {
+    eval_error("remainder: division by zero");
+    return nullptr;
+  }
+  
+  int64_t m = num1 / num2;
+  return _create_num(num1 - num2 * m);
 }
 
 void init_number() {
@@ -694,4 +772,7 @@ void init_number() {
   scm_define_function("expt", 2, 0, 0, scm_c_expt);
   scm_define_vararg_function("max", scm_c_max);
   scm_define_vararg_function("min", scm_c_min);
+  scm_define_function("quotient", 2, 0, 0, scm_c_quotient);
+  scm_define_function("modulo", 2, 0, 0, scm_c_modulo);
+  scm_define_function("remainder", 2, 0, 0, scm_c_remainder);
 }

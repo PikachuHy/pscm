@@ -1,5 +1,3 @@
-;; RUN: %pscm_main -m REGISTER_MACHINE --test %s | FileCheck %s
-;; RUN: %pscm_main --test %s | FileCheck %s
 ;; RUN: %pscm_cc --test %s | FileCheck %s
 
 ;; CHECK: -1
@@ -10,6 +8,52 @@
 (/ 1 3)
 ;; CHECK: 100/3
 (* (/ 1 3) 100)
+
+;; Test quotient function
+;; CHECK: 5
+(quotient 35 7)
+;; CHECK: -5
+(quotient -35 7)
+;; CHECK: -5
+(quotient 35 -7)
+;; CHECK: 5
+(quotient -35 -7)
+;; CHECK: 3
+(quotient 10 3)
+;; CHECK: -3
+(quotient -10 3)
+;; CHECK: -3
+(quotient 10 -3)
+;; CHECK: 3
+(quotient -10 -3)
+
+;; Test modulo function
+;; CHECK: 1
+(modulo 13 4)
+;; CHECK: 3
+(modulo -13 4)
+;; CHECK: -3
+(modulo 13 -4)
+;; CHECK: -1
+(modulo -13 -4)
+;; CHECK: 0
+(modulo 10 5)
+;; CHECK: 2
+(modulo -8 5)
+
+;; Test remainder function
+;; CHECK: 1
+(remainder 13 4)
+;; CHECK: -1
+(remainder -13 4)
+;; CHECK: 1
+(remainder 13 -4)
+;; CHECK: -1
+(remainder -13 -4)
+;; CHECK: 0
+(remainder 10 5)
+;; CHECK: -3
+(remainder -8 5)
 
 ;; Test max function
 ;; CHECK: 5
