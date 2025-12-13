@@ -49,12 +49,14 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
   if (is_float(ast)) {
     double val = ptr_to_double(ast->value);
     // Always show at least one decimal place for floats to preserve the float representation
-    // Use %g for compact representation, but ensure decimal point is shown
+    // Match Guile's precision: use %.14g for better precision (14 significant digits)
     if (val == (double)(int64_t)val) {
       // Integer value stored as float: print with .0 to show it's a float
       printf("%.1f", val);
     } else {
-      printf("%g", val);
+      // Use %.14g to match Guile's precision (14 significant digits)
+      // This will show enough precision for sqrt(2) = 1.4142135623731
+      printf("%.14g", val);
     }
     return;
   }

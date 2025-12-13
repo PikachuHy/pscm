@@ -821,6 +821,7 @@ void init_predicate();
 void init_list();
 void init_symbol();
 void init_apply();
+void init_map();
 void init_number();
 void init_eq();
 void init_alist();

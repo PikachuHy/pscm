@@ -1,12 +1,31 @@
 #include "pscm.h"
 #include "eval.h"
 
+// Wrapper function for map as a builtin function
+// This function is called when map is used as a value (not as a special form)
+SCM *scm_c_map(SCM_List *args) {
+  // This function should never be called directly
+  // It's registered as a placeholder, and eval.cc will handle it specially
+  eval_error("map: internal error - should be handled as special form");
+  return nullptr;
+}
+
+void init_map() {
+  scm_define_vararg_function("map", scm_c_map);
+}
+
 // Helper function for map special form
 SCM *eval_map(SCM_Environment *env, SCM_List *l) {
   if (!l->next || !l->next->next) {
     eval_error("map: requires at least 2 arguments (procedure and list)");
   }
   
+  // When map is called as a special form (from eval.cc with symbol), arguments are NOT evaluated
+  // When map is called as a function value (from eval.cc with function), arguments are also NOT evaluated yet
+  // We always need to evaluate arguments first
+  // The only case where arguments might be pre-evaluated is when called from apply, but apply handles that
+  
+  // Evaluate the procedure argument
   SCM *proc = eval_with_env(env, l->next->data);
   
   // Check if proc is a procedure
@@ -31,6 +50,7 @@ SCM *eval_map(SCM_Environment *env, SCM_List *l) {
   SCM_List **list_ptrs = new SCM_List*[num_lists];
   temp = list_args_head;
   for (int i = 0; i < num_lists; i++) {
+    // Always evaluate list arguments
     SCM *list_arg = eval_with_env(env, temp->data);
     // Check if list_arg is a list
     if (!is_pair(list_arg) && !is_nil(list_arg)) {

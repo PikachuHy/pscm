@@ -1,6 +1,7 @@
 #include "pscm.h"
 #include "eval.h"
 #include <type_traits>
+#include <cmath>
 
 // Forward declaration
 SCM *scm_make_ratio(int64_t numerator, int64_t denominator);
@@ -361,6 +362,20 @@ SCM *scm_c_abs(SCM *arg) {
   data->type = SCM::NUM;
   data->value = (void *)abs_val;
   return data;
+}
+
+SCM *scm_c_sqrt(SCM *arg) {
+  if (!is_num(arg) && !is_float(arg) && !is_ratio(arg)) {
+    eval_error("sqrt: expected number");
+    return nullptr;
+  }
+  double val = scm_to_double(arg);
+  if (val < 0) {
+    eval_error("sqrt: negative argument");
+    return nullptr;
+  }
+  double result = std::sqrt(val);
+  return scm_from_double(result);
 }
 
 bool _number_eq(SCM *lhs, SCM *rhs) {
@@ -769,6 +784,7 @@ void init_number() {
   scm_define_function("<", 2, 0, 0, scm_c_lt_number);
   scm_define_function(">", 2, 0, 0, scm_c_gt_number);
   scm_define_function("abs", 1, 0, 0, scm_c_abs);
+  scm_define_function("sqrt", 1, 0, 0, scm_c_sqrt);
   scm_define_function("expt", 2, 0, 0, scm_c_expt);
   scm_define_vararg_function("max", scm_c_max);
   scm_define_vararg_function("min", scm_c_min);

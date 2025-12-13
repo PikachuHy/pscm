@@ -62,6 +62,20 @@
 ;; CHECK-NEXT: (#\space #\ht #\newline)
 (string->list " \t\n")
 
+;; Test string with various escape sequences
+;; CHECK-NEXT: (#\a #\newline #\b)
+(string->list "a\nb")
+;; CHECK-NEXT: (#\a #\ht #\b)
+(string->list "a\tb")
+;; CHECK-NEXT: (#\a #\space #\b)
+(string->list "a b")
+;; CHECK-NEXT: (#\a #\newline #\ht #\space #\b)
+(string->list "a\n\t b")
+;; CHECK-NEXT: (#\newline #\ht #\space)
+(string->list "\n\t ")
+;; CHECK-NEXT: (#\space #\ht #\newline #\space)
+(string->list " \t\n ")
+
 ;; Test list->string
 ;; CHECK: "1\""
 (list->string '(#\1 #\\ #\"))

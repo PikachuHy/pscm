@@ -194,6 +194,15 @@ SCM *eval_apply(SCM_Environment *env, SCM_List *l) {
       // Actually, we can detect it by checking if l->data is a function (not a symbol)
       return eval_apply(env, &apply_call);
     }
+    // Special handling for map: if map is being applied, we need to handle it specially
+    if (func_obj->name && strcmp(func_obj->name->data, "map") == 0) {
+      // This is map being applied - construct a call list and use eval_map
+      // args_dummy.next contains the arguments for map: (proc list1 list2 ...)
+      SCM_List map_call;
+      map_call.data = proc;
+      map_call.next = args_dummy.next;
+      return eval_map(env, &map_call);
+    }
     SCM_List *evaled_args = eval_list_with_env(env, args_dummy.next);
     SCM_List func_call;
     func_call.data = proc;

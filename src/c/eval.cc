@@ -617,6 +617,13 @@ entry:
       SCM *result = eval_apply(env, l);
       RETURN_WITH_CONTEXT(result);
     }
+    if (func->name && strcmp(func->name->data, "map") == 0) {
+      // For map, when called as a function value, arguments are already evaluated
+      // We need to pass them to eval_map, which will handle them correctly
+      // l->data is the map function, l->next contains the already-evaluated arguments
+      SCM *result = eval_map(env, l);
+      RETURN_WITH_CONTEXT(result);
+    }
     auto func_argl = eval_list_with_env(env, l->next);
     if (debug_enabled) {
       SCM_DEBUG_EVAL(" ");

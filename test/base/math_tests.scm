@@ -86,3 +86,37 @@
 (min 3 5.0 2)
 ;; CHECK: 2.0
 (min 3.0 5 2.0)
+
+;; Test sqrt function
+;; CHECK: 2.0
+(sqrt 4)
+;; CHECK: 3.0
+(sqrt 9)
+;; CHECK: 4.0
+(sqrt 16)
+;; CHECK: 5.0
+(sqrt 25)
+;; CHECK: 1.0
+(sqrt 1)
+;; CHECK: 0.0
+(sqrt 0)
+;; CHECK: 1.4142135623731
+(sqrt 2)
+;; CHECK: 1.7320508075689
+(sqrt 3)
+;; CHECK: 10.0
+(sqrt 100)
+;; CHECK: 30.0
+(sqrt 900)
+
+;; Test sqrt with compose (sqrt as function value)
+;; CHECK: 30.0
+(define (compose f g)
+  (lambda args (f (apply g args))))
+((compose sqrt *) 12 75)
+
+;; Test sqrt in map
+;; CHECK: (2.0 3.0 4.0)
+(map sqrt '(4 9 16))
+;; CHECK: (1.0 1.4142135623731 1.7320508075689)
+(map sqrt '(1 2 3))

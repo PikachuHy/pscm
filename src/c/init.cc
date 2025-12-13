@@ -11,6 +11,7 @@ void init_scm() {
   init_list();
   init_symbol();
   init_apply();
+  init_map();
   init_number();
   init_eq();
   init_alist();
