@@ -121,7 +121,7 @@ static void pop_eval_stack() {
 }
 
 // Print the evaluation call stack
-static void print_eval_stack() {
+void print_eval_stack() {
   if (!g_eval_stack) {
     fprintf(stderr, "\nEvaluation call stack: (empty)\n");
     return;

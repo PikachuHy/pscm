@@ -34,6 +34,9 @@ SCM *eval_with_func(SCM_Function *func, SCM_List *l);
 [[noreturn]] void eval_error(const char *format, ...);
 [[noreturn]] void type_error(SCM *data, const char *expected_type);
 
+// Print evaluation call stack (for debugging)
+void print_eval_stack();
+
 // Macro expansion and definition
 SCM *expand_macro_call(SCM_Environment *env, SCM_Macro *macro, SCM_List *args, SCM *original_call);
 SCM *expand_macros(SCM_Environment *env, SCM *ast);

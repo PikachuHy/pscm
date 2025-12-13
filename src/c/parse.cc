@@ -1,4 +1,5 @@
 #include "pscm.h"
+#include "eval.h"
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -148,6 +149,11 @@ static void parse_error(Parser *p, const char *msg) {
   
   // Print parse stack to show nested parsing context
   print_parse_stack(p);
+  
+  // Print evaluation call stack if available (shows which Scheme function was being evaluated)
+  fprintf(stderr, "\n=== Scheme Evaluation Call Stack ===\n");
+  print_eval_stack();
+  fprintf(stderr, "=== End of Evaluation Call Stack ===\n");
   
   // Show context around the error position
   if (p->input && p->pos) {
