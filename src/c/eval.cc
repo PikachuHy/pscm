@@ -244,6 +244,17 @@ static const char *get_type_name(SCM::Type type) {
   vfprintf(stderr, format, args);
   fprintf(stderr, "\n");
   va_end(args);
+  
+  // Print the evaluation call stack
+  fprintf(stderr, "\n=== Evaluation Call Stack ===\n");
+  if (g_eval_stack) {
+    print_eval_stack();
+  } else {
+    fprintf(stderr, "Call stack is empty (error occurred at top level)\n");
+  }
+  fprintf(stderr, "=== End of Call Stack ===\n");
+  fflush(stderr);
+  
   exit(1);
 }
 
