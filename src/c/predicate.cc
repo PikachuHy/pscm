@@ -41,7 +41,9 @@ SCM *scm_c_is_vector(SCM *arg) {
 }
 
 SCM *scm_c_not(SCM *arg) {
-  if (is_false(arg) || is_nil(arg)) {
+  // In Scheme, not returns #t if arg is #f, #f otherwise
+  // Only #f is falsy in Scheme, everything else (including nil) is truthy
+  if (is_falsy(arg)) {
     return scm_bool_true();
   }
   return scm_bool_false();
