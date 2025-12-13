@@ -1,4 +1,5 @@
 #include "pscm.h"
+#include "eval.h"
 #include <string.h>
 #include <stdio.h>
 
@@ -67,7 +68,43 @@ SCM *scm_c_gensym() {
   return wrap(make_sym(buffer));
 }
 
+// Helper function to create a string from C string
+static SCM *scm_from_c_string(const char *data, int len) {
+  SCM_String *s = new SCM_String();
+  s->data = new char[len + 1];
+  memcpy(s->data, data, len);
+  s->data[len] = '\0';
+  s->len = len;
+  SCM *scm = new SCM();
+  scm->type = SCM::STR;
+  scm->value = s;
+  scm->source_loc = nullptr;
+  return scm;
+}
+
+// symbol->string: Convert symbol to string
+SCM *scm_c_symbol_to_string(SCM *sym) {
+  if (!is_sym(sym)) {
+    eval_error("symbol->string: expected symbol");
+    return nullptr;
+  }
+  auto s = cast<SCM_Symbol>(sym);
+  return scm_from_c_string(s->data, s->len);
+}
+
+// string->symbol: Convert string to symbol
+SCM *scm_c_string_to_symbol(SCM *str) {
+  if (!is_str(str)) {
+    eval_error("string->symbol: expected string");
+    return nullptr;
+  }
+  auto s = cast<SCM_String>(str);
+  return create_sym(s->data, s->len);
+}
+
 void init_symbol() {
   scm_define_function("gensym", 0, 0, 0, scm_c_gensym);
+  scm_define_function("symbol->string", 1, 0, 0, scm_c_symbol_to_string);
+  scm_define_function("string->symbol", 1, 0, 0, scm_c_string_to_symbol);
 }
 

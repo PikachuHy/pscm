@@ -144,11 +144,90 @@ SCM *scm_c_newline(SCM_List *args) {
   return scm_none();
 }
 
+// string=?: Compare two strings for equality (case-sensitive)
+SCM *scm_c_string_eq(SCM *str1, SCM *str2) {
+  if (!is_str(str1)) {
+    eval_error("string=?: first argument must be a string");
+    return nullptr;
+  }
+  if (!is_str(str2)) {
+    eval_error("string=?: second argument must be a string");
+    return nullptr;
+  }
+  
+  auto s1 = cast<SCM_String>(str1);
+  auto s2 = cast<SCM_String>(str2);
+  
+  if (s1->len != s2->len) {
+    return scm_bool_false();
+  }
+  
+  if (strncmp(s1->data, s2->data, s1->len) == 0) {
+    return scm_bool_true();
+  }
+  return scm_bool_false();
+}
+
+// string: Create a string from characters
+SCM *scm_c_string(SCM_List *args) {
+  if (!args) {
+    // No arguments: return empty string
+    SCM_String *s = new SCM_String();
+    s->data = new char[1];
+    s->data[0] = '\0';
+    s->len = 0;
+    SCM *scm = new SCM();
+    scm->type = SCM::STR;
+    scm->value = s;
+    scm->source_loc = nullptr;
+    return scm;
+  }
+  
+  // Count characters
+  int len = 0;
+  SCM_List *current = args;
+  while (current) {
+    if (!is_char(current->data)) {
+      eval_error("string: all arguments must be characters");
+      return nullptr;
+    }
+    len++;
+    if (!current->next || is_nil(wrap(current->next))) {
+      break;
+    }
+    current = current->next;
+  }
+  
+  // Create string from characters
+  SCM_String *s = new SCM_String();
+  s->data = new char[len + 1];
+  s->len = len;
+  current = args;
+  int i = 0;
+  while (current && i < len) {
+    s->data[i] = scm_to_char(current->data);
+    i++;
+    if (!current->next || is_nil(wrap(current->next))) {
+      break;
+    }
+    current = current->next;
+  }
+  s->data[len] = '\0';
+  
+  SCM *scm = new SCM();
+  scm->type = SCM::STR;
+  scm->value = s;
+  scm->source_loc = nullptr;
+  return scm;
+}
+
 void init_string() {
   scm_define_function("string-length", 1, 0, 0, scm_c_string_length);
   scm_define_vararg_function("make-string", scm_c_make_string);
   scm_define_function("string-ref", 2, 0, 0, scm_c_string_ref);
   scm_define_function("string-set!", 3, 0, 0, scm_c_string_set);
+  scm_define_function("string=?", 2, 0, 0, scm_c_string_eq);
+  scm_define_vararg_function("string", scm_c_string);
   scm_define_function("display", 1, 0, 0, scm_c_display);
   scm_define_function("write", 1, 0, 0, scm_c_write);
   scm_define_vararg_function("newline", scm_c_newline);

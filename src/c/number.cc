@@ -17,6 +17,54 @@ SCM *scm_c_is_negative(SCM *arg) {
   return scm_bool_false();
 }
 
+SCM *scm_c_is_positive(SCM *arg) {
+  if (!is_num(arg) && !is_float(arg)) {
+    eval_error("positive?: expected number");
+    return nullptr;
+  }
+  double val = scm_to_double(arg);
+  if (val > 0) {
+    return scm_bool_true();
+  }
+  return scm_bool_false();
+}
+
+SCM *scm_c_is_odd(SCM *arg) {
+  if (!is_num(arg) && !is_float(arg)) {
+    eval_error("odd?: expected number");
+    return nullptr;
+  }
+  double val = scm_to_double(arg);
+  // Check if it's an integer
+  if (val != (double)(int64_t)val) {
+    eval_error("odd?: expected integer");
+    return nullptr;
+  }
+  int64_t n = (int64_t)val;
+  if (n % 2 != 0) {
+    return scm_bool_true();
+  }
+  return scm_bool_false();
+}
+
+SCM *scm_c_is_even(SCM *arg) {
+  if (!is_num(arg) && !is_float(arg)) {
+    eval_error("even?: expected number");
+    return nullptr;
+  }
+  double val = scm_to_double(arg);
+  // Check if it's an integer
+  if (val != (double)(int64_t)val) {
+    eval_error("even?: expected integer");
+    return nullptr;
+  }
+  int64_t n = (int64_t)val;
+  if (n % 2 == 0) {
+    return scm_bool_true();
+  }
+  return scm_bool_false();
+}
+
 SCM *scm_c_is_zero(SCM *arg) {
   if (!is_num(arg) && !is_float(arg) && !is_ratio(arg)) {
     eval_error("zero?: expected number");
@@ -380,6 +428,90 @@ SCM *scm_make_ratio(int64_t numerator, int64_t denominator) {
   return data;
 }
 
+// max: Return the maximum of the arguments
+SCM *scm_c_max(SCM_List *args) {
+  if (!args || !args->data) {
+    eval_error("max: requires at least 1 argument");
+    return nullptr;
+  }
+  
+  SCM *first = args->data;
+  if (!is_num(first) && !is_float(first) && !is_ratio(first)) {
+    eval_error("max: expected number");
+    return nullptr;
+  }
+  
+  double max_val = scm_to_double(first);
+  bool all_int = is_num(first);
+  
+  SCM_List *current = args->next;
+  while (current) {
+    SCM *arg = current->data;
+    if (!is_num(arg) && !is_float(arg) && !is_ratio(arg)) {
+      eval_error("max: expected number");
+      return nullptr;
+    }
+    if (!is_num(arg)) {
+      all_int = false;
+    }
+    double val = scm_to_double(arg);
+    if (val > max_val) {
+      max_val = val;
+    }
+    if (!current->next || is_nil(wrap(current->next))) {
+      break;
+    }
+    current = current->next;
+  }
+  
+  if (all_int && max_val == (double)(int64_t)max_val) {
+    return _create_num((int64_t)max_val);
+  }
+  return scm_from_double(max_val);
+}
+
+// min: Return the minimum of the arguments
+SCM *scm_c_min(SCM_List *args) {
+  if (!args || !args->data) {
+    eval_error("min: requires at least 1 argument");
+    return nullptr;
+  }
+  
+  SCM *first = args->data;
+  if (!is_num(first) && !is_float(first) && !is_ratio(first)) {
+    eval_error("min: expected number");
+    return nullptr;
+  }
+  
+  double min_val = scm_to_double(first);
+  bool all_int = is_num(first);
+  
+  SCM_List *current = args->next;
+  while (current) {
+    SCM *arg = current->data;
+    if (!is_num(arg) && !is_float(arg) && !is_ratio(arg)) {
+      eval_error("min: expected number");
+      return nullptr;
+    }
+    if (!is_num(arg)) {
+      all_int = false;
+    }
+    double val = scm_to_double(arg);
+    if (val < min_val) {
+      min_val = val;
+    }
+    if (!current->next || is_nil(wrap(current->next))) {
+      break;
+    }
+    current = current->next;
+  }
+  
+  if (all_int && min_val == (double)(int64_t)min_val) {
+    return _create_num((int64_t)min_val);
+  }
+  return scm_from_double(min_val);
+}
+
 SCM *scm_c_expt(SCM *base, SCM *exp) {
   assert(is_num(base));
   assert(is_num(exp));
@@ -544,8 +676,11 @@ SCM *scm_c_div(SCM_List *args) {
 }
 
 void init_number() {
+  scm_define_function("positive?", 1, 0, 0, scm_c_is_positive);
   scm_define_function("negative?", 1, 0, 0, scm_c_is_negative);
   scm_define_function("zero?", 1, 0, 0, scm_c_is_zero);
+  scm_define_function("odd?", 1, 0, 0, scm_c_is_odd);
+  scm_define_function("even?", 1, 0, 0, scm_c_is_even);
   scm_define_generic_function("+", scm_c_add_number, _create_num(0));
   scm_define_function("=", 2, 0, 0, scm_c_eq_number);
   scm_define_vararg_function("-", scm_c_minus_wrapper);
@@ -557,4 +692,6 @@ void init_number() {
   scm_define_function(">", 2, 0, 0, scm_c_gt_number);
   scm_define_function("abs", 1, 0, 0, scm_c_abs);
   scm_define_function("expt", 2, 0, 0, scm_c_expt);
+  scm_define_vararg_function("max", scm_c_max);
+  scm_define_vararg_function("min", scm_c_min);
 }

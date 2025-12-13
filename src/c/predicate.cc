@@ -25,7 +25,43 @@ SCM *scm_c_is_pair(SCM *arg) {
 }
 
 SCM *scm_c_is_number(SCM *arg) {
-  return scm_c_type_check(arg, [](SCM *a) { return is_num(a) || is_float(a); });
+  return scm_c_type_check(arg, [](SCM *a) { return is_num(a) || is_float(a) || is_ratio(a); });
+}
+
+SCM *scm_c_is_complex(SCM *arg) {
+  // In Scheme, all numbers are complex numbers (real numbers are a special case)
+  // So complex? returns #t for all number types
+  return scm_c_type_check(arg, [](SCM *a) { return is_num(a) || is_float(a) || is_ratio(a); });
+}
+
+SCM *scm_c_is_real(SCM *arg) {
+  // In Scheme, real? returns #t for real numbers (integers, floats, ratios)
+  // Since we don't have complex numbers yet, all numbers are real
+  return scm_c_type_check(arg, [](SCM *a) { return is_num(a) || is_float(a) || is_ratio(a); });
+}
+
+SCM *scm_c_is_rational(SCM *arg) {
+  // In Scheme, rational? returns #t for rational numbers (integers and ratios)
+  // Floats are not rational (they are inexact)
+  return scm_c_type_check(arg, [](SCM *a) { return is_num(a) || is_ratio(a); });
+}
+
+SCM *scm_c_is_integer(SCM *arg) {
+  // In Scheme, integer? returns #t for integers (exact integers)
+  // Floats and ratios are not integers
+  return scm_c_type_check(arg, is_num);
+}
+
+SCM *scm_c_is_exact(SCM *arg) {
+  // In Scheme, exact? returns #t for exact numbers (integers, ratios)
+  // Floats are inexact
+  return scm_c_type_check(arg, [](SCM *a) { return is_num(a) || is_ratio(a); });
+}
+
+SCM *scm_c_is_inexact(SCM *arg) {
+  // In Scheme, inexact? returns #t for inexact numbers (floats)
+  // Integers and ratios are exact
+  return scm_c_type_check(arg, is_float);
 }
 
 SCM *scm_c_is_string(SCM *arg) {
@@ -100,6 +136,12 @@ void init_predicate() {
   scm_define_function("pair?", 1, 0, 0, scm_c_is_pair);
   scm_define_function("list?", 1, 0, 0, scm_c_is_list);
   scm_define_function("number?", 1, 0, 0, scm_c_is_number);
+  scm_define_function("complex?", 1, 0, 0, scm_c_is_complex);
+  scm_define_function("real?", 1, 0, 0, scm_c_is_real);
+  scm_define_function("rational?", 1, 0, 0, scm_c_is_rational);
+  scm_define_function("integer?", 1, 0, 0, scm_c_is_integer);
+  scm_define_function("exact?", 1, 0, 0, scm_c_is_exact);
+  scm_define_function("inexact?", 1, 0, 0, scm_c_is_inexact);
   scm_define_function("string?", 1, 0, 0, scm_c_is_string);
   // char? is registered in init_char()
   scm_define_function("symbol?", 1, 0, 0, scm_c_is_symbol);

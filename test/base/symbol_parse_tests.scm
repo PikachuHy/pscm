@@ -167,3 +167,33 @@ fourth
 
 ;; CHECK: (... . ...)
 '(... . ...)
+
+;; Test symbol->string function
+;; CHECK: "hello"
+(symbol->string 'hello)
+;; CHECK: "A"
+(symbol->string 'A)
+;; CHECK: "test-symbol"
+(symbol->string 'test-symbol)
+;; CHECK: "..."
+(symbol->string '...)
+
+;; Test string->symbol function
+;; CHECK: hello
+(string->symbol "hello")
+;; CHECK: A
+(string->symbol "A")
+;; CHECK: test-symbol
+(string->symbol "test-symbol")
+;; CHECK: ...
+(string->symbol "...")
+;; CHECK: 123
+(string->symbol "123")
+
+;; Test round-trip conversion
+;; CHECK: "hello"
+(symbol->string (string->symbol "hello"))
+;; CHECK: hello
+(string->symbol (symbol->string 'hello))
+;; CHECK: #t
+(eq? (string->symbol "test") (string->symbol "test"))
