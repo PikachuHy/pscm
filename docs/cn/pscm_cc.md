@@ -2,7 +2,7 @@
 
 ![logo](/logo.png)
 
-pscm cc 是 PikachuHy's Scheme 的 C++ 实现版本，代码规模约 7000+ 行。该版本参考 Guile 1.8，基于 `setjmp/longjmp` 实现了 continuation 支持。
+pscm cc 是 PikachuHy's Scheme 的 C++ 实现版本，代码规模约 11000+ 行。该版本参考 Guile 1.8，基于 `setjmp/longjmp` 实现了 continuation 支持。
 
 ::: warning
 pscm 依然处于非常简陋的状态
@@ -20,7 +20,7 @@ pscm 依然处于非常简陋的状态
 
 - **统一类型**：所有值都是 `struct SCM`（内部为 `void*`）
 - **类型转换**：通过 `cast<Type>(scm)` 转换为具体类型，通过 `wrap(type)` 包装为 `SCM`
-- **支持类型**：16 种数据类型（`NIL`, `LIST`, `NUM`, `FLOAT`, `RATIO`, `CHAR`, `STR`, `SYM`, `BOOL`, `PROC`, `FUNC`, `CONT`, `MACRO`, `HASH_TABLE`, `VECTOR`）
+- **支持类型**：17 种数据类型（`NIL`, `LIST`, `NUM`, `FLOAT`, `RATIO`, `CHAR`, `STR`, `SYM`, `BOOL`, `PROC`, `FUNC`, `CONT`, `MACRO`, `HASH_TABLE`, `VECTOR`, `PORT`）
 - **源位置跟踪**：每个 AST 节点携带可选的源位置信息（文件名、行号、列号），用于错误报告
 
 ### 数据结构
@@ -64,9 +64,12 @@ pscm 依然处于非常简陋的状态
 - **类型检查**：`procedure?`, `boolean?`, `null?`, `pair?`, `char?`, `number?` 等
 - **列表操作**：`car`, `cdr`, `cons`, `list`, `append`, `set-car!`, `set-cdr!` 等
 - **数字运算**：`+`, `-`, `*`, `/`, `expt`, `abs` 等（支持整数、浮点数、分数混合运算）
-- **字符串操作**：`string-length`, `make-string`, `string-ref`, `string-set!`, `display`, `write` 等
-- **向量操作**：`make-vector`, `vector-length`, `vector-ref`, `vector-set!` 等
+- **字符串操作**：`string-length`, `make-string`, `string-ref`, `string-set!`, `string=?`, `string<?`, `string<=?`, `substring`, `string-append`, `string->list`, `list->string`, `display`, `write` 等
+- **字符操作**：`char=?`, `char<?`, `char>?`, `char<=?`, `char>=?`, `char-upcase`, `char-downcase`, `char->integer`, `integer->char` 等
+- **向量操作**：`make-vector`, `vector-length`, `vector-ref`, `vector-set!`, `vector->list`, `list->vector` 等
 - **哈希表**：完整的哈希表操作集（创建、设置、获取、删除、遍历）
+- **端口操作**：`open-input-file`, `open-output-file`, `open-input-string`, `open-output-string`, `read`, `read-char`, `peek-char`, `write-char`, `eof-object?`, `char-ready?`, `call-with-input-file`, `call-with-output-file` 等
+- **系统操作**：`exit` 等
 - **其他**：`gensym`, `not`, `eval`, `equal?`, `eq?`, `eqv?` 等
 
 ## 代码组织
@@ -74,8 +77,8 @@ pscm 依然处于非常简陋的状态
 ### 模块划分
 
 - **核心**：`pscm.h`（类型定义）、`eval.h`（求值接口）、`eval.cc`（主求值器）
-- **特殊形式**：`do.cc`, `cond.cc`, `case.cc`, `map.cc`, `apply.cc`, `quasiquote.cc`, `macro.cc`, `let.cc`, `for_each.cc`, `values.cc`
-- **内置函数**：`predicate.cc`, `number.cc`, `list.cc`, `string.cc`, `char.cc`, `eq.cc`, `alist.cc`, `hash_table.cc`, `vector.cc`
+- **特殊形式**：`do.cc`, `cond.cc`, `case.cc`, `map.cc`, `apply.cc`, `quasiquote.cc`, `macro.cc`, `let.cc`, `for_each.cc`, `values.cc`（`and` 和 `or` 在 `eval.cc` 中实现）
+- **内置函数**：`predicate.cc`, `number.cc`, `list.cc`, `string.cc`, `char.cc`, `eq.cc`, `alist.cc`, `hash_table.cc`, `vector.cc`, `port.cc`, `exit.cc`
 - **基础设施**：`parse.cc`（解析器）、`print.cc`（打印）、`continuation.cc`（continuation）、`environment.cc`（环境）、`source_location.cc`（源位置）
 
 ### 错误处理
@@ -89,15 +92,15 @@ pscm 依然处于非常简陋的状态
 ## 已知限制
 
 1. **内存管理**：未实现垃圾回收（GC），所有分配的内存不会释放，存在内存泄漏风险
-2. **错误处理**：多数情况下直接 `exit(1)`，缺少优雅的错误恢复机制
+2. **错误处理**：多数情况下直接 `exit(1)`，缺少优雅的错误恢复机制（已有调用栈追踪）
 3. **性能**：环境查找使用线性搜索（O(n)），符号比较使用 `memcmp`
-4. **缺失功能**：端口系统、模块系统、Guile API 兼容层等
+4. **缺失功能**：模块系统、文件加载函数（`load`）、Guile API 兼容层等
 
 ## 下一步计划
 
 ### 高优先级
 - 实现垃圾回收机制
-- 端口系统（文件 I/O 支持）
+- 文件加载函数（`load`、`primitive-load`）
 - Guile API 兼容层（C API 接口）
 
 ### 中优先级
