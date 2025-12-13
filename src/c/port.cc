@@ -316,7 +316,13 @@ static SCM *read_expr_from_port(SCM_Port *port) {
   }
   
   // Build a buffer with the expression
-  char buffer[4096];
+  // Use dynamic allocation for large expressions
+  size_t buffer_size = 4096;
+  char *buffer = (char *)malloc(buffer_size);
+  if (!buffer) {
+    eval_error("read: out of memory");
+    return scm_eof_object();
+  }
   int pos = 0;
   int paren_depth = 0;
   bool in_string = false;
@@ -368,14 +374,27 @@ static SCM *read_expr_from_port(SCM_Port *port) {
   }
   
   // Read until we have a complete expression
-  while (pos < sizeof(buffer) - 1) {
+  while (pos < (int)buffer_size - 1) {
     int ch = read_char_from_port(port);
     if (ch == EOF) {
       if (paren_depth == 0 && !in_string) {
         break;
       }
       // Incomplete expression
+      free(buffer);
       return scm_eof_object();
+    }
+    
+    // Resize buffer if needed
+    if (pos >= (int)buffer_size - 1) {
+      buffer_size *= 2;
+      char *new_buffer = (char *)realloc(buffer, buffer_size);
+      if (!new_buffer) {
+        free(buffer);
+        eval_error("read: out of memory");
+        return scm_eof_object();
+      }
+      buffer = new_buffer;
     }
     
     buffer[pos++] = (char)ch;
@@ -422,6 +441,10 @@ static SCM *read_expr_from_port(SCM_Port *port) {
   
   // Parse the expression
   SCM *result = parse(buffer);
+  
+  // Free the buffer
+  free(buffer);
+  
   return result;
 }
 
