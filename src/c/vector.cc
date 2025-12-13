@@ -143,29 +143,42 @@ SCM *scm_c_vector_to_list(SCM *vec) {
     return scm_nil();
   }
   
-  SCM_List dummy = make_list_dummy();
-  SCM_List *tail = &dummy;
-  
-  for (size_t i = 0; i < v->length; i++) {
-    tail->next = make_list(v->elements[i]);
-    tail = tail->next;
+  // Build list from end to beginning
+  SCM_List *result = nullptr;
+  for (int i = (int)v->length - 1; i >= 0; i--) {
+    SCM_List *cell = new SCM_List();
+    cell->data = v->elements[i];
+    cell->next = result;
+    cell->is_dotted = false;
+    result = cell;
   }
   
-  return wrap(dummy.next);
+  return result ? wrap(result) : scm_nil();
 }
 
 // list->vector: Convert list to vector
 SCM *scm_c_list_to_vector(SCM *list) {
-  if (!is_pair(list) && !is_nil(list)) {
+  if (is_nil(list)) {
+    // Empty list: return empty vector
+    SCM_Vector *vec = new SCM_Vector();
+    vec->length = 0;
+    vec->elements = nullptr;
+    return wrap(vec);
+  }
+  
+  if (!is_pair(list)) {
     eval_error("list->vector: expected list");
     return nullptr;
   }
   
   // Count elements
   size_t count = 0;
-  SCM_List *current = is_nil(list) ? nullptr : cast<SCM_List>(list);
+  SCM_List *current = cast<SCM_List>(list);
   while (current) {
     count++;
+    if (!current->next) {
+      break;
+    }
     current = current->next;
   }
   
@@ -176,7 +189,7 @@ SCM *scm_c_list_to_vector(SCM *list) {
     vec->elements = new SCM*[count];
     current = cast<SCM_List>(list);
     size_t i = 0;
-    while (current) {
+    while (current && i < count) {
       vec->elements[i++] = current->data;
       current = current->next;
     }

@@ -1,5 +1,7 @@
 #include "pscm.h"
 #include "eval.h"
+#include <cstring>
+#include <ctype.h>
 
 // string-length: Return the number of characters in string
 SCM *scm_c_string_length(SCM *str) {
@@ -450,13 +452,446 @@ SCM *scm_c_number_to_string(SCM_List *args) {
   return scm;
 }
 
+// substring: Extract a substring from start to end (exclusive)
+SCM *scm_c_substring(SCM *str, SCM *start, SCM *end) {
+  if (!is_str(str)) {
+    eval_error("substring: first argument must be a string");
+    return nullptr;
+  }
+  if (!is_num(start)) {
+    eval_error("substring: second argument must be an integer");
+    return nullptr;
+  }
+  if (!is_num(end)) {
+    eval_error("substring: third argument must be an integer");
+    return nullptr;
+  }
+  
+  SCM_String *s = cast<SCM_String>(str);
+  int64_t start_idx = (int64_t)start->value;
+  int64_t end_idx = (int64_t)end->value;
+  
+  if (start_idx < 0 || start_idx > s->len) {
+    eval_error("substring: start index out of range");
+    return nullptr;
+  }
+  if (end_idx < start_idx || end_idx > s->len) {
+    eval_error("substring: end index out of range");
+    return nullptr;
+  }
+  
+  int64_t len = end_idx - start_idx;
+  SCM_String *result = new SCM_String();
+  result->data = new char[len + 1];
+  memcpy(result->data, s->data + start_idx, len);
+  result->data[len] = '\0';
+  result->len = len;
+  
+  SCM *scm = new SCM();
+  scm->type = SCM::STR;
+  scm->value = result;
+  scm->source_loc = nullptr;
+  return scm;
+}
+
+// string-append: Concatenate strings
+SCM *scm_c_string_append(SCM_List *args) {
+  if (!args) {
+    // No arguments: return empty string
+    SCM_String *s = new SCM_String();
+    s->data = new char[1];
+    s->data[0] = '\0';
+    s->len = 0;
+    SCM *scm = new SCM();
+    scm->type = SCM::STR;
+    scm->value = s;
+    scm->source_loc = nullptr;
+    return scm;
+  }
+  
+  // Calculate total length
+  int total_len = 0;
+  SCM_List *current = args;
+  while (current) {
+    if (!is_str(current->data)) {
+      eval_error("string-append: all arguments must be strings");
+      return nullptr;
+    }
+    SCM_String *s = cast<SCM_String>(current->data);
+    total_len += s->len;
+    if (!current->next || is_nil(wrap(current->next))) {
+      break;
+    }
+    current = current->next;
+  }
+  
+  // Create result string
+  SCM_String *result = new SCM_String();
+  result->data = new char[total_len + 1];
+  result->len = total_len;
+  
+  // Copy strings
+  int pos = 0;
+  current = args;
+  while (current && pos < total_len) {
+    SCM_String *s = cast<SCM_String>(current->data);
+    memcpy(result->data + pos, s->data, s->len);
+    pos += s->len;
+    if (!current->next || is_nil(wrap(current->next))) {
+      break;
+    }
+    current = current->next;
+  }
+  result->data[total_len] = '\0';
+  
+  SCM *scm = new SCM();
+  scm->type = SCM::STR;
+  scm->value = result;
+  scm->source_loc = nullptr;
+  return scm;
+}
+
+// string->list: Convert string to list of characters
+SCM *scm_c_string_to_list(SCM *str) {
+  if (!is_str(str)) {
+    eval_error("string->list: expected string");
+    return nullptr;
+  }
+  
+  SCM_String *s = cast<SCM_String>(str);
+  
+  if (s->len == 0) {
+    return scm_nil();
+  }
+  
+  // Build list from end to beginning
+  SCM_List *result = nullptr;
+  for (int i = s->len - 1; i >= 0; i--) {
+    SCM *ch = scm_from_char(s->data[i]);
+    SCM_List *cell = new SCM_List();
+    cell->data = ch;
+    cell->next = result;
+    cell->is_dotted = false;
+    result = cell;
+  }
+  
+  return result ? wrap(result) : scm_nil();
+}
+
+// list->string: Convert list of characters to string
+SCM *scm_c_list_to_string(SCM *lst) {
+  if (is_nil(lst)) {
+    // Empty list: return empty string
+    SCM_String *s = new SCM_String();
+    s->data = new char[1];
+    s->data[0] = '\0';
+    s->len = 0;
+    SCM *scm = new SCM();
+    scm->type = SCM::STR;
+    scm->value = s;
+    scm->source_loc = nullptr;
+    return scm;
+  }
+  
+  if (!is_pair(lst)) {
+    eval_error("list->string: expected list");
+    return nullptr;
+  }
+  
+  // Count characters
+  int len = 0;
+  SCM_List *current = cast<SCM_List>(lst);
+  while (current) {
+    if (!is_char(current->data)) {
+      eval_error("list->string: all elements must be characters");
+      return nullptr;
+    }
+    len++;
+    if (!current->next) {
+      break;
+    }
+    current = current->next;
+  }
+  
+  // Create string
+  SCM_String *s = new SCM_String();
+  s->data = new char[len + 1];
+  s->len = len;
+  
+  // Copy characters
+  int i = 0;
+  current = cast<SCM_List>(lst);
+  while (current && i < len) {
+    s->data[i] = scm_to_char(current->data);
+    i++;
+    current = current->next;
+  }
+  s->data[len] = '\0';
+  
+  SCM *scm = new SCM();
+  scm->type = SCM::STR;
+  scm->value = s;
+  scm->source_loc = nullptr;
+  return scm;
+}
+
+// String comparison functions (case-sensitive)
+SCM *scm_c_string_lt(SCM *str1, SCM *str2) {
+  if (!is_str(str1)) {
+    eval_error("string<?: first argument must be a string");
+    return nullptr;
+  }
+  if (!is_str(str2)) {
+    eval_error("string<?: second argument must be a string");
+    return nullptr;
+  }
+  
+  auto s1 = cast<SCM_String>(str1);
+  auto s2 = cast<SCM_String>(str2);
+  
+  int cmp = strncmp(s1->data, s2->data, s1->len < s2->len ? s1->len : s2->len);
+  if (cmp < 0) {
+    return scm_bool_true();
+  }
+  if (cmp > 0) {
+    return scm_bool_false();
+  }
+  // If equal up to shorter length, shorter string is less
+  return (s1->len < s2->len) ? scm_bool_true() : scm_bool_false();
+}
+
+SCM *scm_c_string_gt(SCM *str1, SCM *str2) {
+  if (!is_str(str1)) {
+    eval_error("string>?: first argument must be a string");
+    return nullptr;
+  }
+  if (!is_str(str2)) {
+    eval_error("string>?: second argument must be a string");
+    return nullptr;
+  }
+  
+  auto s1 = cast<SCM_String>(str1);
+  auto s2 = cast<SCM_String>(str2);
+  
+  int cmp = strncmp(s1->data, s2->data, s1->len < s2->len ? s1->len : s2->len);
+  if (cmp > 0) {
+    return scm_bool_true();
+  }
+  if (cmp < 0) {
+    return scm_bool_false();
+  }
+  // If equal up to shorter length, longer string is greater
+  return (s1->len > s2->len) ? scm_bool_true() : scm_bool_false();
+}
+
+SCM *scm_c_string_le(SCM *str1, SCM *str2) {
+  if (!is_str(str1)) {
+    eval_error("string<=?: first argument must be a string");
+    return nullptr;
+  }
+  if (!is_str(str2)) {
+    eval_error("string<=?: second argument must be a string");
+    return nullptr;
+  }
+  
+  auto s1 = cast<SCM_String>(str1);
+  auto s2 = cast<SCM_String>(str2);
+  
+  int cmp = strncmp(s1->data, s2->data, s1->len < s2->len ? s1->len : s2->len);
+  if (cmp < 0) {
+    return scm_bool_true();
+  }
+  if (cmp > 0) {
+    return scm_bool_false();
+  }
+  // If equal up to shorter length, shorter or equal length is <=
+  return (s1->len <= s2->len) ? scm_bool_true() : scm_bool_false();
+}
+
+SCM *scm_c_string_ge(SCM *str1, SCM *str2) {
+  if (!is_str(str1)) {
+    eval_error("string>=?: first argument must be a string");
+    return nullptr;
+  }
+  if (!is_str(str2)) {
+    eval_error("string>=?: second argument must be a string");
+    return nullptr;
+  }
+  
+  auto s1 = cast<SCM_String>(str1);
+  auto s2 = cast<SCM_String>(str2);
+  
+  int cmp = strncmp(s1->data, s2->data, s1->len < s2->len ? s1->len : s2->len);
+  if (cmp > 0) {
+    return scm_bool_true();
+  }
+  if (cmp < 0) {
+    return scm_bool_false();
+  }
+  // If equal up to shorter length, longer or equal length is >=
+  return (s1->len >= s2->len) ? scm_bool_true() : scm_bool_false();
+}
+
+// Case-insensitive string comparison functions
+SCM *scm_c_string_ci_eq(SCM *str1, SCM *str2) {
+  if (!is_str(str1)) {
+    eval_error("string-ci=?: first argument must be a string");
+    return nullptr;
+  }
+  if (!is_str(str2)) {
+    eval_error("string-ci=?: second argument must be a string");
+    return nullptr;
+  }
+  
+  auto s1 = cast<SCM_String>(str1);
+  auto s2 = cast<SCM_String>(str2);
+  
+  if (s1->len != s2->len) {
+    return scm_bool_false();
+  }
+  
+  for (int i = 0; i < s1->len; i++) {
+    char c1 = toupper((unsigned char)s1->data[i]);
+    char c2 = toupper((unsigned char)s2->data[i]);
+    if (c1 != c2) {
+      return scm_bool_false();
+    }
+  }
+  return scm_bool_true();
+}
+
+SCM *scm_c_string_ci_lt(SCM *str1, SCM *str2) {
+  if (!is_str(str1)) {
+    eval_error("string-ci<?: first argument must be a string");
+    return nullptr;
+  }
+  if (!is_str(str2)) {
+    eval_error("string-ci<?: second argument must be a string");
+    return nullptr;
+  }
+  
+  auto s1 = cast<SCM_String>(str1);
+  auto s2 = cast<SCM_String>(str2);
+  
+  int min_len = s1->len < s2->len ? s1->len : s2->len;
+  for (int i = 0; i < min_len; i++) {
+    char c1 = toupper((unsigned char)s1->data[i]);
+    char c2 = toupper((unsigned char)s2->data[i]);
+    if (c1 < c2) {
+      return scm_bool_true();
+    }
+    if (c1 > c2) {
+      return scm_bool_false();
+    }
+  }
+  // If equal up to shorter length, shorter string is less
+  return (s1->len < s2->len) ? scm_bool_true() : scm_bool_false();
+}
+
+SCM *scm_c_string_ci_gt(SCM *str1, SCM *str2) {
+  if (!is_str(str1)) {
+    eval_error("string-ci>?: first argument must be a string");
+    return nullptr;
+  }
+  if (!is_str(str2)) {
+    eval_error("string-ci>?: second argument must be a string");
+    return nullptr;
+  }
+  
+  auto s1 = cast<SCM_String>(str1);
+  auto s2 = cast<SCM_String>(str2);
+  
+  int min_len = s1->len < s2->len ? s1->len : s2->len;
+  for (int i = 0; i < min_len; i++) {
+    char c1 = toupper((unsigned char)s1->data[i]);
+    char c2 = toupper((unsigned char)s2->data[i]);
+    if (c1 > c2) {
+      return scm_bool_true();
+    }
+    if (c1 < c2) {
+      return scm_bool_false();
+    }
+  }
+  // If equal up to shorter length, longer string is greater
+  return (s1->len > s2->len) ? scm_bool_true() : scm_bool_false();
+}
+
+SCM *scm_c_string_ci_le(SCM *str1, SCM *str2) {
+  if (!is_str(str1)) {
+    eval_error("string-ci<=?: first argument must be a string");
+    return nullptr;
+  }
+  if (!is_str(str2)) {
+    eval_error("string-ci<=?: second argument must be a string");
+    return nullptr;
+  }
+  
+  auto s1 = cast<SCM_String>(str1);
+  auto s2 = cast<SCM_String>(str2);
+  
+  int min_len = s1->len < s2->len ? s1->len : s2->len;
+  for (int i = 0; i < min_len; i++) {
+    char c1 = toupper((unsigned char)s1->data[i]);
+    char c2 = toupper((unsigned char)s2->data[i]);
+    if (c1 < c2) {
+      return scm_bool_true();
+    }
+    if (c1 > c2) {
+      return scm_bool_false();
+    }
+  }
+  // If equal up to shorter length, shorter or equal length is <=
+  return (s1->len <= s2->len) ? scm_bool_true() : scm_bool_false();
+}
+
+SCM *scm_c_string_ci_ge(SCM *str1, SCM *str2) {
+  if (!is_str(str1)) {
+    eval_error("string-ci>=?: first argument must be a string");
+    return nullptr;
+  }
+  if (!is_str(str2)) {
+    eval_error("string-ci>=?: second argument must be a string");
+    return nullptr;
+  }
+  
+  auto s1 = cast<SCM_String>(str1);
+  auto s2 = cast<SCM_String>(str2);
+  
+  int min_len = s1->len < s2->len ? s1->len : s2->len;
+  for (int i = 0; i < min_len; i++) {
+    char c1 = toupper((unsigned char)s1->data[i]);
+    char c2 = toupper((unsigned char)s2->data[i]);
+    if (c1 > c2) {
+      return scm_bool_true();
+    }
+    if (c1 < c2) {
+      return scm_bool_false();
+    }
+  }
+  // If equal up to shorter length, longer or equal length is >=
+  return (s1->len >= s2->len) ? scm_bool_true() : scm_bool_false();
+}
+
 void init_string() {
   scm_define_function("string-length", 1, 0, 0, scm_c_string_length);
   scm_define_vararg_function("make-string", scm_c_make_string);
   scm_define_function("string-ref", 2, 0, 0, scm_c_string_ref);
   scm_define_function("string-set!", 3, 0, 0, scm_c_string_set);
   scm_define_function("string=?", 2, 0, 0, scm_c_string_eq);
+  scm_define_function("string<?", 2, 0, 0, scm_c_string_lt);
+  scm_define_function("string>?", 2, 0, 0, scm_c_string_gt);
+  scm_define_function("string<=?", 2, 0, 0, scm_c_string_le);
+  scm_define_function("string>=?", 2, 0, 0, scm_c_string_ge);
+  scm_define_function("string-ci=?", 2, 0, 0, scm_c_string_ci_eq);
+  scm_define_function("string-ci<?", 2, 0, 0, scm_c_string_ci_lt);
+  scm_define_function("string-ci>?", 2, 0, 0, scm_c_string_ci_gt);
+  scm_define_function("string-ci<=?", 2, 0, 0, scm_c_string_ci_le);
+  scm_define_function("string-ci>=?", 2, 0, 0, scm_c_string_ci_ge);
   scm_define_vararg_function("string", scm_c_string);
+  scm_define_function("substring", 3, 0, 0, scm_c_substring);
+  scm_define_vararg_function("string-append", scm_c_string_append);
+  scm_define_function("string->list", 1, 0, 0, scm_c_string_to_list);
+  scm_define_function("list->string", 1, 0, 0, scm_c_list_to_string);
   scm_define_function("display", 1, 0, 0, scm_c_display);
   scm_define_function("write", 1, 0, 0, scm_c_write);
   scm_define_vararg_function("newline", scm_c_newline);

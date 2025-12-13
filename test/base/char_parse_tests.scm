@@ -27,12 +27,18 @@
 #\Newline
 ;; CHECK: #\newline
 #\NEWLINE
-;; CHECK: #\tab
+;; CHECK: #\ht
 #\tab
-;; CHECK: #\tab
+;; CHECK: #\ht
 #\Tab
-;; CHECK: #\tab
+;; CHECK: #\ht
 #\TAB
+;; CHECK: #\ht
+#\ht
+;; CHECK: #\ht
+#\Ht
+;; CHECK: #\ht
+#\HT
 
 ;; Test quoted character literals
 ;; CHECK: #\a
@@ -87,7 +93,7 @@
 ;; Test character in lists
 ;; CHECK: (#\a #\b #\c)
 (list '#\a '#\b '#\c)
-;; CHECK: (#\space #\newline #\tab)
+;; CHECK: (#\space #\newline #\ht)
 (list '#\space '#\newline '#\tab)
 ;; CHECK: (#\space #\space)
 (list '#\ #\Space)

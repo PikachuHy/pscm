@@ -282,12 +282,30 @@ static SCM *parse_char(Parser *p) {
       }
     } else if (len == 3) {
       // Check for "tab" (case-insensitive)
+      // Also support "ht" for compatibility, though it's 2 characters
       char name_lower[4];
       for (int i = 0; i < 3; i++) {
         name_lower[i] = (char)tolower((unsigned char)name_start[i]);
       }
       name_lower[3] = '\0';
       if (strcmp(name_lower, "tab") == 0) {
+        ch = '\t';
+      } else {
+        // Not a named character, treat the first character as the character value
+        p->pos = name_start;
+        p->column = start_column + 2;
+        ch = *p->pos;
+        p->pos++;
+        p->column++;
+      }
+    } else if (len == 2) {
+      // Check for "ht" (horizontal tab, R4RS standard name)
+      char name_lower[3];
+      for (int i = 0; i < 2; i++) {
+        name_lower[i] = (char)tolower((unsigned char)name_start[i]);
+      }
+      name_lower[2] = '\0';
+      if (strcmp(name_lower, "ht") == 0) {
         ch = '\t';
       } else {
         // Not a named character, treat the first character as the character value
@@ -416,13 +434,12 @@ static SCM *parse_string(Parser *p) {
   p->column++;
   
   const char *start = p->pos;
-  int len = 0;
   bool escape = false;
   
+  // First pass: find the end of the string and track line numbers
   while (*p->pos) {
     if (escape) {
       escape = false;
-      len++;
       p->pos++;
       p->column++;
       continue;
@@ -440,7 +457,6 @@ static SCM *parse_string(Parser *p) {
       p->line++;
       p->column = 1;
     }
-    len++;
     p->pos++;
     p->column++;
   }
@@ -448,16 +464,37 @@ static SCM *parse_string(Parser *p) {
   if (*p->pos != '"') {
     parse_error(p, "unterminated string");
   }
+  const char *end = p->pos;
   p->pos++; // consume closing quote
   p->column++;
   
-  // Create string symbol
-  char *str_data = new char[len + 1];
+  // Second pass: process escape sequences and calculate actual length
   const char *src = start;
+  int actual_len = 0;
+  escape = false;
+  
+  while (src < end) {
+    if (escape) {
+      escape = false;
+      // Escape sequence counts as one character
+      actual_len++;
+      src++;
+    } else if (*src == '\\') {
+      escape = true;
+      src++;
+    } else {
+      actual_len++;
+      src++;
+    }
+  }
+  
+  // Third pass: build the actual string
+  char *str_data = new char[actual_len + 1];
+  src = start;
   char *dst = str_data;
   escape = false;
   
-  for (int i = 0; i < len; i++) {
+  while (src < end) {
     if (escape) {
       escape = false;
       switch (*src) {
@@ -478,10 +515,16 @@ static SCM *parse_string(Parser *p) {
   }
   *dst = '\0';
   
-  SCM *scm = create_sym(str_data, len);
+  // Create string object directly
+  SCM_String *s = new SCM_String();
+  s->data = str_data;  // Use the allocated buffer directly
+  s->len = actual_len;
+  
+  SCM *scm = new SCM();
   scm->type = SCM::STR;
+  scm->value = s;
+  scm->source_loc = nullptr;
   set_source_location(scm, p->filename, start_line, start_column);
-  delete[] str_data;
   return scm;
 }
 

@@ -69,12 +69,13 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
     // !write_mode: print as A, ., etc. (display format)
     if (write_mode) {
       // Write format: #\A, #\., #\space, etc.
+      // Follow guile convention: space -> #\space, newline -> #\newline, tab -> #\ht
       if (ch == ' ') {
         printf("#\\space");
       } else if (ch == '\n') {
         printf("#\\newline");
       } else if (ch == '\t') {
-        printf("#\\tab");
+        printf("#\\ht");
       } else {
         printf("#\\%c", ch);
       }
