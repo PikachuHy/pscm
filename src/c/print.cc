@@ -1,5 +1,23 @@
 #include "pscm.h"
+
+// Print context to track if we're inside a quasiquote expression
+struct PrintContext {
+  bool in_quasiquote;
+  
+  PrintContext() : in_quasiquote(false) {}
+  PrintContext(bool in_qq) : in_quasiquote(in_qq) {}
+};
+
+// Forward declarations
+static void _print_list(SCM_List *l, bool nested, const PrintContext &ctx);
+static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContext &ctx);
+
 void print_ast(SCM *ast, bool write_mode) {
+  PrintContext ctx;
+  _print_ast_with_context(ast, write_mode, ctx);
+}
+
+static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContext &ctx) {
   if (is_proc(ast)) {
     auto proc = cast<SCM_Procedure>(ast);
     printf("#<");
@@ -89,7 +107,7 @@ void print_ast(SCM *ast, bool write_mode) {
   }
   if (is_pair(ast)) {
     auto l = cast<SCM_List>(ast);
-    print_list(l);
+    _print_list(l, false, ctx);
     return;
   }
   if (is_vector(ast)) {
@@ -99,7 +117,8 @@ void print_ast(SCM *ast, bool write_mode) {
       if (i > 0) {
         printf(" ");
       }
-      print_ast(vec->elements[i], write_mode);
+      // Pass context to vector elements
+      _print_ast_with_context(vec->elements[i], write_mode, ctx);
     }
     printf(")");
     return;
@@ -135,11 +154,11 @@ void print_ast(SCM *ast, bool write_mode) {
 }
 
 // Helper function to print a dotted pair: (car . cdr)
-static void _print_dotted_pair(SCM *car_val, SCM *cdr_val) {
+static void _print_dotted_pair(SCM *car_val, SCM *cdr_val, const PrintContext &ctx) {
   printf("(");
-  print_ast(car_val);
+  _print_ast_with_context(car_val, true, ctx);
   printf(" . ");
-  print_ast(cdr_val);
+  _print_ast_with_context(cdr_val, true, ctx);
   printf(")");
 }
 
@@ -160,24 +179,68 @@ static bool _is_dotted_pair(SCM_List *l) {
   return last->is_dotted;
 }
 
-static void _print_list(SCM_List *l, bool nested) {
+static void _print_list(SCM_List *l, bool nested, const PrintContext &ctx) {
   if (!l) {
     printf("()");
     return;
   }
   
+  // Check if this list starts with quasiquote - if so, set context
+  PrintContext new_ctx = ctx;
+  if (is_sym(l->data)) {
+    auto sym = cast<SCM_Symbol>(l->data);
+    if (strcmp(sym->data, "quasiquote") == 0) {
+      new_ctx.in_quasiquote = true;
+    }
+  }
+  
   // Handle quote special form
+  // In quasiquote context, always use '... format for nested quotes
+  // Outside quasiquote context, use (quote ...) for nested quotes
   if (is_sym(l->data)) {
     auto sym = cast<SCM_Symbol>(l->data);
     if (strcmp(sym->data, "quote") == 0) {
-      printf("'");
-      if (l->next) {
-        print_ast(l->next->data, true);  // Use write mode in quoted expressions
-        assert(!l->next->next);
-      } else {
-        printf("()");
+      // Check if the quoted expression is a list starting with unquote/quasiquote/unquote-splicing
+      bool should_use_quote_syntax = false;
+      if (l->next && is_pair(l->next->data)) {
+        SCM_List *quoted_list = cast<SCM_List>(l->next->data);
+        if (quoted_list->data && is_sym(quoted_list->data)) {
+          SCM_Symbol *quoted_sym = cast<SCM_Symbol>(quoted_list->data);
+          if (strcmp(quoted_sym->data, "unquote") == 0 ||
+              strcmp(quoted_sym->data, "quasiquote") == 0 ||
+              strcmp(quoted_sym->data, "unquote-splicing") == 0) {
+            should_use_quote_syntax = true;
+          }
+        }
       }
-      return;
+      
+      // Use '... format if:
+      // 1. Not nested (top-level)
+      // 2. Contains unquote/quasiquote/unquote-splicing
+      // 3. In quasiquote context (even when nested) - ALL quotes use '... format
+      // Outside quasiquote context, nested quotes always use (quote ...) format
+      
+      if (!nested || should_use_quote_syntax || ctx.in_quasiquote) {
+        // Top-level, or contains special forms, or in quasiquote context
+        printf("'");
+        if (l->next) {
+          _print_ast_with_context(l->next->data, true, new_ctx);
+          assert(!l->next->next);
+        } else {
+          printf("()");
+        }
+        return;
+      } else {
+        // Nested quote outside quasiquote: print as (quote ...)
+        printf("(quote");
+        if (l->next) {
+          printf(" ");
+          _print_ast_with_context(l->next->data, true, new_ctx);
+          assert(!l->next->next);
+        }
+        printf(")");
+        return;
+      }
     }
   }
   
@@ -209,9 +272,9 @@ static void _print_list(SCM_List *l, bool nested) {
             printf(" ");
           }
           if (is_pair(current->data)) {
-            _print_list(cast<SCM_List>(current->data), true);
+            _print_list(cast<SCM_List>(current->data), true, new_ctx);
           } else {
-            print_ast(current->data, true);  // Use write mode in lists
+            _print_ast_with_context(current->data, true, new_ctx);
           }
           current = current->next;
         }
@@ -222,9 +285,9 @@ static void _print_list(SCM_List *l, bool nested) {
             printf(" ");
           }
           if (is_pair(cdr_current->data)) {
-            _print_list(cast<SCM_List>(cdr_current->data), true);
+            _print_list(cast<SCM_List>(cdr_current->data), true, new_ctx);
           } else {
-            print_ast(cdr_current->data, true);  // Use write mode in lists
+            _print_ast_with_context(cdr_current->data, true, new_ctx);
           }
           cdr_current = cdr_current->next;
         }
@@ -243,17 +306,17 @@ static void _print_list(SCM_List *l, bool nested) {
       
       // If this is the last element before the dotted pair cdr
       if (current == prev) {
-        print_ast(current->data, true);  // Use write mode in lists
+        _print_ast_with_context(current->data, true, new_ctx);
         printf(" . ");
-        print_ast(last->data, true);  // Use write mode in lists
+        _print_ast_with_context(last->data, true, new_ctx);
         break;
       }
       
       // Print element
       if (is_pair(current->data)) {
-        _print_list(cast<SCM_List>(current->data), true);
+        _print_list(cast<SCM_List>(current->data), true, new_ctx);
       } else {
-        print_ast(current->data, true);  // Use write mode in lists
+        _print_ast_with_context(current->data, true, new_ctx);
       }
       
       current = current->next;
@@ -270,9 +333,9 @@ static void _print_list(SCM_List *l, bool nested) {
       
       // Print element
       if (is_pair(current->data)) {
-        _print_list(cast<SCM_List>(current->data), true);
+        _print_list(cast<SCM_List>(current->data), true, new_ctx);
       } else {
-        print_ast(current->data, true);  // Use write mode in lists
+        _print_ast_with_context(current->data, true, new_ctx);
       }
       
       current = current->next;
@@ -282,6 +345,6 @@ static void _print_list(SCM_List *l, bool nested) {
 }
 
 void print_list(SCM_List *l) {
-  _print_list(l, false);
+  PrintContext ctx;
+  _print_list(l, false, ctx);
 }
-

@@ -120,17 +120,26 @@ SCM *scm_append(SCM_List *args) {
   }
   
   // Find the last argument to check if it's a dotted pair
+  // We need to check the actual value, not the expression, so we check after
+  // processing all arguments
   SCM_List *last_arg = args;
   while (last_arg->next) {
     last_arg = last_arg->next;
   }
+  // Check if the last argument evaluates to a dotted pair
+  // This is done after we've processed all arguments, so we can check the actual value
   bool last_is_dotted_pair = false;
   SCM *last_cdr = nullptr;
   if (is_pair(last_arg->data)) {
     SCM_List *last_list = cast<SCM_List>(last_arg->data);
     if (_is_dotted_pair(last_list)) {
       last_is_dotted_pair = true;
-      last_cdr = last_list->next->data;
+      // Find the last node to get the cdr
+      SCM_List *last_node = last_list;
+      while (last_node->next) {
+        last_node = last_node->next;
+      }
+      last_cdr = last_node->data;
     }
   }
   

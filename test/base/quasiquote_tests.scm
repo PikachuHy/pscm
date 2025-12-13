@@ -85,3 +85,110 @@
 ;; Test nested unquote-splicing (not valid in standard Scheme, but test parsing)
 ;; CHECK: (quasiquote (unquote (unquote-splicing items)))
 '`,,@items
+
+;; ========================================
+;; Test actual evaluation of quasiquote expressions
+;; ========================================
+
+;; Test basic quasiquote evaluation
+;; CHECK: (a b c)
+`(a b c)
+
+;; Test unquote with simple value
+;; CHECK: (a 42 c)
+`(a ,(+ 20 22) c)
+
+;; Test unquote with variable
+(define x 10)
+;; CHECK: (a 10 c)
+`(a ,x c)
+
+;; Test unquote-splicing with empty list
+;; CHECK: (a c)
+`(a ,@'() c)
+
+;; Test unquote-splicing with single element list
+;; CHECK: (a 1 c)
+`(a ,@'(1) c)
+
+;; Test unquote-splicing with multiple elements (the bug we just fixed)
+;; CHECK: (a 1 2 3 c)
+`(a ,@'(1 2 3) c)
+
+;; Test unquote-splicing with computed list
+;; CHECK: (a 1 2 3 c)
+`(a ,@(list 1 2 3) c)
+
+;; Test unquote-splicing with map result (the specific bug case)
+;; CHECK: (a 3 4 5 6 b)
+`(a ,(+ 1 2) ,@(map abs '(4 -5 6)) b)
+
+;; Test unquote-splicing at the beginning
+;; CHECK: (1 2 3 a b)
+`(,@'(1 2 3) a b)
+
+;; Test unquote-splicing at the end
+;; CHECK: (a b 1 2 3)
+`(a b ,@'(1 2 3))
+
+;; Test multiple unquote-splicing
+;; CHECK: (a 1 2 b 3 4 c)
+`(a ,@'(1 2) b ,@'(3 4) c)
+
+;; Test unquote and unquote-splicing together
+(define name 'foo)
+(define items '(x y z))
+;; CHECK: (list foo x y z bar)
+`(list ,name ,@items bar)
+
+;; Test unquote-splicing with empty result (using map that returns empty list)
+;; CHECK: (a c)
+`(a ,@'() c)
+
+;; Test nested quasiquote (currently preserved as structure, not evaluated)
+(define y 20)
+;; CHECK: (a (quasiquote b (unquote . y) d) e)
+`(a `(b ,y d) e)
+
+;; Test unquote with expression that returns list
+;; CHECK: ((1 2 3) 4 5)
+`(,(list 1 2 3) 4 5)
+
+;; Test unquote-splicing with expression that returns list
+;; CHECK: (1 2 3 4 5)
+`(,@(list 1 2 3) 4 5)
+
+;; Test complex example: building a function call
+(define func 'list)
+(define args '(1 2 3))
+;; CHECK: (list 1 2 3)
+`(,func ,@args)
+
+;; Test unquote-splicing with map and filter
+;; CHECK: (a 2 4 6 b)
+`(a ,@(map (lambda (x) (* x 2)) '(1 2 3)) b)
+
+;; Test unquote-splicing with computed list
+;; CHECK: (a 2 4 6 b)
+`(a ,@(map (lambda (x) (* x 2)) '(1 2 3)) b)
+
+;; Test empty list with unquote-splicing
+;; CHECK: (a b)
+`(a ,@'() b)
+
+;; Test unquote-splicing with single element
+;; CHECK: (a 42 b)
+`(a ,@'(42) b)
+
+;; Test R4RS test case: list with unquote
+;; CHECK: (list 3 4)
+`(list ,(+ 1 2) 4)
+
+;; Test R4RS test case: list with variable and quoted variable
+(let ((name 'a))
+  ;; CHECK: (list a (quote a))
+  `(list ,name ',name))
+
+;; Test R4RS test case: complex unquote-splicing
+;; CHECK: ((foo 7) . cons)
+`((foo ,(- 10 3)) ,@(cdr '(c)) . ,(car '(cons)))
