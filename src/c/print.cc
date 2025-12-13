@@ -48,11 +48,11 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
   }
   if (is_float(ast)) {
     double val = ptr_to_double(ast->value);
-    // Use %g for compact representation, but ensure we show decimal point for non-integer values
-    // %g automatically chooses between %f and %e format
+    // Always show at least one decimal place for floats to preserve the float representation
+    // Use %g for compact representation, but ensure decimal point is shown
     if (val == (double)(int64_t)val) {
-      // Integer value stored as float: print as integer
-      printf("%.0f", val);
+      // Integer value stored as float: print with .0 to show it's a float
+      printf("%.1f", val);
     } else {
       printf("%g", val);
     }

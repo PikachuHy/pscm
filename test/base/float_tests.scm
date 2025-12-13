@@ -9,23 +9,23 @@
 -3.14
 ;; CHECK: 0.5
 0.5
-;; CHECK: 1
+;; CHECK: 1.0
 1.0
 
 ;; Test 2: Scientific notation
-;; CHECK: 1200
+;; CHECK: 1200.0
 1.2e3
 ;; CHECK: 0.0012
 1.2e-3
-;; CHECK: -500
+;; CHECK: -500.0
 -5.0e2
 
 ;; Test 3: Float arithmetic
-;; CHECK: 4
+;; CHECK: 4.0
 (+ 1.5 2.5)
 ;; CHECK: 2.5
 (- 5.0 2.5)
-;; CHECK: 7
+;; CHECK: 7.0
 (* 2.0 3.5)
 ;; CHECK: 3.5
 (+ 1 2.5)  ; Integer + Float -> Float
@@ -59,6 +59,6 @@
 (+ 1 2.5 3)
 ;; CHECK: 6.5
 (- 10.0 2 1.5)
-;; CHECK: 9
+;; CHECK: 9.0
 (* 2 1.5 3)
 
