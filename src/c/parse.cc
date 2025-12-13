@@ -16,10 +16,237 @@ struct Parser {
   int column;
 };
 
-// Error reporting
+// Parse stack for tracking nested parsing context
+struct ParseStackFrame {
+  const char *context_type;      // "list", "vector", "string", "quasiquote", etc.
+  int start_line;
+  int start_column;
+  const char *start_pos;         // Position where this context started
+  ParseStackFrame *next;
+};
+
+static ParseStackFrame *g_parse_stack = nullptr;
+static const int MAX_PARSE_STACK_DEPTH = 50;
+
+// Push a parse context onto the stack
+static void push_parse_stack(Parser *p, const char *context_type) {
+  if (!p) return;
+  
+  // Count current depth
+  int depth = 0;
+  ParseStackFrame *frame = g_parse_stack;
+  while (frame) {
+    depth++;
+    frame = frame->next;
+  }
+  
+  if (depth >= MAX_PARSE_STACK_DEPTH) {
+    return;  // Stack too deep
+  }
+  
+  ParseStackFrame *new_frame = new ParseStackFrame();
+  if (!new_frame) return;
+  
+  new_frame->context_type = context_type;
+  new_frame->start_line = p->line;
+  new_frame->start_column = p->column;
+  new_frame->start_pos = p->pos;
+  new_frame->next = g_parse_stack;
+  g_parse_stack = new_frame;
+}
+
+// Pop a parse context from the stack
+static void pop_parse_stack() {
+  if (g_parse_stack) {
+    ParseStackFrame *old = g_parse_stack;
+    g_parse_stack = g_parse_stack->next;
+    delete old;
+  }
+}
+
+// Print the parse stack
+static void print_parse_stack(Parser *p) {
+  if (!g_parse_stack) {
+    fprintf(stderr, "\nParse stack: (empty - parsing at top level)\n");
+    return;
+  }
+  
+  fprintf(stderr, "\n=== Parse Stack (showing nested parsing context) ===\n");
+  fprintf(stderr, "Most recent context first (innermost to outermost):\n\n");
+  
+  ParseStackFrame *frame = g_parse_stack;
+  int depth = 0;
+  while (frame && depth < 20) {  // Limit to 20 frames
+    fprintf(stderr, "  #%d: Parsing %s\n", depth, frame->context_type);
+    fprintf(stderr, "       Started at: %s:%d:%d\n", 
+            p->filename ? p->filename : "<input>", 
+            frame->start_line, frame->start_column);
+    
+    // Show a snippet of where this context started
+    if (frame->start_pos && p->input && frame->start_pos >= p->input) {
+      const char *start = frame->start_pos;
+      const char *input_end = p->input + strlen(p->input);
+      
+      // Find line start for better context
+      const char *line_start = start;
+      while (line_start > p->input && line_start[-1] != '\n') {
+        line_start--;
+      }
+      
+      // Find line end
+      const char *line_end = start;
+      while (line_end < input_end && *line_end != '\n' && *line_end != '\r') {
+        line_end++;
+      }
+      
+      int line_len = (int)(line_end - line_start);
+      if (line_len > 0 && line_len < 120) {
+        // Calculate column in line
+        int col_in_line = (int)(start - line_start) + 1;
+        
+        fprintf(stderr, "       Line %d: ", frame->start_line);
+        fwrite(line_start, 1, line_len, stderr);
+        fprintf(stderr, "\n");
+        fprintf(stderr, "       ");
+        for (int i = 0; i < 8 + (int)strlen("Line X: "); i++) {
+          fprintf(stderr, " ");
+        }
+        for (int i = 1; i < col_in_line; i++) {
+          fprintf(stderr, " ");
+        }
+        fprintf(stderr, "^\n");
+      } else if (line_len > 0) {
+        // Line too long, just show a snippet
+        int snippet_len = 60;
+        if (start + snippet_len > input_end) {
+          snippet_len = (int)(input_end - start);
+        }
+        fprintf(stderr, "       Context: ");
+        fwrite(start, 1, snippet_len, stderr);
+        if (start + snippet_len < input_end) {
+          fprintf(stderr, "...");
+        }
+        fprintf(stderr, "\n");
+      }
+    }
+    
+    fprintf(stderr, "\n");
+    frame = frame->next;
+    depth++;
+  }
+  
+  if (frame) {
+    fprintf(stderr, "  ... (%d more frames)\n\n", depth);
+  }
+  fprintf(stderr, "=== End of Parse Stack ===\n");
+}
+
+// Error reporting with context
 static void parse_error(Parser *p, const char *msg) {
-  fprintf(stderr, "%s:%d:%d: parse error: %s\n", 
-          p->filename ? p->filename : "<input>", p->line, p->column, msg);
+  const char *filename = p->filename ? p->filename : "<input>";
+  fprintf(stderr, "%s:%d:%d: parse error: %s\n", filename, p->line, p->column, msg);
+  
+  // Print parse stack to show nested parsing context
+  print_parse_stack(p);
+  
+  // Show context around the error position
+  if (p->input && p->pos) {
+    // Find the start of the current line
+    const char *line_start = p->pos;
+    while (line_start > p->input && line_start[-1] != '\n') {
+      line_start--;
+    }
+    
+    // Find the end of the current line
+    const char *line_end = p->pos;
+    while (*line_end && *line_end != '\n') {
+      line_end++;
+    }
+    
+    // Calculate column position in the line
+    int col_in_line = (int)(p->pos - line_start) + 1;
+    
+    // Print the line with error
+    int line_len = (int)(line_end - line_start);
+    if (line_len > 0 && line_len < 200) {  // Only show if line is reasonable length
+      fprintf(stderr, "  %d | ", p->line);
+      fwrite(line_start, 1, line_len, stderr);
+      fprintf(stderr, "\n");
+      
+      // Print caret pointing to error position
+      fprintf(stderr, "     ");
+      for (int i = 1; i < col_in_line; i++) {
+        fprintf(stderr, " ");
+      }
+      fprintf(stderr, "^\n");
+    }
+    
+    // Show surrounding context (previous and next lines if available)
+    if (line_start > p->input) {
+      // Find previous line
+      const char *prev_line_start = line_start - 1;
+      while (prev_line_start > p->input && prev_line_start[-1] != '\n') {
+        prev_line_start--;
+      }
+      if (prev_line_start < line_start - 1) {
+        const char *prev_line_end = line_start - 1;
+        int prev_line_len = (int)(prev_line_end - prev_line_start);
+        if (prev_line_len > 0 && prev_line_len < 200) {
+          fprintf(stderr, "  %d | ", p->line - 1);
+          fwrite(prev_line_start, 1, prev_line_len, stderr);
+          fprintf(stderr, "\n");
+        }
+      }
+    }
+    
+    // Show next line if available
+    if (*line_end == '\n') {
+      const char *next_line_start = line_end + 1;
+      const char *next_line_end = next_line_start;
+      while (*next_line_end && *next_line_end != '\n') {
+        next_line_end++;
+      }
+      int next_line_len = (int)(next_line_end - next_line_start);
+      if (next_line_len > 0 && next_line_len < 200) {
+        fprintf(stderr, "  %d | ", p->line + 1);
+        fwrite(next_line_start, 1, next_line_len, stderr);
+        fprintf(stderr, "\n");
+      }
+    }
+    
+    // Show character context (what we're trying to parse)
+    fprintf(stderr, "\n  Current position: column %d, character: ", col_in_line);
+    if (*p->pos == '\0') {
+      fprintf(stderr, "<EOF>\n");
+    } else if (*p->pos == '\n') {
+      fprintf(stderr, "<newline>\n");
+    } else if (isprint((unsigned char)*p->pos)) {
+      fprintf(stderr, "'%c' (0x%02x)\n", *p->pos, (unsigned char)*p->pos);
+    } else {
+      fprintf(stderr, "<0x%02x>\n", (unsigned char)*p->pos);
+    }
+    
+    // Show next few characters for context
+    if (*p->pos != '\0') {
+      fprintf(stderr, "  Next characters: ");
+      const char *next = p->pos;
+      for (int i = 0; i < 20 && *next && *next != '\n'; i++, next++) {
+        if (isprint((unsigned char)*next)) {
+          fprintf(stderr, "%c", *next);
+        } else {
+          fprintf(stderr, "\\x%02x", (unsigned char)*next);
+        }
+      }
+      if (*next == '\n') {
+        fprintf(stderr, "\\n");
+      } else if (*next != '\0') {
+        fprintf(stderr, "...");
+      }
+      fprintf(stderr, "\n");
+    }
+  }
+  
+  fflush(stderr);
   exit(1);
 }
 
@@ -351,6 +578,8 @@ static SCM *parse_vector(Parser *p) {
   int start_line = p->line;
   int start_column = p->column;
   
+  push_parse_stack(p, "vector");
+  
   p->pos += 2;  // Skip #(
   p->column += 2;
   
@@ -360,6 +589,8 @@ static SCM *parse_vector(Parser *p) {
   if (*p->pos == ')') {
     p->pos++; // consume ')'
     p->column++;
+    
+    pop_parse_stack();  // Successfully parsed empty vector
     
     auto vec = new SCM_Vector();
     vec->elements = nullptr;
@@ -381,6 +612,7 @@ static SCM *parse_vector(Parser *p) {
       elem = parse_expr(p);
     }
     if (!elem) {
+      pop_parse_stack();  // Pop before error
       parse_error(p, "expected expression in vector");
     }
     
@@ -430,6 +662,9 @@ static SCM *parse_string(Parser *p) {
   }
   int start_line = p->line;
   int start_column = p->column;
+  
+  push_parse_stack(p, "string");
+  
   p->pos++; // consume opening quote
   p->column++;
   
@@ -462,11 +697,14 @@ static SCM *parse_string(Parser *p) {
   }
   
   if (*p->pos != '"') {
+    pop_parse_stack();  // Pop before error
     parse_error(p, "unterminated string");
   }
   const char *end = p->pos;
   p->pos++; // consume closing quote
   p->column++;
+  
+  pop_parse_stack();  // Successfully parsed string
   
   // Second pass: process escape sequences and calculate actual length
   const char *src = start;
@@ -519,6 +757,8 @@ static SCM *parse_string(Parser *p) {
   SCM_String *s = new SCM_String();
   s->data = str_data;  // Use the allocated buffer directly
   s->len = actual_len;
+  
+  pop_parse_stack();  // Successfully parsed string
   
   SCM *scm = new SCM();
   scm->type = SCM::STR;
@@ -590,6 +830,9 @@ static SCM *parse_quote(Parser *p) {
   if (*p->pos != '\'') {
     return nullptr;
   }
+  
+  push_parse_stack(p, "quote");
+  
   p->pos++; // consume quote
   p->column++;
   
@@ -623,24 +866,30 @@ static SCM *parse_quote(Parser *p) {
     quoted = parse_expr(p);
   }
   if (!quoted) {
+    pop_parse_stack();  // Pop before error
     parse_error(p, "expected expression after quote");
   }
   
-  // Build (quote expr)
-  SCM *quote_sym = scm_sym_quote();
-  SCM_List *list = make_list(quote_sym, quoted);
-  
-  SCM *scm = new SCM();
-  scm->type = SCM::LIST;
-  scm->value = list;
-  return scm;
-}
+    // Build (quote expr)
+    SCM *quote_sym = scm_sym_quote();
+    SCM_List *list = make_list(quote_sym, quoted);
+    
+    pop_parse_stack();  // Successfully parsed quote
+    
+    SCM *scm = new SCM();
+    scm->type = SCM::LIST;
+    scm->value = list;
+    return scm;
+  }
 
 // Parse a quasiquoted expression (backquote `)
 static SCM *parse_quasiquote(Parser *p) {
   if (*p->pos != '`') {
     return nullptr;
   }
+  
+  push_parse_stack(p, "quasiquote");
+  
   p->pos++; // consume backquote
   p->column++;
   
@@ -651,12 +900,15 @@ static SCM *parse_quasiquote(Parser *p) {
     quoted = parse_expr(p);
   }
   if (!quoted) {
+    pop_parse_stack();  // Pop before error
     parse_error(p, "expected expression after quasiquote");
   }
   
   // Build (quasiquote expr)
   SCM *quasiquote_sym = scm_sym_quasiquote();
   SCM_List *list = make_list(quasiquote_sym, quoted);
+  
+  pop_parse_stack();  // Successfully parsed quasiquote
   
   SCM *scm = new SCM();
   scm->type = SCM::LIST;
@@ -759,6 +1011,9 @@ static SCM *parse_list(Parser *p) {
   }
   int start_line = p->line;
   int start_column = p->column;
+  
+  push_parse_stack(p, "list");
+  
   p->pos++; // consume '('
   p->column++;
   
@@ -788,6 +1043,7 @@ static SCM *parse_list(Parser *p) {
       }
     }
     if (!elem) {
+      pop_parse_stack();  // Pop before error
       parse_error(p, "expected expression in list");
     }
     
@@ -832,6 +1088,7 @@ static SCM *parse_list(Parser *p) {
           cdr = parse_expr(p);
         }
         if (!cdr) {
+          pop_parse_stack();  // Pop before error
           parse_error(p, "expected expression after dot");
         }
         
@@ -865,6 +1122,7 @@ static SCM *parse_list(Parser *p) {
         cdr = parse_expr(p);
       }
       if (!cdr) {
+        pop_parse_stack();  // Pop before error
         parse_error(p, "expected expression after dot");
       }
       
@@ -882,10 +1140,13 @@ static SCM *parse_list(Parser *p) {
   }
   
   if (*p->pos != ')') {
+    pop_parse_stack();  // Pop before error
     parse_error(p, "expected ')' to close list");
   }
   p->pos++; // consume ')'
   p->column++;
+  
+  pop_parse_stack();  // Successfully parsed list
   
   if (dummy.next) {
     SCM *scm = new SCM();
@@ -970,8 +1231,16 @@ static SCM *parse_expr(Parser *p) {
     return result;
   }
   
-  // Unknown token
-  parse_error(p, "unexpected character");
+  // Unknown token - provide more context
+  char context[128];
+  if (*p->pos == '\0') {
+    snprintf(context, sizeof(context), "unexpected end of input");
+  } else if (isprint((unsigned char)*p->pos)) {
+    snprintf(context, sizeof(context), "unexpected character '%c' (0x%02x)", *p->pos, (unsigned char)*p->pos);
+  } else {
+    snprintf(context, sizeof(context), "unexpected character (0x%02x)", (unsigned char)*p->pos);
+  }
+  parse_error(p, context);
   return nullptr;
 }
 
@@ -986,12 +1255,55 @@ SCM *parse(const char *s) {
   
   SCM *result = parse_expr(&p);
   if (!result) {
-    parse_error(&p, "expected expression");
+    // Provide more context about what we were trying to parse
+    skip_whitespace(&p);
+    if (*p.pos == '\0') {
+      parse_error(&p, "expected expression (reached end of input)");
+    } else {
+      char context[64];
+      int len = 0;
+      const char *pos = p.pos;
+      while (len < 60 && *pos && *pos != '\n' && *pos != ' ' && *pos != '\t') {
+        if (isprint((unsigned char)*pos)) {
+          context[len++] = *pos;
+        } else {
+          break;
+        }
+        pos++;
+      }
+      context[len] = '\0';
+      if (len > 0) {
+        char msg[128];
+        snprintf(msg, sizeof(msg), "expected expression (found: '%s'...)", context);
+        parse_error(&p, msg);
+      } else {
+        parse_error(&p, "expected expression");
+      }
+    }
   }
   
   skip_whitespace(&p);
   if (*p.pos != '\0') {
-    parse_error(&p, "extra input after expression");
+    // Show what extra input we found
+    char extra[64];
+    int len = 0;
+    const char *pos = p.pos;
+    while (len < 60 && *pos && *pos != '\n') {
+      if (isprint((unsigned char)*pos)) {
+        extra[len++] = *pos;
+      } else {
+        break;
+      }
+      pos++;
+    }
+    extra[len] = '\0';
+    if (len > 0) {
+      char msg[128];
+      snprintf(msg, sizeof(msg), "extra input after expression: '%s'...", extra);
+      parse_error(&p, msg);
+    } else {
+      parse_error(&p, "extra input after expression");
+    }
   }
   
   return result;
@@ -1036,17 +1348,41 @@ SCM_List *parse_file(const char *filename) {
   SCM_List dummy = make_list_dummy();
   SCM_List *tail = &dummy;
   
+  int expr_count = 0;
   while (!is_eof(&p)) {
+    // Save position before parsing
+    const char *before_pos = p.pos;
+    int before_line = p.line;
+    int before_column = p.column;
+    
     SCM *expr = parse_expr(&p);
     if (!expr) {
+      // If we didn't make progress, break to avoid infinite loop
+      if (p.pos == before_pos && p.line == before_line && p.column == before_column) {
+        // We're stuck - provide helpful error message
+        fprintf(stderr, "\nParse failed at expression #%d\n", expr_count + 1);
+        fprintf(stderr, "Successfully parsed %d expressions before failure\n", expr_count);
+        parse_error(&p, "failed to parse expression (parser made no progress)");
+      }
       break;
     }
     
+    expr_count++;
     SCM_List *node = make_list(expr);
     tail->next = node;
     tail = node;
     
+    // Clear parse stack after successful parse of each expression
+    while (g_parse_stack) {
+      pop_parse_stack();
+    }
+    
     skip_whitespace(&p);
+  }
+  
+  // Clear any remaining stack frames
+  while (g_parse_stack) {
+    pop_parse_stack();
   }
   
   delete[] content;
