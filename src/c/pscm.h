@@ -42,9 +42,13 @@ struct SCM_String {
   int len;
 };
 
+// Rational number (fraction) representation
+// Stores a fraction as numerator/denominator
+// Example: 3/4 would have numerator=3, denominator=4
+// The fraction is always in simplified form (GCD reduced)
 struct SCM_Rational {
-  int64_t numerator;
-  int64_t denominator;
+  int64_t numerator;    // The numerator (top part) of the fraction
+  int64_t denominator;  // The denominator (bottom part) of the fraction, always > 0
 };
 
 struct SCM_Procedure {
