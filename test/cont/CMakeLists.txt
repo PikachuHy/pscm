@@ -12,5 +12,5 @@ pscm_configure_lit_site_cfg(
 pscm_add_lit_testsuite(check-cont "Running the Continuation regression tests"
     ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS
-    pscm_main pscm_cc
+    pscm_cc
 )

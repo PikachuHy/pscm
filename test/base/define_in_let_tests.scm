@@ -1,6 +1,4 @@
-;; RUN: %pscm_main -m REGISTER_MACHINE --test %s | FileCheck %s
 ;; RUN: %pscm_cc --test %s | FileCheck %s
-;; RUN: %pscm_main --test %s | FileCheck %s
 
 ;; Test that define creates local bindings inside let/let*/letrec
 ;; and does not affect outer environment variables

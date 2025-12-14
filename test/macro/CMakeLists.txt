@@ -11,5 +11,5 @@ pscm_add_lit_testsuite(check-macro "Running the macro regression tests"
     ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS
     pscm_cc
-    pscm_main
+    pscm_cc
 )

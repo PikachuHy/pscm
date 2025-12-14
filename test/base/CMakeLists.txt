@@ -10,5 +10,5 @@ pscm_configure_lit_site_cfg(
 pscm_add_lit_testsuite(check-base "Running the base regression tests"
     ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS
-    pscm_main
+    pscm_cc
 )

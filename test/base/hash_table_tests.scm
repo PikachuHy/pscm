@@ -1,5 +1,3 @@
-;; TODO: %pscm_main -m REGISTER_MACHINE --test %s | FileCheck %s
-;; RUN: %pscm_main --test %s | FileCheck %s
 ;; RUN: %pscm_cc --test %s | FileCheck %s
 
 (define h (make-hash-table 31))
