@@ -39,12 +39,12 @@ export default {
 
 function nav() {
   return [
-    { text: 'Guide', link: '/cn/intro', activeMatch: '/cn/' },
+    { text: 'Guide', link: '/cn/pscm_cc', activeMatch: '/cn/' },
     {
       text: "Language",
       items: [
         {
-          text: "简体中文", link: '/cn/intro'
+          text: "简体中文", link: '/cn/pscm_cc'
         }
       ]
     },
@@ -58,59 +58,7 @@ function nav() {
 function sidebarGuideZh() {
   return [
     {
-      text: 'pscm',
-      collapsible: true,
-      items: [
-        {
-          text: 'pscm 简介',
-          link: '/cn/intro'
-        },
-        {
-          text: '如何构建 pscm',
-          link: '/cn/how_to_build_pscm'
-        },
-        {
-          text: 'pscm 数据类型',
-          link: '/cn/cell'
-        },
-        {
-          text: 'Equivalence predicates',
-          link: '/cn/eq_eqv_equal'
-        },
-        {
-          text: 'Register Machine',
-          link: '/cn/register_machine'
-        },
-        {
-          text: 'Continuation',
-          link: '/cn/continuation'
-        },
-        {
-          text: 'R4RS Support',
-          link: '/cn/r4rs_support'
-        },
-        {
-          text: 'Unicode Support',
-          link: '/cn/unicode_support'
-        },
-        {
-          text: 'Language Binding',
-          link: '/cn/language_binding'
-        },
-      ]
-    },
-    {
-      text: 'pscm-core',
-      collapsible: true,
-      items: [
-        {
-          text: 'pscm-core 简介',
-          link: '/cn/pscm_core'
-        },
-      ]
-    },
-    {
-      text: 'pscm-cc',
+      text: 'pscm-cc (active development)',
       collapsible: true,
       items: [
         {
@@ -136,11 +84,51 @@ function sidebarGuideZh() {
         {
           text: 'pscm-cc dynamic-wind 实现方案',
           link: '/cn/dynamic_wind_support'
+        },
+        {
+          text: 'pscm-cc eval 实现方案',
+          link: '/cn/eval_implementation'
+        },
+        {
+          text: 'pscm-cc continuation 实现方案',
+          link: '/cn/continuation_implementation'
+        },
+        {
+          text: 'pscm-cc map 实现方案',
+          link: '/cn/map_implementation'
+        },
+        {
+          text: 'pscm-cc for-each 实现方案',
+          link: '/cn/for_each_implementation'
+        },
+        {
+          text: 'pscm-cc values 实现方案',
+          link: '/cn/values_implementation'
         }
       ]
     },
     {
-      text: 'pscm-build',
+      text: 'pscm v2 (archived)',
+      collapsible: true,
+      items: [
+        {
+          text: 'pscm v2 文档汇总（已归档）',
+          link: '/cn/pscm_v2_archived'
+        },
+      ]
+    },
+    {
+      text: 'pscm-core (archived)',
+      collapsible: true,
+      items: [
+        {
+          text: 'pscm-core 简介',
+          link: '/cn/pscm_core'
+        },
+      ]
+    },
+    {
+      text: 'pscm-build (archived)',
       collapsible: true,
       items: [
         {
