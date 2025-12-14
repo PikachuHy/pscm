@@ -445,6 +445,21 @@ entry:
       SCM *expanded = expand_macro_call(env, macro, l->next, ast);
       // Recursively expand the result, then evaluate
       ast = expand_macros(env, expanded);
+      // If macro expansion returns a non-pair value (e.g., a number), 
+      // we need to handle it directly instead of trying to evaluate it as a list
+      if (!is_pair(ast)) {
+        RETURN_WITH_CONTEXT(ast);
+      }
+      // After macro expansion, we need to re-check the structure
+      // If ast is a pair but l->data is not a symbol/proc/func, it might be
+      // a self-evaluating value wrapped in a list, which should be evaluated directly
+      // We need to recast l since ast might have changed
+      l = cast<SCM_List>(ast);
+      if (l && l->data && !is_sym(l->data) && !is_proc(l->data) && !is_func(l->data) && !is_cont(l->data) && !is_pair(l->data) && !l->next) {
+        // This is a self-evaluating value (number, string, etc.) wrapped in a single-element list
+        // Return it directly
+        RETURN_WITH_CONTEXT(l->data);
+      }
       goto entry;
     }
 
@@ -629,6 +644,15 @@ entry:
     new_l->next = l->next;
     ast = wrap(new_l);
     goto entry;
+  }
+  else if (is_num(l->data) || is_float(l->data) || is_str(l->data) || is_char(l->data) || is_bool(l->data) || is_nil(l->data)) {
+    // Self-evaluating values: numbers, strings, characters, booleans, nil
+    // If this is a single-element list with a self-evaluating value, return it directly
+    if (!l->next) {
+      RETURN_WITH_CONTEXT(l->data);
+    }
+    // Otherwise, this is an error - can't have a list starting with a self-evaluating value
+    // Fall through to error reporting
   }
   else {
     // Enhanced error reporting for unsupported expression types
