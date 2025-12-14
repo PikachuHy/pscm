@@ -13,44 +13,10 @@
 
 a scheme language implementation
 <p>
-<img src="https://github.com/PikachuHy/pscm/actions/workflows/linux_clang.yml/badge.svg?branch=master">
-<img src="https://github.com/PikachuHy/pscm/actions/workflows/linux_gcc.yml/badge.svg?branch=master">
 <img src="https://github.com/PikachuHy/pscm/actions/workflows/macos.yml/badge.svg?branch=master">
-<img src="https://github.com/PikachuHy/pscm/actions/workflows/windows.yml/badge.svg?branch=master">
 </p>
 
-Try Demo: https://pscm.dev/demo.html
-
 for details, [go to pscm.dev](https://pscm.dev).
-
-- Discord: https://discord.gg/Trr5v2WP
-- Telegram: https://t.me/+6k3RgdwpfpYyYzRl
-- QQ Group: 538402289
-
-## Build
-
-see [Build pscm](https://pscm.dev/cn/how_to_build_pscm)
-## Development Plan
-
-see [Development Plan](https://github.com/PikachuHy/pscm/issues/13)
-
-## Screenshot
-
-- krabby
-
-![Krabby base on WASM SDL2](http://cdn.pikachu.net.cn/project/Krabby/krabby_v3_sdl2_wasm_screenshot.png)
-
-- vau
-
-![vau pdf preview](http://cdn.pikachu.net.cn/pscm/vau/vau-test_pdf.png)
-
-- pscm android app
-
-![pscm android app](http://cdn.pikachu.net.cn/pscm/android.jpg)
-
-- pscm ios app
-
-![pscm ios app](http://cdn.pikachu.net.cn/pscm/ios.png)
 
 ## License
 
