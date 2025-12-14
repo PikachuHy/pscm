@@ -1,6 +1,0 @@
-cc_library(
-    name = "variant",
-    hdrs = glob(["include/mpark/*.hpp"]),
-    visibility = ["//visibility:public"],
-    includes = ["include"],
-)

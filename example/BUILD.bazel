@@ -1,8 +1,0 @@
-cc_binary(
-    name = "unicode_example_1",
-    srcs = ["unicode_example_1.cpp"],
-    deps = [
-        "@icu//:io",
-        "@icu//:stubdata",
-    ],
-)

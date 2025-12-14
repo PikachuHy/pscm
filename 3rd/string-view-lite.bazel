@@ -1,6 +1,0 @@
-cc_library(
-    name = "string-view-lite",
-    hdrs = ["include/nonstd/string_view.hpp"],
-    visibility = ["//visibility:public"],
-    includes = ["include"],
-)
