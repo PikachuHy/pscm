@@ -354,6 +354,123 @@ SCM *scm_c_gt_number(SCM *lhs, SCM *rhs) {
   return BinaryOperator<GtOp<bool, int64_t>>::run(lhs, rhs);
 }
 
+// Multi-argument comparison functions (chain comparisons)
+SCM *scm_c_eq_chain(SCM_List *args) {
+  if (!args || !args->next) {
+    return scm_bool_true();  // (=) returns #t
+  }
+  if (!args->next->next) {
+    // For 2 arguments: (= a b) means a = b
+    return scm_c_eq_number(args->data, args->next->data);
+  }
+  
+  // For 3 or more arguments, chain the comparisons
+  SCM_List *current = args;
+  while (current->next) {
+    SCM *lhs = current->data;
+    SCM *rhs = current->next->data;
+    SCM *result = scm_c_eq_number(lhs, rhs);
+    if (!is_true(result)) {
+      return scm_bool_false();
+    }
+    current = current->next;
+  }
+  return scm_bool_true();
+}
+
+SCM *scm_c_lt_chain(SCM_List *args) {
+  if (!args || !args->next) {
+    return scm_bool_true();  // (<) returns #t
+  }
+  if (!args->next->next) {
+    // For 2 arguments: (< a b) means a < b
+    return scm_c_lt_number(args->data, args->next->data);
+  }
+  
+  // For 3 or more arguments, chain the comparisons
+  SCM_List *current = args;
+  while (current->next) {
+    SCM *lhs = current->data;
+    SCM *rhs = current->next->data;
+    SCM *result = scm_c_lt_number(lhs, rhs);
+    if (!is_true(result)) {
+      return scm_bool_false();
+    }
+    current = current->next;
+  }
+  return scm_bool_true();
+}
+
+SCM *scm_c_gt_chain(SCM_List *args) {
+  if (!args || !args->next) {
+    return scm_bool_true();  // (>) returns #t
+  }
+  if (!args->next->next) {
+    // For 2 arguments: (> a b) means a > b
+    return scm_c_gt_number(args->data, args->next->data);
+  }
+  
+  // For 3 or more arguments, chain the comparisons
+  // Check each pair: (a b c) means a > b and b > c
+  SCM_List *current = args;
+  while (current->next) {
+    SCM *lhs = current->data;
+    SCM *rhs = current->next->data;
+    SCM *result = scm_c_gt_number(lhs, rhs);
+    if (!is_true(result)) {
+      return scm_bool_false();
+    }
+    current = current->next;
+  }
+  return scm_bool_true();
+}
+
+SCM *scm_c_le_chain(SCM_List *args) {
+  if (!args || !args->next) {
+    return scm_bool_true();  // (<=) returns #t
+  }
+  if (!args->next->next) {
+    // For 2 arguments: (<= a b) means a <= b
+    return scm_c_lt_eq_number(args->data, args->next->data);
+  }
+  
+  // For 3 or more arguments, chain the comparisons
+  SCM_List *current = args;
+  while (current->next) {
+    SCM *lhs = current->data;
+    SCM *rhs = current->next->data;
+    SCM *result = scm_c_lt_eq_number(lhs, rhs);
+    if (!is_true(result)) {
+      return scm_bool_false();
+    }
+    current = current->next;
+  }
+  return scm_bool_true();
+}
+
+SCM *scm_c_ge_chain(SCM_List *args) {
+  if (!args || !args->next) {
+    return scm_bool_true();  // (>=) returns #t
+  }
+  if (!args->next->next) {
+    // For 2 arguments: (>= a b) means a >= b
+    return scm_c_gt_eq_number(args->data, args->next->data);
+  }
+  
+  // For 3 or more arguments, chain the comparisons
+  SCM_List *current = args;
+  while (current->next) {
+    SCM *lhs = current->data;
+    SCM *rhs = current->next->data;
+    SCM *result = scm_c_gt_eq_number(lhs, rhs);
+    if (!is_true(result)) {
+      return scm_bool_false();
+    }
+    current = current->next;
+  }
+  return scm_bool_true();
+}
+
 SCM *scm_c_abs(SCM *arg) {
   assert(is_num(arg));
   int64_t val = (int64_t)arg->value;
@@ -775,14 +892,14 @@ void init_number() {
   scm_define_function("odd?", 1, 0, 0, scm_c_is_odd);
   scm_define_function("even?", 1, 0, 0, scm_c_is_even);
   scm_define_generic_function("+", scm_c_add_number, _create_num(0));
-  scm_define_function("=", 2, 0, 0, scm_c_eq_number);
+  scm_define_vararg_function("=", scm_c_eq_chain);
   scm_define_vararg_function("-", scm_c_minus_wrapper);
   scm_define_generic_function("*", scm_c_mul_number, _create_num(1));
   scm_define_vararg_function("/", scm_c_div);
-  scm_define_function("<=", 2, 0, 0, scm_c_lt_eq_number);
-  scm_define_function(">=", 2, 0, 0, scm_c_gt_eq_number);
-  scm_define_function("<", 2, 0, 0, scm_c_lt_number);
-  scm_define_function(">", 2, 0, 0, scm_c_gt_number);
+  scm_define_vararg_function("<=", scm_c_le_chain);
+  scm_define_vararg_function(">=", scm_c_ge_chain);
+  scm_define_vararg_function("<", scm_c_lt_chain);
+  scm_define_vararg_function(">", scm_c_gt_chain);
   scm_define_function("abs", 1, 0, 0, scm_c_abs);
   scm_define_function("sqrt", 1, 0, 0, scm_c_sqrt);
   scm_define_function("expt", 2, 0, 0, scm_c_expt);

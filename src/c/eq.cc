@@ -84,6 +84,8 @@ bool _eq(SCM *lhs, SCM *rhs) {
   case SCM::NIL:
     return true;
   case SCM::LIST:
+    // For backward compatibility with existing tests, use deep comparison for lists
+    // In strict R4RS, eq? should use pointer equality (lhs == rhs) for lists
     return _list_eq(lhs, rhs);
   case SCM::PROC:
   case SCM::CONT:
@@ -123,15 +125,80 @@ bool _eq(SCM *lhs, SCM *rhs) {
   }
 }
 
+// eq?: Pointer equality (identity)
+// Note: For backward compatibility with existing tests, we use _eq which does
+// deep comparison for lists. In strict R4RS, eq? should use pointer equality for lists.
 SCM *scm_c_is_eq(SCM *lhs, SCM *rhs) {
+  // Use _eq for backward compatibility (does deep comparison for lists)
   if (_eq(lhs, rhs)) {
     return scm_bool_true();
   }
   return scm_bool_false();
 }
 
+// eqv?: Value equality (but pointer equality for lists/vectors)
+// Note: For backward compatibility, we use _eq which does deep comparison for lists
+SCM *scm_c_is_eqv(SCM *lhs, SCM *rhs) {
+  // Use _eq for backward compatibility (same as eq? in this implementation)
+  if (_eq(lhs, rhs)) {
+    return scm_bool_true();
+  }
+  return scm_bool_false();
+}
+
+// equal?: Deep value equality
+SCM *scm_c_is_equal(SCM *lhs, SCM *rhs) {
+  if (lhs == rhs) {
+    return scm_bool_true();
+  }
+  
+  if (lhs->type != rhs->type) {
+    // Special case: allow NUM <-> FLOAT comparison
+    if ((lhs->type == SCM::NUM && rhs->type == SCM::FLOAT) ||
+        (lhs->type == SCM::FLOAT && rhs->type == SCM::NUM)) {
+      return _number_eq(lhs, rhs) ? scm_bool_true() : scm_bool_false();
+    }
+    return scm_bool_false();
+  }
+  
+  switch (lhs->type) {
+  case SCM::NONE:
+  case SCM::NIL:
+    return scm_bool_true();
+  case SCM::LIST:
+    return _list_eq(lhs, rhs) ? scm_bool_true() : scm_bool_false();
+  case SCM::VECTOR:
+    return _vector_eq(lhs, rhs) ? scm_bool_true() : scm_bool_false();
+  case SCM::PROC:
+  case SCM::CONT:
+  case SCM::FUNC:
+  case SCM::MACRO:
+  case SCM::HASH_TABLE:
+  case SCM::PORT:
+    // For compound types, equal? uses pointer equality (same as eq?)
+    return scm_bool_false();
+  case SCM::NUM:
+  case SCM::FLOAT:
+  case SCM::RATIO:
+    return _number_eq(lhs, rhs) ? scm_bool_true() : scm_bool_false();
+  case SCM::CHAR:
+    {
+      char ch_lhs = ptr_to_char(lhs->value);
+      char ch_rhs = ptr_to_char(rhs->value);
+      return (ch_lhs == ch_rhs) ? scm_bool_true() : scm_bool_false();
+    }
+  case SCM::BOOL:
+    return (is_true(lhs) == is_true(rhs)) ? scm_bool_true() : scm_bool_false();
+  case SCM::SYM:
+  case SCM::STR:
+    return _sym_eq(lhs, rhs) ? scm_bool_true() : scm_bool_false();
+  default:
+    return scm_bool_false();
+  }
+}
+
 void init_eq() {
   scm_define_function("eq?", 2, 0, 0, scm_c_is_eq);
-  scm_define_function("eqv?", 2, 0, 0, scm_c_is_eq);
-  scm_define_function("equal?", 2, 0, 0, scm_c_is_eq);
+  scm_define_function("eqv?", 2, 0, 0, scm_c_is_eqv);
+  scm_define_function("equal?", 2, 0, 0, scm_c_is_equal);
 }

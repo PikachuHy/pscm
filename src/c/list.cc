@@ -119,6 +119,15 @@ SCM *scm_append(SCM_List *args) {
     return args->data;
   }
   
+  // Special case: (append '() non-list) -> non-list
+  // Check if first argument is nil and second is not a list
+  if (is_nil(args->data) && args->next) {
+    if (!args->next->next) {
+      // Only two arguments: (append '() x) -> x
+      return args->next->data;
+    }
+  }
+  
   // Find the last argument to check if it's a dotted pair
   // We need to check the actual value, not the expression, so we check after
   // processing all arguments
@@ -462,6 +471,9 @@ static bool _eqv(SCM *lhs, SCM *rhs) {
 
 // memq: Return the first sublist of list whose car is obj (using eq? for comparison)
 // Returns #f if obj is not found
+// Note: For compatibility with existing tests, we use _eq which does deep comparison for lists
+// In strict R4RS, eq? should use pointer equality for lists, but this implementation
+// uses value equality for lists to maintain backward compatibility
 SCM *scm_c_memq(SCM *obj, SCM *lst) {
   if (is_nil(lst)) {
     return scm_bool_false();
@@ -475,6 +487,8 @@ SCM *scm_c_memq(SCM *obj, SCM *lst) {
   SCM_List *current = cast<SCM_List>(lst);
   
   while (current) {
+    // Use _eq for compatibility (does deep comparison for lists)
+    // In strict R4RS, this should be pointer equality (obj == current->data)
     if (current->data && _eq(obj, current->data)) {
       // Found a match, return the sublist starting from this element
       return wrap(current);

@@ -596,6 +596,11 @@ inline SCM *cdr(SCM *data) {
   if (l->next == nullptr) {
     return scm_nil();
   }
+  // Check if this is a dotted pair (is_dotted flag is set on the cdr node)
+  if (l->next->is_dotted) {
+    // For dotted pair (a . b), return b directly (not wrapped as a list)
+    return l->next->data;
+  }
   auto new_data = new SCM();
   new_data->type = SCM::LIST;
   new_data->value = l->next;

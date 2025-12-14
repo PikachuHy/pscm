@@ -29,3 +29,25 @@
 '((1 . 2) (3 . 4))
 ;; CHECK: ((1 . 2) (3 . 4))
 
+;; Test cdr with dotted pair (should return the cdr value directly)
+;; CHECK: 2
+(cdr '(1 . 2))
+
+;; Test cdr with proper list (should return the rest of the list)
+;; CHECK: (2 3)
+(cdr '(1 2 3))
+
+;; Test cdr with single element list (should return empty list)
+;; CHECK: ()
+(cdr '(1))
+
+;; Test car and cdr with dotted pair
+;; CHECK: 1
+(car '(1 . 2))
+;; CHECK: 2
+(cdr '(1 . 2))
+
+;; Test nested dotted pair cdr
+;; CHECK: (2 . 3)
+(cdr '(1 2 . 3))
+
