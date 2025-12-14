@@ -4,6 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Forward declaration
+SCM *scm_c_list_to_vector(SCM *list);
+
 // Error handling helper for quasiquote
 [[noreturn]] static void quasiquote_error(const char *format, ...) {
   va_list args;
@@ -15,292 +18,329 @@
   exit(1);
 }
 
-// Helper function to check if an expression is constant (doesn't need evaluation)
-static bool is_constant_expr(SCM *expr) {
+// Helper function to check if expr is (unquote ...)
+static bool is_unquote_form(SCM *expr) {
   if (!is_pair(expr)) {
-    // Atoms are constant except symbols
-    return !is_sym(expr);
+    return false;
   }
-  
-  // Check if it's a quote expression
   SCM_List *l = cast<SCM_List>(expr);
   if (l->data && is_sym(l->data)) {
     SCM_Symbol *sym = cast<SCM_Symbol>(l->data);
-    if (strcmp(sym->data, "quote") == 0) {
-      return true;
-    }
+    return strcmp(sym->data, "unquote") == 0;
   }
   return false;
 }
 
-// Helper function to check if expr is (quote symbol) and return the symbol, or NULL
-static SCM *get_quoted_symbol(SCM *expr) {
+// Helper function to check if expr is (unquote-splicing ...)
+static bool is_unquote_splicing_form(SCM *expr) {
   if (!is_pair(expr)) {
-    return NULL;
+    return false;
   }
   SCM_List *l = cast<SCM_List>(expr);
   if (l->data && is_sym(l->data)) {
     SCM_Symbol *sym = cast<SCM_Symbol>(l->data);
-    if (strcmp(sym->data, "quote") == 0 && l->next && !l->next->next) {
-      if (is_sym(l->next->data)) {
-        return l->next->data;
-      }
-    }
+    return strcmp(sym->data, "unquote-splicing") == 0;
   }
-  return NULL;
+  return false;
 }
 
-// Helper function to combine skeletons in quasiquote expansion
-static SCM *combine_skeletons(SCM_Environment *env, SCM *left, SCM *right, SCM *original) {
-  // If both are constants, evaluate and quote
-  if (is_constant_expr(left) && is_constant_expr(right)) {
-    SCM *left_val = eval_with_env(env, left);
-    SCM *right_val = eval_with_env(env, right);
-    // For now, just use cons - optimization can be added later
-    return scm_list3(create_sym("cons", 4), left, right);
-  }
-  
-  // If right is nil, use (list left)
-  if (is_nil(right)) {
-    return scm_list2(create_sym("list", 4), left);
-  }
-  
-  // Check if left is (quote symbol) - but we only want to handle special cases
-  // Don't treat (quote list) specially unless we're in a specific context
-  // where we know it's a list constructor (like after unquote-splicing)
-  // For regular quasiquote expansion, (quote list) should just be treated as
-  // a quoted symbol like any other
-  SCM *left_quoted_sym = get_quoted_symbol(left);
-  if (left_quoted_sym && is_sym(left_quoted_sym)) {
-    SCM_Symbol *left_sym = cast<SCM_Symbol>(left_quoted_sym);
-    // Only handle this special case if right starts with (append ...)
-    // This indicates we came from unquote-splicing expansion
-    if (strcmp(left_sym->data, "list") == 0 && is_pair(right)) {
-      SCM_List *right_list = cast<SCM_List>(right);
-      if (right_list->data && is_sym(right_list->data)) {
-        SCM_Symbol *sym = cast<SCM_Symbol>(right_list->data);
-        // Only merge if right is (append ...) - this means we're in unquote-splicing context
-        if (strcmp(sym->data, "append") == 0) {
-          // right is (append items rest)
-          SCM_List *rest = right_list->next;
-          if (rest && rest->data) {
-            SCM *items = rest->data;
-            SCM *rest_expr = rest->next ? wrap(rest->next) : scm_nil();
-            if (is_nil(rest_expr)) {
-              // (append items nil) -> use (apply list items)
-              // This will properly construct (list ...items...)
-              return scm_list3(create_sym("apply", 5), 
-                             create_sym("list", 4), 
-                             items);
-            } else {
-              // (append items rest) -> use (apply list (append items rest))
-              return scm_list3(create_sym("apply", 5), 
-                             create_sym("list", 4), 
-                             right);
-            }
-          } else {
-            // Malformed append, shouldn't happen - use apply list for consistency
-            return scm_list3(create_sym("apply", 5),
-                           create_sym("list", 4),
-                           right);
-          }
-        }
-      }
-    }
-  }
-  
-  // Default: use (cons left right)
-  return scm_list3(create_sym("cons", 4), left, right);
-}
-
-// Helper function to expand quasiquote expression
-static SCM *expand_quasiquote(SCM_Environment *env, SCM *expr, int nesting) {
-  // Handle non-pair expressions
+// Helper function to check if expr is (quasiquote ...)
+static bool is_quasiquote_form(SCM *expr) {
   if (!is_pair(expr)) {
-    if (is_constant_expr(expr)) {
-      return expr;  // Constants are returned as-is
-    }
-    // Symbols need to be quoted
-    return scm_list2(scm_sym_quote(), expr);
+    return false;
   }
-  
   SCM_List *l = cast<SCM_List>(expr);
-  if (!l->data) {
+  if (l->data && is_sym(l->data)) {
+    SCM_Symbol *sym = cast<SCM_Symbol>(l->data);
+    return strcmp(sym->data, "quasiquote") == 0;
+  }
+  return false;
+}
+
+// Helper function to get the argument from (unquote expr) or similar
+static SCM *get_form_arg(SCM *form) {
+  if (!is_pair(form)) {
+    return nullptr;
+  }
+  SCM_List *l = cast<SCM_List>(form);
+  if (l->next) {
+    return l->next->data;
+  }
+  return nullptr;
+}
+
+// Helper function to get the rest of a list after the first element
+static SCM *get_list_rest(SCM *list_expr) {
+  if (!is_pair(list_expr)) {
     return scm_nil();
   }
-  
-  // Special case: if this list node itself is marked as dotted pair's cdr
-  // This happens when we wrap a dotted pair node: the node itself is the wrapper
-  // with is_dotted=true and data=cdr. We need to handle this case specially.
-  // When we call expand_quasiquote(env, wrap(l->next), nesting) where l->next is
-  // a dotted pair node, the wrapped l->next becomes the root, so l->is_dotted == true
-  // and l->data is the cdr. But we don't have access to the car in this context.
-  // So we can't handle this case here - it should be handled by the caller.
-  // However, is_dotted is on the next node, not the current node.
-  // So we check l->next->is_dotted in the normal flow below.
-  
-  // Handle (unquote expr) - when nesting is 0, evaluate expr
-  if (is_sym(l->data)) {
-    SCM_Symbol *sym = cast<SCM_Symbol>(l->data);
-    if (strcmp(sym->data, "unquote") == 0 && l->next && !l->next->next) {
-      if (nesting == 0) {
-        // Evaluate the unquoted expression
-        SCM *eval_result = eval_with_env(env, l->next->data);
-        // In Scheme quasiquote, unquote inserts the value directly.
-        // However, when building the expanded expression, we need to quote symbols and lists
-        // to prevent them from being evaluated as variables or function calls.
-        // The combine_skeletons function will handle these quoted values correctly
-        // when building the final (list ...) or (cons ...) structure.
-        if (is_sym(eval_result) || is_pair(eval_result)) {
-          return scm_list2(scm_sym_quote(), eval_result);
-        }
-        return eval_result;
-      } else {
-        // Nested: reduce nesting and continue
-        SCM *new_right = expand_quasiquote(env, l->next->data, nesting - 1);
-        return combine_skeletons(env, scm_list2(scm_sym_quote(), scm_sym_unquote()), new_right, expr);
-      }
-    }
-    
-    // Handle (quasiquote expr) - increase nesting
-    if (strcmp(sym->data, "quasiquote") == 0 && l->next && !l->next->next) {
-      SCM *new_right = expand_quasiquote(env, l->next->data, nesting + 1);
-      return combine_skeletons(env, scm_list2(scm_sym_quote(), scm_sym_quasiquote()), new_right, expr);
-    }
-    
-    // Handle (unquote-splicing expr) - when nesting is 0, use append
-    // Note: unquote-splicing should only appear in list context, not as a top-level form
-    // This case handles (unquote-splicing expr) as a list element
-    if (strcmp(sym->data, "unquote-splicing") == 0 && l->next && !l->next->next) {
-      if (nesting == 0) {
-        // This shouldn't happen in normal quasiquote - unquote-splicing is handled in list context
-        // But if it does, treat it like unquote
-        return eval_with_env(env, l->next->data);
-      } else {
-        SCM *new_right = expand_quasiquote(env, l->next->data, nesting - 1);
-        return combine_skeletons(env, scm_list2(scm_sym_quote(), scm_sym_unquote_splicing()), new_right, expr);
-      }
-    }
+  SCM_List *l = cast<SCM_List>(list_expr);
+  if (l->next) {
+    return wrap(l->next);
   }
-  
-  // Handle unquote-splicing in list context: ((unquote-splicing expr) ...)
-  // This is the normal case for ,@ in a quasiquoted list
-  if (is_pair(l->data)) {
-    SCM_List *first = cast<SCM_List>(l->data);
-    if (first->data && is_sym(first->data)) {
-      SCM_Symbol *first_sym = cast<SCM_Symbol>(first->data);
-      if (strcmp(first_sym->data, "unquote-splicing") == 0 && first->next && !first->next->next) {
-        if (nesting == 0) {
-          // Evaluate the spliced expression
-          SCM *spliced_val = eval_with_env(env, first->next->data);
-          // Check if the rest of the list is a dotted pair
-          // l->next is the rest of the list after (unquote-splicing ...)
-          // If l->next is a dotted pair node, then rest_is_dotted is true
-          // If l->next is a list and l->next->next is a dotted pair node, we also need to check that
-          bool rest_is_dotted = false;
-          SCM *rest_cdr = nullptr;
-          if (l->next && l->next->is_dotted) {
-            // l->next is directly a dotted pair node
-            rest_is_dotted = true;
-            // The cdr of the dotted pair is in l->next->data
-            rest_cdr = l->next->data;
-          } else if (l->next && l->next->next && l->next->next->is_dotted) {
-            // l->next is a list, and l->next->next is a dotted pair node
-            rest_is_dotted = true;
-            // The cdr of the dotted pair is in l->next->next->data
-            rest_cdr = l->next->next->data;
-          }
-          
-          // Expand the rest of the list (which may be a dotted pair)
-          SCM *new_right;
-          if (rest_is_dotted) {
-            // Special case: l->next is a dotted pair node
-            // We need to expand the cdr separately and create a dotted pair expression
-            SCM *new_cdr = expand_quasiquote(env, rest_cdr, nesting);
-            
-            // Create a dotted pair expression: (cons ... new_cdr)
-            // The car will be the result of appending spliced_val
-            // If spliced_val is empty, we should directly return new_cdr (the dotted pair expression)
-            // because append(() list) = list, and we want to avoid creating (() . ...)
-            if (is_nil(spliced_val)) {
-              // Empty splice: directly return the dotted pair expression
-              // This avoids creating (() . ...) when the splice is empty
-              return new_cdr;
-            } else {
-              // Non-empty splice: use append to concatenate spliced_val with dotted pair
-              SCM *quoted_spliced = scm_list2(scm_sym_quote(), spliced_val);
-              // Create (cons '() new_cdr) for the dotted pair part
-              SCM *dotted_pair = scm_list3(create_sym("cons", 4), scm_list2(scm_sym_quote(), scm_nil()), new_cdr);
-              new_right = scm_list3(create_sym("append", 6), quoted_spliced, dotted_pair);
-              return new_right;
-            }
-          } else {
-            new_right = l->next ? expand_quasiquote(env, wrap(l->next), nesting) : scm_nil();
-          }
-          
-          // Use append to concatenate
-          if (is_nil(new_right)) {
-            // If right is nil, just return the spliced value
-            // But we need to quote it to prevent re-evaluation when eval_quasiquote evaluates the result
-            return scm_list2(scm_sym_quote(), spliced_val);
-          }
-          // Build (append spliced_val new_right)
-          // Note: spliced_val is already evaluated, so we need to quote it to prevent re-evaluation
-          // when append is called. However, append expects a list value, not an expression.
-          // The issue is that when (append spliced_val new_right) is evaluated,
-          // eval_list_with_env will try to evaluate spliced_val again, which would fail
-          // if spliced_val is a list like (4 5 6) because it would try to call 4 as a function.
-          // Solution: quote spliced_val so it's treated as a literal value
-          SCM *quoted_spliced = scm_list2(scm_sym_quote(), spliced_val);
-          
-          // Special handling: if spliced_val is empty and new_right is a dotted pair expression,
-          // append should return new_right directly (since append(() list) = list)
-          // But we can't check this here because new_right is an expression, not a value
-          // So we rely on append to handle this correctly
-          return scm_list3(create_sym("append", 6), quoted_spliced, new_right);
-        } else {
-          // Nested: preserve the structure
-          SCM *new_left = expand_quasiquote(env, l->data, nesting - 1);
-          SCM *new_right = expand_quasiquote(env, l->next ? wrap(l->next) : scm_nil(), nesting);
-          return combine_skeletons(env, new_left, new_right, expr);
-        }
-      }
-    }
-  }
-  
-  // Check if this is a dotted pair
-  bool is_dotted = false;
-  SCM *cdr_val = nullptr;
-  if (l->next && l->next->is_dotted) {
-    is_dotted = true;
-    cdr_val = l->next->data;
-  }
-  
-  // Recursively expand car and cdr
-  SCM *new_left = expand_quasiquote(env, l->data, nesting);
-  if (is_dotted) {
-    // This is a dotted pair: expand the cdr separately
-    SCM *new_cdr = expand_quasiquote(env, cdr_val, nesting);
-    // Use (cons new_left new_cdr) to create the dotted pair
-    // This will evaluate to a dotted pair when the cdr is not a list
-    return scm_list3(create_sym("cons", 4), new_left, new_cdr);
-  } else {
-    // Regular list: expand cdr recursively
-    SCM *new_right = expand_quasiquote(env, l->next ? wrap(l->next) : scm_nil(), nesting);
-    return combine_skeletons(env, new_left, new_right, expr);
-  }
+  return scm_nil();
 }
+
+// Helper function to append two lists (for unquote-splicing)
+// This is a simplified version that merges two lists directly
+static SCM *append_two_lists(SCM *list1, SCM *list2) {
+  if (is_nil(list1)) {
+    return list2;
+  }
+  if (is_nil(list2)) {
+    return list1;
+  }
   
+  // Copy list1
+  SCM_List *l1 = cast<SCM_List>(list1);
+  SCM_List dummy = make_list_dummy();
+  SCM_List *tail = &dummy;
+  
+  // Copy all elements from list1
+  SCM_List *current = l1;
+  while (current) {
+    tail->next = make_list(current->data);
+    tail = tail->next;
+    
+    // Check if this is the last element (nil or dotted pair)
+    if (!current->next || is_nil(wrap(current->next))) {
+      break;
+    }
+    // Check if this is a dotted pair
+    if (current->is_dotted) {
+      // This shouldn't happen in a proper list, but handle it
+      break;
+    }
+    current = current->next;
+  }
+  
+  // Check if list1 ends with a dotted pair
+  bool list1_is_dotted = false;
+  SCM *list1_cdr = nullptr;
+  if (l1) {
+    SCM_List *last = l1;
+    while (last->next && !is_nil(wrap(last->next))) {
+      if (last->is_dotted) {
+        list1_is_dotted = true;
+        list1_cdr = last->data;
+        break;
+      }
+      last = last->next;
+    }
+    if (!list1_is_dotted && last->is_dotted) {
+      list1_is_dotted = true;
+      list1_cdr = last->data;
+    }
+  }
+  
+  // Append list2
+  if (is_pair(list2)) {
+    SCM_List *l2 = cast<SCM_List>(list2);
+    SCM_List *current2 = l2;
+    
+    while (current2) {
+      tail->next = make_list(current2->data);
+      tail = tail->next;
+      
+      // Check if this is the last element
+      if (!current2->next || is_nil(wrap(current2->next))) {
+        break;
+      }
+      // Check if this is a dotted pair
+      if (current2->is_dotted) {
+        tail->is_dotted = true;
+        break;
+      }
+      current2 = current2->next;
+    }
+    
+    // Check if list2 ends with a dotted pair
+    if (l2) {
+      SCM_List *last2 = l2;
+      while (last2->next && !is_nil(wrap(last2->next))) {
+        if (last2->is_dotted) {
+          tail->is_dotted = true;
+          break;
+        }
+        last2 = last2->next;
+      }
+      if (last2->is_dotted) {
+        tail->is_dotted = true;
+      }
+    }
+  } else if (!is_nil(list2)) {
+    // list2 is not a list, create a dotted pair
+    tail->next = make_list(list2);
+    tail->next->is_dotted = true;
+  }
+  
+  return dummy.next ? wrap(dummy.next) : scm_nil();
+}
+
+// Main quasi function: expand quasiquote expression
+// Based on Guile 1.8's iqq function - direct evaluation approach
+static SCM *quasi(SCM_Environment *env, SCM *p, int depth) {
+  // 1. Handle (unquote ...)
+  if (is_unquote_form(p)) {
+    SCM *arg = get_form_arg(p);
+    if (!arg) {
+      quasiquote_error("unquote requires an argument");
+    }
+    if (depth == 1) {
+      // Direct evaluation and return
+      return eval_with_env(env, arg);
+    } else {
+      // Nested: recursively process argument with reduced depth
+      SCM *expanded_arg = quasi(env, arg, depth - 1);
+      return scm_list2(scm_sym_unquote(), expanded_arg);
+    }
+  }
+  
+  // 2. Handle ((unquote-splicing ...) . rest)
+  if (is_pair(p)) {
+    SCM_List *p_list = cast<SCM_List>(p);
+    if (is_pair(p_list->data) && is_unquote_splicing_form(p_list->data)) {
+      SCM *arg = get_form_arg(p_list->data);
+      if (!arg) {
+        quasiquote_error("unquote-splicing requires an argument");
+      }
+      
+      // Check if rest is a dotted pair
+      bool rest_is_dotted = false;
+      SCM *rest_cdr_data = nullptr;
+      if (p_list->next && p_list->next->is_dotted) {
+        rest_is_dotted = true;
+        rest_cdr_data = p_list->next->data;
+      }
+      
+      if (depth == 1) {
+        // Direct evaluation and merge
+        SCM *list = eval_with_env(env, arg);
+        // Check if result is a list
+        if (!is_pair(list) && !is_nil(list)) {
+          quasiquote_error("unquote-splicing requires a list");
+        }
+        
+        // If rest is a dotted pair, handle it specially
+        if (rest_is_dotted && rest_cdr_data) {
+          // Process the cdr of the dotted pair
+          SCM *expanded_cdr = quasi(env, rest_cdr_data, depth);
+          // Append list elements, then create dotted pair with expanded_cdr
+          // We need to append list to an empty list, then make it a dotted pair
+          if (is_nil(list)) {
+            // If list is empty, return just the cdr (which will be combined with car by caller)
+            return expanded_cdr;
+          }
+          // Otherwise, append list elements, then create dotted pair with expanded_cdr
+          SCM_List *l = cast<SCM_List>(list);
+          SCM_List dummy = make_list_dummy();
+          SCM_List *tail = &dummy;
+          
+          // Copy all elements from list
+          SCM_List *current = l;
+          while (current) {
+            tail->next = make_list(current->data);
+            tail = tail->next;
+            
+            if (!current->next || is_nil(wrap(current->next))) {
+              break;
+            }
+            if (current->is_dotted) {
+              break;
+            }
+            current = current->next;
+          }
+          
+          // Make the last element a dotted pair with expanded_cdr
+          tail->is_dotted = true;
+          tail->data = expanded_cdr;
+          
+          return dummy.next ? wrap(dummy.next) : expanded_cdr;
+        } else {
+          // Normal case: process rest and merge
+          SCM *rest = get_list_rest(p);
+          SCM *expanded_rest = quasi(env, rest, depth);
+          return append_two_lists(list, expanded_rest);
+        }
+      } else {
+        // Nested: recursively process both car and cdr
+        SCM *expanded_car = quasi(env, p_list->data, depth - 1);
+        if (rest_is_dotted && rest_cdr_data) {
+          SCM *expanded_cdr = quasi(env, rest_cdr_data, depth);
+          return scm_list2(expanded_car, expanded_cdr);
+        } else {
+          SCM *rest = get_list_rest(p);
+          SCM *expanded_cdr = quasi(env, rest, depth);
+          return scm_cons(expanded_car, expanded_cdr);
+        }
+      }
+    }
+  }
+  
+  // 3. Handle (quasiquote ...)
+  if (is_quasiquote_form(p)) {
+    SCM *arg = get_form_arg(p);
+    if (!arg) {
+      quasiquote_error("quasiquote requires an argument");
+    }
+    // Increase depth
+    SCM *expanded_arg = quasi(env, arg, depth + 1);
+    return scm_list2(scm_sym_quasiquote(), expanded_arg);
+  }
+  
+  // 4. Handle (p . q) - pair
+  if (is_pair(p)) {
+    SCM_List *p_list = cast<SCM_List>(p);
+    SCM *car_val = p_list->data;
+    SCM *cdr_val = get_list_rest(p);
+    
+    // Check if this is a dotted pair
+    bool is_dotted = false;
+    SCM *cdr_data = nullptr;
+    if (p_list->next && p_list->next->is_dotted) {
+      is_dotted = true;
+      cdr_data = p_list->next->data;
+    }
+    
+    if (is_dotted) {
+      // Dotted pair: use cons
+      SCM *expanded_car = quasi(env, car_val, depth);
+      SCM *expanded_cdr = quasi(env, cdr_data, depth);
+      return scm_cons(expanded_car, expanded_cdr);
+    } else {
+      // Proper list: recursively process
+      SCM *expanded_car = quasi(env, car_val, depth);
+      SCM *expanded_cdr = quasi(env, cdr_val, depth);
+      return scm_cons(expanded_car, expanded_cdr);
+    }
+  }
+  
+  // 5. Handle vectors: #(x ...)
+  if (is_vector(p)) {
+    SCM_Vector *vec = cast<SCM_Vector>(p);
+    // Convert vector to list and process
+    SCM_List dummy = make_list_dummy();
+    SCM_List *tail = &dummy;
+    for (size_t i = 0; i < vec->length; i++) {
+      tail->next = make_list(vec->elements[i]);
+      tail = tail->next;
+    }
+    SCM *list_expr = dummy.next ? wrap(dummy.next) : scm_nil();
+    SCM *expanded_list = quasi(env, list_expr, depth);
+    // Convert back to vector
+    return scm_c_list_to_vector(expanded_list);
+  }
+  
+  // 6. Otherwise: return directly (atoms are returned as-is)
+  return p;
+}
+
 // Helper function for quasiquote special form
 SCM *eval_quasiquote(SCM_Environment *env, SCM_List *l) {
   if (!l->next) {
     quasiquote_error("missing argument");
   }
   
-  // Expand the quasiquote expression
-  SCM *expanded = expand_quasiquote(env, l->next->data, 0);
-  
-  // Evaluate the expanded expression
-  return eval_with_env(env, expanded);
+  // Start from depth=1 (because we're already inside quasiquote)
+  return quasi(env, l->next->data, 1);
 }
-  

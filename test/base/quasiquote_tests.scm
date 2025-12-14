@@ -67,7 +67,7 @@
 '`,,name1
 
 ;; Test nested quasiquote with nested unquote
-;; CHECK: (quasiquote (a (quasiquote (b (unquote (unquote name1)) (unquote '(unquote name2)) d)) e))
+;; CHECK: (quasiquote (a (quasiquote (b (unquote (unquote name1)) (unquote (quote (unquote name2))) d)) e))
 '`(a `(b ,,name1 ,',name2 d) e)
 
 ;; Test triple nested unquote (three commas)
@@ -147,7 +147,7 @@
 
 ;; Test nested quasiquote (currently preserved as structure, not evaluated)
 (define y 20)
-;; CHECK: (a (quasiquote b (unquote . y) d) e)
+;; CHECK: (a (quasiquote (b (unquote y) d)) e)
 `(a `(b ,y d) e)
 
 ;; Test unquote with expression that returns list

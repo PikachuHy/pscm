@@ -3,9 +3,10 @@
 // Print context to track if we're inside a quasiquote expression
 struct PrintContext {
   bool in_quasiquote;
+  bool in_unquote;
   
-  PrintContext() : in_quasiquote(false) {}
-  PrintContext(bool in_qq) : in_quasiquote(in_qq) {}
+  PrintContext() : in_quasiquote(false), in_unquote(false) {}
+  PrintContext(bool in_qq, bool in_unq = false) : in_quasiquote(in_qq), in_unquote(in_unq) {}
 };
 
 // Forward declarations
@@ -145,6 +146,9 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
   }
   if (is_pair(ast)) {
     auto l = cast<SCM_List>(ast);
+    if (!l) {
+      type_error(ast, "pair");
+    }
     _print_list(l, false, ctx);
     return;
   }
@@ -191,15 +195,6 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
   exit(1);
 }
 
-// Helper function to print a dotted pair: (car . cdr)
-static void _print_dotted_pair(SCM *car_val, SCM *cdr_val, const PrintContext &ctx) {
-  printf("(");
-  _print_ast_with_context(car_val, true, ctx);
-  printf(" . ");
-  _print_ast_with_context(cdr_val, true, ctx);
-  printf(")");
-}
-
 // Helper function to check if a list is a dotted pair by finding the last node
 // and checking its is_dotted flag
 static bool _is_dotted_pair(SCM_List *l) {
@@ -217,69 +212,88 @@ static bool _is_dotted_pair(SCM_List *l) {
   return last->is_dotted;
 }
 
+// Helper function to check if a list starts with a specific symbol
+static bool _list_starts_with(SCM_List *l, const char *sym_name) {
+  if (!l || !l->data || !is_sym(l->data)) {
+    return false;
+  }
+  SCM_Symbol *sym = cast<SCM_Symbol>(l->data);
+  return strcmp(sym->data, sym_name) == 0;
+}
+
 static void _print_list(SCM_List *l, bool nested, const PrintContext &ctx) {
   if (!l) {
     printf("()");
     return;
   }
   
-  // Check if this list starts with quasiquote - if so, set context
   PrintContext new_ctx = ctx;
-  if (is_sym(l->data)) {
-    auto sym = cast<SCM_Symbol>(l->data);
-    if (strcmp(sym->data, "quasiquote") == 0) {
-      new_ctx.in_quasiquote = true;
+  
+  // Handle quasiquote special form
+  if (_list_starts_with(l, "quasiquote")) {
+    new_ctx.in_quasiquote = true;
+    printf("(quasiquote");
+    if (l->next) {
+      printf(" ");
+      _print_ast_with_context(l->next->data, true, new_ctx);
+      assert(!l->next->next);
+    } else {
+      printf(" ()");
     }
+    printf(")");
+    return;
   }
   
   // Handle quote special form
-  // In quasiquote context, always use '... format for nested quotes
-  // Outside quasiquote context, use (quote ...) for nested quotes
-  if (is_sym(l->data)) {
-    auto sym = cast<SCM_Symbol>(l->data);
-    if (strcmp(sym->data, "quote") == 0) {
-      // Check if the quoted expression is a list starting with unquote/quasiquote/unquote-splicing
-      bool should_use_quote_syntax = false;
-      if (l->next && is_pair(l->next->data)) {
-        SCM_List *quoted_list = cast<SCM_List>(l->next->data);
-        if (quoted_list->data && is_sym(quoted_list->data)) {
-          SCM_Symbol *quoted_sym = cast<SCM_Symbol>(quoted_list->data);
-          if (strcmp(quoted_sym->data, "unquote") == 0 ||
-              strcmp(quoted_sym->data, "quasiquote") == 0 ||
-              strcmp(quoted_sym->data, "unquote-splicing") == 0) {
-            should_use_quote_syntax = true;
-          }
-        }
-      }
-      
-      // Use '... format if:
-      // 1. Not nested (top-level)
-      // 2. Contains unquote/quasiquote/unquote-splicing
-      // 3. In quasiquote context (even when nested) - ALL quotes use '... format
-      // Outside quasiquote context, nested quotes always use (quote ...) format
-      
-      if (!nested || should_use_quote_syntax || ctx.in_quasiquote) {
-        // Top-level, or contains special forms, or in quasiquote context
-        printf("'");
-        if (l->next) {
-          _print_ast_with_context(l->next->data, true, new_ctx);
-          assert(!l->next->next);
-        } else {
-          printf("()");
-        }
-        return;
+  if (_list_starts_with(l, "quote")) {
+    // In quasiquote context, use '... format for quotes, unless we're inside an unquote
+    // This matches the test expectations:
+    // - '(unquote name) should print as '(unquote name)
+    // - (unquote (quote (unquote name))) should print as (unquote (quote (unquote name)))
+    if (ctx.in_quasiquote && !ctx.in_unquote) {
+      printf("'");
+      if (l->next) {
+        _print_ast_with_context(l->next->data, true, new_ctx);
+        assert(!l->next->next);
       } else {
-        // Nested quote outside quasiquote: print as (quote ...)
-        printf("(quote");
-        if (l->next) {
-          printf(" ");
-          _print_ast_with_context(l->next->data, true, new_ctx);
-          assert(!l->next->next);
-        }
-        printf(")");
-        return;
+        printf("()");
       }
+    } else {
+      // Use (quote ...) format when not in quasiquote context or inside unquote
+      printf("(quote");
+      if (l->next) {
+        printf(" ");
+        _print_ast_with_context(l->next->data, true, new_ctx);
+        assert(!l->next->next);
+      }
+      printf(")");
     }
+    return;
+  }
+  
+  // Handle unquote special form
+  if (_list_starts_with(l, "unquote")) {
+    new_ctx.in_unquote = true;
+    printf("(unquote");
+    if (l->next) {
+      printf(" ");
+      _print_ast_with_context(l->next->data, true, new_ctx);
+      assert(!l->next->next);
+    }
+    printf(")");
+    return;
+  }
+  
+  // Handle unquote-splicing special form
+  if (_list_starts_with(l, "unquote-splicing")) {
+    printf("(unquote-splicing");
+    if (l->next) {
+      printf(" ");
+      _print_ast_with_context(l->next->data, true, new_ctx);
+      assert(!l->next->next);
+    }
+    printf(")");
+    return;
   }
   
   // Check if this is a dotted pair using is_dotted flag
