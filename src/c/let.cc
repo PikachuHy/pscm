@@ -35,6 +35,11 @@ SCM *expand_let(SCM *expr) {
                body
                (loop ...))))
   (loop val1 val2))
+    
+    Important: The initialization expressions (val1, val2) are evaluated
+    in the OUTER environment, before the letrec binding is established.
+    So if there's a variable shadowing issue, we need to evaluate the
+    args in the outer environment first.
     */
     assert(l->next->next->next);
     auto argl = l->next->next->data;
@@ -70,20 +75,107 @@ SCM *expand_let(SCM *expr) {
     
     // For empty args, just call the function: (name)
     // For non-empty args, concatenate: (name arg1 arg2 ...)
+    //
+    // Important: In named let, the initialization expressions (args) are
+    // evaluated in the OUTER environment, before the letrec binding is
+    // established. This means if the named let variable shadows an outer
+    // variable, the args should still reference the outer variable.
+    //
+    // The problem: when we expand to letrec, the args are evaluated in the
+    // letrec environment where the binding already exists (initialized to #f).
+    // To fix this, we need to evaluate the args in the outer environment first,
+    // then pass the evaluated values to the letrec.
+    //
+    // The correct expansion:
+    // (let ((temp1 val1) (temp2 val2))  ; evaluate args in outer env
+    //   (letrec ((name (lambda (param1 param2) body)))
+    //     (name temp1 temp2)))
+    //
+    // We need to generate temporary variable names. For simplicity, we'll
+    // use a gensym-like approach, but for now let's use a simpler method:
+    // wrap the letrec in a let that evaluates the args first.
     SCM *call_fn;
     if (is_nil(args)) {
       call_fn = scm_list1(func_args);
+      auto new_expr = scm_list3(scm_sym_letrec(), scm_list1(letrec_arg), call_fn);
+      if (debug_enabled) {
+        printf("expand -> ");
+        print_ast(new_expr);
+        printf("\n");
+      }
+      return new_expr;
     } else {
-      call_fn = scm_concat_list2(scm_list1(func_args), args);
+      // For non-empty args, we need to evaluate them in the outer environment.
+      // The problem: when we expand to letrec, the args are evaluated in the
+      // letrec environment where the binding already exists (initialized to #f).
+      // 
+      // The correct fix: expand to use let to evaluate args first in outer env,
+      // then letrec. We need to generate temporary variable names.
+      //
+      // Use a simple approach: generate temp names using a counter.
+      // We'll use names like "__temp_0", "__temp_1", etc.
+      SCM_List temp_bindings_dummy = make_list_dummy();
+      SCM_List temp_params_dummy = make_list_dummy();
+      auto temp_bindings = &temp_bindings_dummy;
+      auto temp_params = &temp_params_dummy;
+      
+      auto argl_it = cast<SCM_List>(argl);
+      int temp_counter = 0;
+      while (argl_it) {
+        auto param = car(argl_it->data);
+        auto arg_expr = cadr(argl_it->data);
+        
+        // Generate a temporary variable name using a simple counter
+        char temp_name[64];
+        snprintf(temp_name, sizeof(temp_name), "__temp_%d", temp_counter++);
+        SCM *temp_sym_scm = create_sym(temp_name, strlen(temp_name));
+        
+        // Create binding: (temp-sym arg-expr)
+        auto temp_binding = scm_list2(temp_sym_scm, arg_expr);
+        temp_bindings->next = make_list(temp_binding);
+        temp_bindings = temp_bindings->next;
+        
+        // Add temp to params list for the letrec call
+        temp_params->next = make_list(temp_sym_scm);
+        temp_params = temp_params->next;
+        
+        argl_it = argl_it->next;
+      }
+      
+      // Now create the letrec call using temp params
+      // Build the function call: (name temp1 temp2 ...)
+      if (temp_params_dummy.next) {
+        // Build list: (name temp1 temp2 ...)
+        SCM_List call_dummy = make_list_dummy();
+        auto call_tail = &call_dummy;
+        call_tail->next = make_list(func_args);
+        call_tail = call_tail->next;
+        
+        // Add all temp params
+        auto temp_it = temp_params_dummy.next;
+        while (temp_it) {
+          call_tail->next = make_list(temp_it->data);
+          call_tail = call_tail->next;
+          temp_it = temp_it->next;
+        }
+        call_fn = wrap(call_dummy.next);
+      } else {
+        call_fn = scm_list1(func_args);
+      }
+      
+      // Create: (let ((__temp_0 arg1) (__temp_1 arg2))
+      //          (letrec ((name (lambda (p1 p2) body)))
+      //            (name __temp_0 __temp_1)))
+      auto inner_letrec = scm_list3(scm_sym_letrec(), scm_list1(letrec_arg), call_fn);
+      auto outer_let = scm_list3(scm_sym_let(), wrap(temp_bindings_dummy.next), inner_letrec);
+      
+      if (debug_enabled) {
+        printf("expand -> ");
+        print_ast(outer_let);
+        printf("\n");
+      }
+      return outer_let;
     }
-    
-    auto new_expr = scm_list3(scm_sym_letrec(), scm_list1(letrec_arg), call_fn);
-    if (debug_enabled) {
-      printf("expand -> ");
-      print_ast(new_expr);
-      printf("\n");
-    }
-    return new_expr;
   }
   else {
     if (debug_enabled) {

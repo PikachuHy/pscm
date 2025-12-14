@@ -100,8 +100,27 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
   if (is_str(ast)) {
     auto str = cast<SCM_String>(ast);
     if (write_mode) {
-      // Write format: with quotes
-      printf("\"%s\"", str->data);
+      // Write format: with quotes and escaped special characters
+      printf("\"");
+      for (size_t i = 0; i < str->len; i++) {
+        char c = str->data[i];
+        switch (c) {
+          case '\\': printf("\\\\"); break;
+          case '"': printf("\\\""); break;
+          case '\n': printf("\\n"); break;
+          case '\t': printf("\\t"); break;
+          case '\r': printf("\\r"); break;
+          default:
+            if (c >= 32 && c < 127) {
+              printf("%c", c);
+            } else {
+              // For non-printable characters, use octal escape
+              printf("\\%03o", (unsigned char)c);
+            }
+            break;
+        }
+      }
+      printf("\"");
     } else {
       // Display format: without quotes
       printf("%s", str->data);

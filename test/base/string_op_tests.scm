@@ -77,7 +77,7 @@
 (string->list " \t\n ")
 
 ;; Test list->string
-;; CHECK: "1\""
+;; CHECK: "1\\\""
 (list->string '(#\1 #\\ #\"))
 ;; CHECK-NEXT: ""
 (list->string '())

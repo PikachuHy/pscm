@@ -162,9 +162,7 @@
   (newline port)
   (get-output-string port))
 
-;; CHECK: "a
-;; CHECK-NEXT: b
-;; CHECK-NEXT: "
+;; CHECK: "a\nb\n"
 (let ((port (open-output-string)))
   (write-char (integer->char 97) port)
   (newline port)
