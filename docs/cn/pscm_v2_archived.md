@@ -1,5 +1,7 @@
 # pscm v2 文档汇总(归档)
 
+代码在 [v2-legacy](https://github.com/PikachuHy/pscm/tree/v2-legacy) 分支
+
 # pscm 简介
 
 pscm 是 PikachuHy's Scheme 的缩写，
@@ -380,3 +382,236 @@ print(scm)
 ret = scm.eval("(+ 2 6)")
 print(ret)
 ```
+
+# pscm core
+
+pscm core 是重新写的一套PikachuHy's Scheme实现。
+从 core 这个名字也可以看出，我希望它足够的小，但有足够的有用。
+
+## Why
+
+之前做的实现，在支持 Continuation 和 Unicode 后，变得比较难演进。
+所以我想再写一个更小的实现，不再拘泥 R5RS 标准。
+我对它的定位更多是一个前缀表达式的语言。
+
+## 设计目标
+
+- 学习 LLVM
+- 将 Scheme 编译到 LLVM IR，然后用 LLVM JIT运行。(也可以考虑直接出一个可执行文件)
+- 强类型
+
+::: warning
+pscm 依然处于非常简陋的状态
+:::
+
+当前的版本
+
+以下特性已实现编译到 LLVM IR，并使用 LLVM JIT运行。
+
+- 基于 LLVM 17 开发
+- 支持整型 `integer`，和整型数组 `array<integer>`
+- 支持的操作： `map`, `+`, `-`, `>`, `<`
+- 支持简单的函数定义和调用。函数在调用时才做类型检查和代码生成。只定义，不调用不会有任何的效果。
+
+## 整体设计
+
+不再使用之前基于 `Cell` 的实现，现在使用大量的指针和类继承。
+基本类型是 `Value`，然后会把各种 `Value` 编译到 `AST`。
+这里相当于前端的语法是前缀表达式，后面的流程和传统的 `C/C++` 差不多。
+
+Codegen 时，把各种 `AST` 生成 LLVM IR，接着就可以使用 LLVM JIT执行LLVM IR。
+
+```
+Cell -> Value -> AST -> LLVM IR
+```
+
+目前依旧复用了老的pscm的parser，暂时没有重新写一套，所以刚拿到的依旧是 `Cell`。
+
+# pscm-build
+
+[pscm-build](https://github.com/PikachuHy/pscm/tree/master/tool/pscm-build) 是在 pscm 的基础上开发的一个构建系统，相关的概念借鉴 [bazel](https://bazel.build) 。
+
+::: warning
+pscm-build 依然处于非常简陋的状态
+:::
+
+pscm-build 是基于 pscm 开发的第一个工具，目前能够
+
+- 实现构建 pscm
+- 支持 C++20 Modules
+
+## 设计目标
+
+pscm-build 的目标是在 C++20 Modules 的背景下，探索 C++ 的构建系统和包管理器。
+
+- 利用 C++20 Modules 加速 C++ 代码的构建
+- 实现基于 C++20 Modules 包管理
+
+## 当前的设计
+
+- 完全基于 C++20 Modules 的代码风格编写
+- 通过 `repo.pscm` 文件定位仓库根目录，pscm-build 会从调用命令的目录往上找，找到为止（找不到直接报错）
+- 通过 `build.pscm` 划分包，一个仓库可以有多个包
+- 通过 Label `@repo_name//package_name:target_name` 定位具体的某个 target
+- 通过 Action 运行编译命令，子进程通过库 [subprocess](https://github.com/benman64/subprocess.git) 调用
+
+## 运行要求
+
+- clang 16及以上：默认采用构建 C++20 Modules 模式，需要对 C++20 Modules 支持比较完整的 LLVM 版本
+- ccache: 由于目前没有实现 cache，默认使用 ccache 驱动 clang
+- 设定环境变量 CC: 通过 CC 获取编译器路径。
+  由于 AppleClang 目前还不支持 C++20 Modules,
+  在 MacOS 上可以通过 `brew install llvm` 安装最新的 LLVM，
+  然后通过 `export CC=/usr/local/opt/llvm/bin/clang` 使用。
+
+## 规则简介
+
+目前支持 `cpp_library`, `cpp_binary`, `cpp_test` 3个规则。
+每个规则默认有一个 `name` 属性，用于标识当前 target。
+此外，还支持
+
+- `srcs`: 源码文件，支持使用 `glob`
+- `hdrs`: 头文件，支持使用 `glob`
+- `includes`: 库头文件的路径，会传递给依赖它的库/二进制程序。仅 `cpp_library` 支持
+- `defines`: 库宏定义，会传递给依赖它的库/二进制程序。仅 `cpp_library` 支持
+- `copts`: 编译时的flags
+- `deps`: 依赖的库
+
+## 样例代码
+- 创建一个库
+```scheme
+(cpp_library
+ (name "pscm")
+ (srcs
+  (glob "src/*.cpp"))
+ (hdrs
+  (glob "include/**/*.h"))
+ (includes "include")
+ (copts "-std=c++20" "-I" "build/generate")
+ (deps ":spdlog"))
+```
+- 创建一个二进制程序
+```scheme
+(cpp_binary
+  (name "pscm-main")
+  (srcs "main.cpp")
+  (deps ":pscm"))
+```
+- 创建一个测试
+```scheme
+(cpp_test
+  (name "r4rs_test")
+  (srcs (glob "test/r4rs/*.cpp"))
+  (deps ":pscm" ":doctest")
+  (copts "-std=c++20"))
+```
+
+- 支持 C++20 Modules
+
+pscm-build 会自动辨别 Module Interface (通过 clang-scan-deps 的扫描结果)，
+无需手动指定
+
+```scheme
+(cpp_binary
+  (name "main")
+  (srcs (glob "*.cc" "*.cppm" "*.cpp"))
+  (copts "-std=c++20"))
+```
+
+- 构建所有的 target
+
+```shell
+export CC=/usr/local/opt/llvm/bin/clang
+pscm-build build :all
+```
+
+默认构建产物在仓库根目录下的 `pscm-build-bin` 目录
+
+- 删除构建目录
+
+```shell
+pscm-build clean
+```
+
+## 未来计划
+
+- cache
+- action graph
+- sandbox
+
+# Krabby
+
+一个简单的打字软件.开发代号“大钳蟹”
+![Krabby](http://s1.52poke.wiki/wiki/thumb/a/a7/098Krabby.png/300px-098Krabby.png)
+## 大钳蟹简介
+大钳蟹（日文︰クラブ，英文︰Krabby）是水属性宝可梦。
+
+外貌
+大钳蟹有点像招潮蟹，大钳蟹的体色由红色和白色组成，头部的上半部分和两只蟹爪为红色，其余部分为白色。头顶有两个突起，下颌部分有着状似牙齿的凸起。六条肢体（包含钳子）都分节，它似乎还可以吃。
+
+性别差异
+大钳蟹没有性别差异。
+
+特殊能力
+性情
+落日时会聚集在一起吐泡沫。
+
+栖息地
+沙滩的洞中。
+
+## v3
+
+基于SDL2的wasm版本正在开发中
+
+![Krabby base on WASM SDL2](http://cdn.pikachu.net.cn/project/Krabby/krabby_v3_sdl2_wasm_screenshot.png)
+
+## v2
+
+### v2.1.0 支持统计
+![Krabby v2.1.0 MacOS](http://cdn.pikachu.net.cn/project/Krabby/krabby_v2.1.0_macos_screenshot.png)
+
+- 调整部分图标
+- 支持统计打字速度
+- 支持随机键盘练习
+- 支持隐藏/显示键盘
+
+### v2.0.0 支持MacOS
+![Krabby v2.0.0 MacOS](http://cdn.pikachu.net.cn/project/Krabby/krabby_v2.0.0_macos_screenshot.png)
+
+![Krabby v2.0.0 WASM](http://cdn.pikachu.net.cn/project/Krabby/krabby_v2.0.0_wasm_screenshot.png)
+
+- 支持MacOS，移除对DTK的依赖
+- 支持键盘提示
+- 调整部分图标
+- 基于Qt6.5部分支持WASM
+
+## 金山打字通deepin版
+
+- 打字练习的UI界面保持和windows版本一致
+
+![1554212082558](https://img-blog.csdnimg.cn/20190403215627887.png)
+
+- 图标从简，只显示文字
+  - 时间
+  - 速度
+  - 进度
+  - 正确率
+  - 重置
+  - 暂停
+- 课程选择，使用下拉列表框
+- 去掉其他的部分
+- 打字的部分实现
+  - 仅支持英文
+  - 需要打的字为黑色，打字正确变成灰色，错误变成红色，都需要变
+  - 自动换行
+  - 每篇文章分成多个页，不同页之前不能干扰
+  - 每页有5行输入的文本
+  
+### 当前实现
+![demo](http://cdn.pikachu.net.cn/project/Krabby/krabby_v1_demo.png)
+
+![score](http://cdn.pikachu.net.cn/project/Krabby/krabby_v1_score.png)
+
+![article](http://cdn.pikachu.net.cn/project/Krabby/krabby_v1_article.png)
+
+![setting](http://cdn.pikachu.net.cn/project/Krabby/krabby_v1_settings.png)

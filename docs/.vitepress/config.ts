@@ -118,26 +118,6 @@ function sidebarGuideZh() {
       ]
     },
     {
-      text: 'pscm-core (archived)',
-      collapsible: true,
-      items: [
-        {
-          text: 'pscm-core 简介',
-          link: '/cn/pscm_core'
-        },
-      ]
-    },
-    {
-      text: 'pscm-build (archived)',
-      collapsible: true,
-      items: [
-        {
-          text: 'pscm-build 简介',
-          link: '/cn/pscm_build'
-        },
-      ]
-    },
-    {
       text: 'misc',
       collapsible: true,
       items: [
@@ -147,15 +127,5 @@ function sidebarGuideZh() {
         }
       ]
     },
-    {
-      text: 'project',
-      collapsible: true,
-      items: [
-        {
-          text: 'Krabby',
-          link: '/cn/krabby'
-        }
-      ]
-    }
   ]
 }
