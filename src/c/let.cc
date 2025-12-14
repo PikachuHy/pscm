@@ -11,7 +11,19 @@ SCM *expand_let(SCM *expr) {
   auto args = &dummy_args;
   auto func_args = l->next->data;
   if (is_nil(func_args)) {
-    // TODO
+    // (let () body) -> ((lambda () body))
+    auto new_l = make_list(scm_sym_lambda());
+    new_l->next = make_list(scm_nil());
+    new_l->next->next = l->next->next;
+    auto lambda_expr = wrap(new_l);
+    auto call_expr = make_list(lambda_expr);
+    auto ast = wrap(call_expr);
+    if (debug_enabled) {
+      SCM_DEBUG_EVAL("expand let () ");
+      print_ast(ast);
+      printf("\n");
+    }
+    return ast;
   }
   else if (is_sym(func_args)) {
     /*
@@ -148,8 +160,19 @@ SCM *expand_letstar(SCM *expr) {
   
   // Handle empty bindings list
   if (is_nil(bindings)) {
-    // (let* () body) -> body
-    return l->next->next->data;
+    // (let* () body) -> ((lambda () body))
+    auto new_l = make_list(scm_sym_lambda());
+    new_l->next = make_list(scm_nil());
+    new_l->next->next = l->next->next;
+    auto lambda_expr = wrap(new_l);
+    auto call_expr = make_list(lambda_expr);
+    auto ast = wrap(call_expr);
+    if (debug_enabled) {
+      SCM_DEBUG_EVAL("expand let* () ");
+      print_ast(ast);
+      printf("\n");
+    }
+    return ast;
   }
   
   // Check if bindings is a pair
@@ -247,7 +270,19 @@ SCM *expand_letrec(SCM *expr) {
   auto args = &dummy_args;
   auto func_args = l->next->data;
   if (is_nil(func_args)) {
-    // TODO:
+    // (letrec () body) -> ((lambda () body))
+    auto new_l = make_list(scm_sym_lambda());
+    new_l->next = make_list(scm_nil());
+    new_l->next->next = l->next->next;
+    auto lambda_expr = wrap(new_l);
+    auto call_expr = make_list(lambda_expr);
+    auto ast = wrap(call_expr);
+    if (debug_enabled) {
+      SCM_DEBUG_EVAL("expand letrec () ");
+      print_ast(ast);
+      printf("\n");
+    }
+    return ast;
   }
   else {
     assert(is_pair(func_args));

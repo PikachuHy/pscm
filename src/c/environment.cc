@@ -17,7 +17,7 @@ SCM_Environment::Entry *scm_env_search_entry(SCM_Environment *env, SCM_Symbol *s
     l = l->next;
   }
   if (search_parent && env->parent) {
-    return scm_env_search_entry(env->parent, sym);
+    return scm_env_search_entry(env->parent, sym, search_parent);
   }
   return nullptr;
 }
