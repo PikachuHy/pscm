@@ -18,7 +18,7 @@
 ;; CHECK: #f
 (eq? 'a 'b)
 
-;; Test eq? with lists (uses deep comparison in this implementation)
+;; Test eq? with lists (uses pointer equality in R4RS)
 (define a (list 'a))
 (define b (list 'a))
 (define c a)
@@ -26,8 +26,8 @@
 (eq? a a)
 ;; CHECK: #t
 (eq? a c)
-;; CHECK: #t
-(eq? a b)  ; Deep comparison for backward compatibility
+;; CHECK: #f
+(eq? a b)  ; Pointer equality - different objects
 
 ;; Test eq? with strings (should compare by content)
 ;; CHECK: #t
@@ -45,13 +45,13 @@
 ;; CHECK: #t
 (eqv? 1 1.0)
 
-;; Test eqv? with lists (uses deep comparison in this implementation)
+;; Test eqv? with lists (uses pointer equality in R4RS, same as eq?)
 ;; CHECK: #t
 (eqv? a a)
 ;; CHECK: #t
 (eqv? a c)
-;; CHECK: #t
-(eqv? a b)  ; Deep comparison for backward compatibility
+;; CHECK: #f
+(eqv? a b)  ; Pointer equality - different objects
 
 ;; Test equal? with numbers (should compare by value)
 ;; CHECK: #t
@@ -127,9 +127,9 @@
 ;; CHECK: #t
 (equal? '() '())
 
-;; Test memq behavior (uses eq? for comparison)
-;; CHECK: ((a) c)
-(memq (list 'a) '(b (a) c))  ; Deep comparison in this implementation
+;; Test memq behavior (uses eq? for comparison - pointer equality)
+;; CHECK: #f
+(memq (list 'a) '(b (a) c))  ; Pointer equality - different objects
 
 ;; Test member behavior (uses equal? for comparison)
 ;; CHECK: ((a) c)

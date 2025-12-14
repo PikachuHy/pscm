@@ -471,9 +471,7 @@ static bool _eqv(SCM *lhs, SCM *rhs) {
 
 // memq: Return the first sublist of list whose car is obj (using eq? for comparison)
 // Returns #f if obj is not found
-// Note: For compatibility with existing tests, we use _eq which does deep comparison for lists
-// In strict R4RS, eq? should use pointer equality for lists, but this implementation
-// uses value equality for lists to maintain backward compatibility
+// eq? uses pointer equality for lists and pairs, but value equality for numbers, symbols, etc.
 SCM *scm_c_memq(SCM *obj, SCM *lst) {
   if (is_nil(lst)) {
     return scm_bool_false();
@@ -483,13 +481,15 @@ SCM *scm_c_memq(SCM *obj, SCM *lst) {
     return nullptr;
   }
   
-  extern bool _eq(SCM *lhs, SCM *rhs);
   SCM_List *current = cast<SCM_List>(lst);
   
   while (current) {
-    // Use _eq for compatibility (does deep comparison for lists)
-    // In strict R4RS, this should be pointer equality (obj == current->data)
-    if (current->data && _eq(obj, current->data)) {
+    // Use eq? for comparison
+    // For immediate values (numbers, symbols, etc.), eq? compares by value
+    // For compound types (lists, pairs), eq? uses pointer equality
+    extern SCM *scm_c_is_eq(SCM *lhs, SCM *rhs);
+    SCM *eq_result = scm_c_is_eq(obj, current->data);
+    if (eq_result && is_true(eq_result)) {
       // Found a match, return the sublist starting from this element
       return wrap(current);
     }

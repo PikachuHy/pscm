@@ -67,9 +67,9 @@ b
 (memq 'qux '(baz foo bar))
 
 ;; Test memq with lists
-;; Note: In this implementation, eq? uses deep equality for lists
-;; So (memq '(a) '(b (a) c)) will match because eq? compares list contents
-;; CHECK: ((a) c)
+;; Note: In R4RS, eq? uses pointer equality for lists
+;; So (memq '(a) '(b (a) c)) will not match because they are different objects
+;; CHECK: #f
 (memq '(a) '(b (a) c))
 
 ;; Test memq with the same list object (pointer equality)
@@ -78,8 +78,8 @@ b
 (memq x (list 'x x 'y))
 
 ;; Test memq with characters
-;; CHECK: (#\b #\c)
+;; CHECK-NEXT: (#\b #\c)
 (memq #\b '(#\a #\b #\c))
 
-;; CHECK: #f
+;; CHECK-NEXT: #f
 (memq #\d '(#\a #\b #\c))
