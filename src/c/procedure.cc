@@ -121,7 +121,22 @@ SCM *apply_procedure(SCM_Environment *env, SCM_Procedure *proc, SCM_List *args) 
   
   // Check for argument mismatch (only if no rest parameter)
   if (!has_rest_param && (args_iter || current_param)) {
-    report_arg_mismatch(proc->args, original_args);
+    // Construct the call expression for better error reporting
+    SCM *call_expr = nullptr;
+    if (proc->name) {
+      // Create a list starting with the procedure name
+      SCM_List *call_list = make_list(wrap(proc->name));
+      SCM_List *call_tail = call_list;
+      SCM_List *arg_iter = original_args;
+      while (arg_iter) {
+        SCM_List *arg_node = make_list(arg_iter->data);
+        call_tail->next = arg_node;
+        call_tail = arg_node;
+        arg_iter = arg_iter->next;
+      }
+      call_expr = wrap(call_list);
+    }
+    report_arg_mismatch(proc->args, original_args, "Procedure", call_expr, proc->name);
   }
   
   return eval_with_list(proc_env, proc->body);

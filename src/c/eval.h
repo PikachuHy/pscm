@@ -34,8 +34,30 @@ SCM *eval_with_func(SCM_Function *func, SCM_List *l);
 [[noreturn]] void eval_error(const char *format, ...);
 [[noreturn]] void type_error(SCM *data, const char *expected_type);
 
+// Call stack for tracking evaluation path
+struct EvalStackFrame {
+  char *source_location;        // Source location string (owned, must be freed)
+  char *expr_str;               // String representation of expression (owned, must be freed)
+  EvalStackFrame *next;         // Next frame in stack
+};
+
 // Print evaluation call stack (for debugging)
 void print_eval_stack();
+
+// External variables for error reporting context
+extern SCM *g_current_eval_context;
+extern EvalStackFrame *g_eval_stack;
+
+// Helper function to print AST to stderr
+inline void print_ast_to_stderr(SCM *ast) {
+  // Temporarily redirect stdout to stderr for print_ast
+  fflush(stdout);
+  FILE *saved_stdout = stdout;
+  stdout = stderr;
+  print_ast(ast);
+  fflush(stderr);
+  stdout = saved_stdout;
+}
 
 // Macro expansion and definition
 SCM *expand_macro_call(SCM_Environment *env, SCM_Macro *macro, SCM_List *args, SCM *original_call);
@@ -71,8 +93,8 @@ inline void print_arg_list(SCM_List *l) {
         fprintf(stderr, "%s", sym->data);
       }
       else {
-        // For non-symbol arguments, print the AST representation
-        print_ast(current->data);
+        // For non-symbol arguments, print the AST representation to stderr
+        print_ast_to_stderr(current->data);
       }
     }
     else {
@@ -83,13 +105,70 @@ inline void print_arg_list(SCM_List *l) {
   fprintf(stderr, ")");
 }
 
-[[noreturn]] inline void report_arg_mismatch(SCM_List *expected, SCM_List *got) {
-  fprintf(stderr, "args not match\n");
-  fprintf(stderr, "expect ");
+[[noreturn]] inline void report_arg_mismatch(SCM_List *expected, SCM_List *got, 
+                                               const char *call_type = nullptr, 
+                                               SCM *original_call = nullptr,
+                                               SCM_Symbol *name = nullptr) {
+  // Print source location if available
+  const char *loc_str = nullptr;
+  if (original_call) {
+    loc_str = get_source_location_str(original_call);
+  }
+  if (!loc_str && g_current_eval_context) {
+    loc_str = get_source_location_str(g_current_eval_context);
+  }
+  
+  if (loc_str) {
+    fprintf(stderr, "%s: ", loc_str);
+  } else {
+    fprintf(stderr, "<unknown location>: ");
+  }
+  
+  // Print call type and name if available
+  if (call_type) {
+    fprintf(stderr, "%s argument mismatch", call_type);
+    if (name) {
+      fprintf(stderr, " for '%s'", name->data);
+    }
+    fprintf(stderr, "\n");
+  } else {
+    fprintf(stderr, "Argument mismatch\n");
+  }
+  
+  // Print the original call expression if available
+  // Check if original_call is a valid list/pair (not just a boolean or other value)
+  bool printed_call = false;
+  if (original_call && is_pair(original_call)) {
+    fprintf(stderr, "  While calling: ");
+    print_ast_to_stderr(original_call);
+    fprintf(stderr, "\n");
+    printed_call = true;
+  }
+  // Also print current eval context if different from original_call
+  if (g_current_eval_context && is_pair(g_current_eval_context)) {
+    if (!printed_call || g_current_eval_context != original_call) {
+      fprintf(stderr, "  While evaluating: ");
+      print_ast_to_stderr(g_current_eval_context);
+      fprintf(stderr, "\n");
+    }
+  }
+  
+  fprintf(stderr, "  Expected arguments: ");
   print_arg_list(expected);
   fprintf(stderr, "\n");
-  fprintf(stderr, "but got ");
+  fprintf(stderr, "  But got arguments: ");
   print_arg_list(got);
   fprintf(stderr, "\n");
+  
+  // Print the evaluation call stack
+  fprintf(stderr, "\n=== Evaluation Call Stack ===\n");
+  if (g_eval_stack) {
+    print_eval_stack();
+  } else {
+    fprintf(stderr, "Call stack is empty (error occurred at top level)\n");
+  }
+  fprintf(stderr, "=== End of Call Stack ===\n");
+  fflush(stderr);
+  
   exit(1);
 }

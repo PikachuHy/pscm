@@ -3,17 +3,7 @@
 #include "eval.h"
 #include <stdarg.h>
 
-// Helper function to print AST to stderr
-static void print_ast_to_stderr(SCM *ast) {
-  // Temporarily redirect stdout to stderr for print_ast
-  // This is safe in single-threaded context
-  fflush(stdout);
-  FILE *saved_stdout = stdout;
-  stdout = stderr;
-  print_ast(ast);
-  fflush(stderr);
-  stdout = saved_stdout;
-}
+// Helper function to print AST to stderr (moved to eval.h as inline function)
 
 SCM *eval_with_list(SCM_Environment *env, SCM_List *l) {
   assert(l);
@@ -40,16 +30,10 @@ SCM_List *eval_list_with_env(SCM_Environment *env, SCM_List *l) {
 
 
 // Error handling helper with context
-static SCM *g_current_eval_context = nullptr;
+SCM *g_current_eval_context = nullptr;
 
-// Call stack for tracking evaluation path
-struct EvalStackFrame {
-  char *source_location;        // Source location string (owned, must be freed)
-  char *expr_str;               // String representation of expression (owned, must be freed)
-  EvalStackFrame *next;         // Next frame in stack
-};
-
-static EvalStackFrame *g_eval_stack = nullptr;
+// Call stack for tracking evaluation path (EvalStackFrame defined in eval.h)
+EvalStackFrame *g_eval_stack = nullptr;
 static const int MAX_STACK_DEPTH = 100;  // Prevent infinite recursion
 static int g_stack_depth = 0;
 

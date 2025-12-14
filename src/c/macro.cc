@@ -25,7 +25,7 @@ SCM *expand_macro_call(SCM_Environment *env, SCM_Macro *macro, SCM_List *args, S
   }
 
   if (macro_args || actual_args) {
-    report_arg_mismatch(macro->transformer->args, args);
+    report_arg_mismatch(macro->transformer->args, args, "Macro", original_call, macro->name);
   }
 
   // Call the macro transformer (evaluate in macro environment)
