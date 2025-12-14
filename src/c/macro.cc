@@ -154,7 +154,7 @@ SCM *expand_macros(SCM_Environment *env, SCM *ast) {
   // Check if this is a macro call
   if (is_sym(l->data)) {
     SCM_Symbol *sym = cast<SCM_Symbol>(l->data);
-    SCM *val = scm_env_search(env, sym);
+    SCM *val = scm_env_exist(env, sym);
 
     if (val && is_macro(val)) {
       // Found a macro, expand it
