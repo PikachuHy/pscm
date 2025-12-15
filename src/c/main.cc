@@ -1,10 +1,9 @@
 #include "pscm.h"
+#include "eval.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdnoreturn.h>
 #include <string.h>
-
-
 #include <assert.h>
 
 bool debug_enabled = false;

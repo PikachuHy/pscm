@@ -104,6 +104,10 @@ function sidebarGuideZh() {
         {
           text: 'pscm-cc values 实现方案',
           link: '/cn/values_implementation'
+        },
+        {
+          text: 'pscm-cc load 实现方案',
+          link: '/cn/load_implementation'
         }
       ]
     },
