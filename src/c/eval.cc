@@ -214,7 +214,7 @@ static const char *get_type_name(SCM::Type type) {
       printed_location = true;
     }
     fprintf(stderr, "Error while evaluating: ");
-    print_ast(g_current_eval_context);
+    print_ast_to_stderr(g_current_eval_context);
     fprintf(stderr, "\n");
     if (!printed_location) {
       fprintf(stderr, "  (no source location available)\n");
