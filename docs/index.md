@@ -7,7 +7,7 @@ titleTemplate: a scheme language implementation
 hero:
   name: PikachuHy's Scheme
   text: a scheme language implementation
-  tagline: A lightweight Scheme implementation in C++ (~11k LOC), designed to drive TeXmacs
+  tagline: A lightweight Scheme implementation in C++ (~12k LOC), designed to drive TeXmacs
   actions:
     - theme: brand
       text: Get Started
@@ -17,13 +17,13 @@ hero:
       link: https://github.com/PikachuHy/pscm
 features:
   - title: Complete Type System
-    details: Unified SCM type supporting 17 data types including NIL, LIST, NUM, FLOAT, RATIO, CHAR, STR, SYM, BOOL, PROC, FUNC, CONT, MACRO, HASH_TABLE, VECTOR, PORT
+    details: Unified SCM type supporting 18 data types including NIL, LIST, NUM, FLOAT, RATIO, CHAR, STR, SYM, BOOL, PROC, FUNC, CONT, MACRO, HASH_TABLE, VECTOR, PORT, PROMISE
   - title: Continuation Support
     details: Full continuation support implemented with setjmp/longjmp, including call/cc and dynamic-wind
   - title: Tail Recursion Optimization
     details: Efficient tail call optimization using goto to reduce stack depth
   - title: Rich Built-in Functions
-    details: Comprehensive library including list operations, numeric functions, string/char manipulation, hash tables, vectors, and port operations
+    details: Comprehensive library including list operations, numeric functions (including gcd/lcm), string/char manipulation, hash tables, vectors, ports, and lazy evaluation primitives (delay/force)
   - title: Modular Architecture
     details: Clean modular design with separate files for each special form and built-in function category
   - title: Source Location Tracking

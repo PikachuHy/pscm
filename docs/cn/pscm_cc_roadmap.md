@@ -3,16 +3,17 @@
 本文档总结 pscm_cc 的现有功能特性，并规划实现驱动 TeXmacs 所需的功能。
 
 pscm_cc 已实现 Scheme 的核心功能，包括：
-- ✅ 完整的类型系统
-- ✅ 核心特殊形式
+- ✅ 完整的类型系统（18 种数据类型）
+- ✅ 核心特殊形式（包括 `delay`/`force`）
 - ✅ Continuation 支持
-- ✅ 丰富的内置函数
+- ✅ 宏系统（支持 dotted pair 参数）
+- ✅ 丰富的内置函数（包括 `gcd`、`lcm`）
 
 ## 一、现有功能总结
 
 ### 1.1 核心基础设施 ✅
 
-- **类型系统**：统一 `SCM` 类型，支持 17 种数据类型（包括 `PORT`）
+- **类型系统**：统一 `SCM` 类型，支持 18 种数据类型（包括 `PORT`、`PROMISE`）
 - **解析器**：递归下降解析器，支持完整 Scheme 语法
 - **求值器**：支持尾递归优化，模块化特殊形式处理
 - **环境系统**：词法作用域，链表结构环境
@@ -38,6 +39,7 @@ pscm_cc 已实现 Scheme 的核心功能，包括：
 | `HASH_TABLE` | ✅ | 哈希表 |
 | `VECTOR` | ✅ | 向量 |
 | `PORT` | ✅ | 端口 |
+| `PROMISE` | ✅ | Promise（延迟求值） |
 
 ### 1.3 特殊形式支持 ✅
 
@@ -50,6 +52,7 @@ pscm_cc 已实现 Scheme 的核心功能，包括：
 - **Continuation**：`call/cc`, `call-with-current-continuation`
 - **多值**：`call-with-values`, `values`
 - **动态控制**：`dynamic-wind`
+- **延迟求值**：`delay`, `force`
 
 ### 1.4 内置函数支持 ✅
 
@@ -60,7 +63,7 @@ pscm_cc 已实现 Scheme 的核心功能，包括：
 `car`, `cdr`, `cadr`, `cddr`, `caddr`, `cons`, `list`, `append`, `list-head`, `list-tail`, `last-pair`, `set-car!`, `set-cdr!`
 
 #### 数字运算
-- 算术：`+`, `-`, `*`, `/`, `expt`, `abs`
+- 算术：`+`, `-`, `*`, `/`, `expt`, `abs`, `gcd`, `lcm`
 - 比较：`=`, `<`, `>`, `<=`, `>=`, `negative?`
 - 类型提升：整数、浮点数、分数混合运算
 
@@ -85,6 +88,9 @@ pscm_cc 已实现 Scheme 的核心功能，包括：
 #### 系统操作
 `exit`
 
+#### 延迟求值
+`delay`, `force`
+
 #### 其他
 `gensym`, `not`, `eval`
 
@@ -93,6 +99,17 @@ pscm_cc 已实现 Scheme 的核心功能，包括：
 - `scm_define_function`：固定参数函数
 - `scm_define_generic_function`：泛型函数
 - `scm_define_vararg_function`：可变参数函数
+
+### 1.6 宏系统 ✅
+
+- **宏定义**：`define-macro` 支持定义宏，支持 dotted pair 参数列表（如 `(define-macro (foo x y . z) ...)`）
+- **宏展开**：正确处理宏参数绑定和展开，包括 rest 参数的绑定
+- **Dotted Pair 支持**：
+  - 宏展开时正确保留 dotted pair 结构（`is_dotted` 标记）
+  - `expand_macros` 函数在递归展开列表时保留 `is_dotted` 标记
+  - `quasi` 函数正确处理 quasiquote 中的 dotted pair，包括 `(quote ...)` 形式
+- **Quasiquote 集成**：宏中使用的 `quasiquote` 正确处理 dotted pair，确保 `(lambda (x y . z) z)` 等结构在宏展开后仍保持正确
+- **测试覆盖**：包含 rest 参数宏、dotted pair 参数宏、quasiquote 中 dotted pair 的完整测试
 
 ## 二、缺失功能分析
 
@@ -202,21 +219,21 @@ TeXmacs 大量使用模块系统组织代码。
 2. 错误类型定义
 3. 错误处理流程改进（从 `exit(1)` 改为可恢复的错误处理）
 
-### 2.5 更多特殊形式 ⚠️
+### 2.5 更多特殊形式 ✅
 
-**优先级**：🟡 中
+**优先级**：✅ 已完成
 
 #### 已实现功能
 - `case expr clause ...`：多路分支 ✅
 - `and expr ...`：逻辑与（短路求值）✅
 - `or expr ...`：逻辑或（短路求值）✅
+- `delay expr`：延迟求值（Promise）✅
+- `force promise`：强制求值 ✅
 
-#### 缺失功能
-- `delay expr`：延迟求值（Promise）
-- `force promise`：强制求值
-
-#### 实现要点
-1. `delay`/`force`：添加 `PROMISE` 类型
+#### 实现说明
+- **Promise 类型**：添加了 `PROMISE` 类型，支持延迟求值
+- **重入处理**：`force` 实现正确处理重入调用（re-entrant force），符合 R5RS 规范
+- **测试覆盖**：包含基础用法、多次 force、懒序列（stream）和重入 force 的完整测试
 
 ### 2.6 更多内置函数 ⚠️
 
@@ -232,6 +249,9 @@ TeXmacs 大量使用模块系统组织代码。
   - `string->list`, `list->string`：转换 ✅
 - **向量操作**：
   - `vector->list`, `list->vector`：转换 ✅
+- **数字运算**：
+  - `gcd n1 ...`：最大公约数（支持可变参数）✅
+  - `lcm n1 ...`：最小公倍数（支持可变参数）✅
 - **系统操作**：
   - `exit code`：退出程序 ✅
 
