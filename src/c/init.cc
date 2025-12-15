@@ -19,6 +19,7 @@ void init_scm() {
   init_string();
   init_port();
   init_load();
+  init_delay();
   init_eval();
   init_values();
   init_hash_table();

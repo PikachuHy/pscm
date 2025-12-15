@@ -527,6 +527,10 @@ entry:
       }
       goto entry;
     }
+    else if (is_sym_val(l->data, "delay")) {
+      SCM *result = eval_delay(env, l);
+      RETURN_WITH_CONTEXT(result);
+    }
     else if (is_sym_val(l->data, "cond")) {
       auto ret = eval_cond(env, l, &ast);
       if (ret) {

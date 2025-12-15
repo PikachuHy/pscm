@@ -191,6 +191,17 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
     printf("#<hash-table %zu/%zu>", hash_table->size, hash_table->capacity);
     return;
   }
+  if (is_promise(ast)) {
+    auto promise = cast<SCM_Promise>(ast);
+    printf("#<promise");
+    if (promise->is_forced) {
+      printf(" forced");
+    } else {
+      printf(" pending");
+    }
+    printf(">");
+    return;
+  }
   printf("%s:%d not supported %d\n", __FILE__, __LINE__, ast->type);
   exit(1);
 }

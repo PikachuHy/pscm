@@ -70,6 +70,9 @@ SCM *eval_define(SCM_Environment *env, SCM_List *l);
 // Lambda special form (used by define)
 SCM *eval_lambda(SCM_Environment *env, SCM_List *l);
 
+// delay special form (promises)
+SCM *eval_delay(SCM_Environment *env, SCM_List *l);
+
 // List evaluation (used by macros and other special forms)
 SCM *eval_with_list(SCM_Environment *env, SCM_List *l);
 

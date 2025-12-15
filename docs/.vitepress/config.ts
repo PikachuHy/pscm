@@ -108,6 +108,10 @@ function sidebarGuideZh() {
         {
           text: 'pscm-cc load 实现方案',
           link: '/cn/load_implementation'
+        },
+        {
+          text: 'pscm-cc delay 实现方案',
+          link: '/cn/delay_implementation'
         }
       ]
     },

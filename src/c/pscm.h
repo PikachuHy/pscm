@@ -15,7 +15,7 @@ struct SCM_SourceLocation {
 };
 
 struct SCM {
-  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, CHAR, BOOL, SYM, STR, MACRO, HASH_TABLE, RATIO, VECTOR, PORT } type;
+  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, CHAR, BOOL, SYM, STR, MACRO, HASH_TABLE, RATIO, VECTOR, PORT, PROMISE } type;
 
   void *value;
   SCM_SourceLocation *source_loc;  // Optional source location
@@ -89,6 +89,12 @@ struct SCM_HashTable {
 struct SCM_Vector {
   SCM **elements;       // Array of SCM pointers
   size_t length;        // Number of elements
+};
+
+struct SCM_Promise {
+  SCM *thunk;      // A zero-argument procedure representing the delayed computation
+  SCM *value;      // Cached value after forcing; nullptr if not yet forced
+  bool is_forced;  // Whether the promise has been forced
 };
 
 // Port types
@@ -219,6 +225,10 @@ inline bool is_hash_table(SCM *scm) {
 
 inline bool is_vector(SCM *scm) {
   return scm->type == SCM::VECTOR;
+}
+
+inline bool is_promise(SCM *scm) {
+  return scm->type == SCM::PROMISE;
 }
 
 inline bool is_port(SCM *scm) {
@@ -501,6 +511,15 @@ inline SCM_Continuation *cast<SCM_Continuation>(SCM *data) {
   }
   auto l = (SCM_Continuation *)data->value;
   return l;
+}
+
+template <>
+inline SCM_Promise *cast<SCM_Promise>(SCM *data) {
+  if (!data || !is_promise(data)) {
+    type_error(data, "promise");
+  }
+  auto p = (SCM_Promise *)data->value;
+  return p;
 }
 
 template <>
@@ -868,6 +887,7 @@ void init_string();
 void init_port();
 void init_exit();
 void init_load();
+void init_delay();
 void init_eval();
 void init_values();
 void init_hash_table();
