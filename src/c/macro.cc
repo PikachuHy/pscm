@@ -173,6 +173,10 @@ SCM *expand_macros(SCM_Environment *env, SCM *ast) {
   while (current) {
     SCM *expanded = expand_macros(env, current->data);
     SCM_List *node = make_list(expanded);
+    // Preserve dotted-pair structure: copy is_dotted flag from original node.
+    // This is critical for forms like (lambda (x y . z) ...) where the
+    // parameter list is represented using the is_dotted flag on the cdr node.
+    node->is_dotted = current->is_dotted;
     tail->next = node;
     tail = node;
     current = current->next;
