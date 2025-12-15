@@ -50,6 +50,34 @@
 (remainder 13 -4)
 ;; CHECK: -1
 (remainder -13 -4)
+
+;; Test gcd function
+;; CHECK: 4
+(gcd 32 -36)
+;; CHECK: 1
+(gcd 17 19)
+;; CHECK: 6
+(gcd 12 18)
+;; CHECK: 0
+(gcd)
+;; CHECK: 5
+(gcd 5)
+;; CHECK: 1
+(gcd 5 3 7)
+
+;; Test lcm function
+;; CHECK: 288
+(lcm 32 -36)
+;; CHECK: 323
+(lcm 17 19)
+;; CHECK: 36
+(lcm 12 18)
+;; CHECK: 1
+(lcm)
+;; CHECK: 5
+(lcm 5)
+;; CHECK: 105
+(lcm 5 3 7)
 ;; CHECK: 0
 (remainder 10 5)
 ;; CHECK: -3

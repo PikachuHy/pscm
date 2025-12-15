@@ -520,6 +520,79 @@ static int64_t gcd(int64_t a, int64_t b) {
   return a;
 }
 
+// gcd: Return the greatest common divisor of the arguments
+// R5RS: (gcd n1 ...) -> integer
+SCM *scm_c_gcd(SCM_List *args) {
+  if (!args || !args->data) {
+    // gcd with no arguments returns 0 (R5RS)
+    return _create_num(0);
+  }
+  
+  SCM *first = args->data;
+  if (!is_num(first)) {
+    eval_error("gcd: expected integer");
+    return nullptr;
+  }
+  
+  int64_t result = (int64_t)first->value;
+  result = result < 0 ? -result : result;  // abs
+  
+  SCM_List *current = args->next;
+  while (current) {
+    SCM *arg = current->data;
+    if (!is_num(arg)) {
+      eval_error("gcd: expected integer");
+      return nullptr;
+    }
+    int64_t val = (int64_t)arg->value;
+    result = gcd(result, val);
+    current = current->next;
+  }
+  
+  return _create_num(result);
+}
+
+// lcm: Return the least common multiple of the arguments
+// R5RS: (lcm n1 ...) -> integer
+// lcm(a,b) = |a*b| / gcd(a,b)
+SCM *scm_c_lcm(SCM_List *args) {
+  if (!args || !args->data) {
+    // lcm with no arguments returns 1 (R5RS)
+    return _create_num(1);
+  }
+  
+  SCM *first = args->data;
+  if (!is_num(first)) {
+    eval_error("lcm: expected integer");
+    return nullptr;
+  }
+  
+  int64_t result = (int64_t)first->value;
+  result = result < 0 ? -result : result;  // abs
+  
+  SCM_List *current = args->next;
+  while (current) {
+    SCM *arg = current->data;
+    if (!is_num(arg)) {
+      eval_error("lcm: expected integer");
+      return nullptr;
+    }
+    int64_t val = (int64_t)arg->value;
+    val = val < 0 ? -val : val;  // abs
+    
+    // lcm(a,b) = |a*b| / gcd(a,b)
+    // But we need to avoid overflow, so compute as: (a / gcd(a,b)) * b
+    int64_t g = gcd(result, val);
+    if (g == 0) {
+      return _create_num(0);
+    }
+    result = (result / g) * val;
+    current = current->next;
+  }
+  
+  return _create_num(result);
+}
+
 // Create a rational number (fraction)
 SCM *scm_make_ratio(int64_t numerator, int64_t denominator) {
   if (denominator == 0) {
@@ -908,4 +981,6 @@ void init_number() {
   scm_define_function("quotient", 2, 0, 0, scm_c_quotient);
   scm_define_function("modulo", 2, 0, 0, scm_c_modulo);
   scm_define_function("remainder", 2, 0, 0, scm_c_remainder);
+  scm_define_vararg_function("gcd", scm_c_gcd);
+  scm_define_vararg_function("lcm", scm_c_lcm);
 }
