@@ -111,7 +111,11 @@ function sidebarGuideZh() {
         },
         {
           text: 'pscm-cc delay 实现方案',
-          link: '/cn/delay_implementation'
+          link: '/cn/delay_force_implementation'
+        },
+        {
+          text: 'pscm-cc module 实现方案',
+          link: '/cn/module_implementation'
         }
       ]
     },

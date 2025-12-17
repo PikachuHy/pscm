@@ -51,10 +51,25 @@ SCM *scm_env_exist(SCM_Environment *env, SCM_Symbol *sym) {
 }
 
 SCM *scm_env_search(SCM_Environment *env, SCM_Symbol *sym) {
+  // 1. First search in lexical environment
   auto ret = scm_env_exist(env, sym);
   if (ret) {
     return ret;
   }
+  
+  // 2. If current module exists, search in module
+  extern SCM *scm_current_module();
+  SCM *current_mod = scm_current_module();
+  if (current_mod && is_module(current_mod)) {
+    extern SCM *scm_module_variable(SCM_Module *module, SCM_Symbol *sym, bool definep);
+    SCM_Module *module = cast<SCM_Module>(current_mod);
+    SCM *var = scm_module_variable(module, sym, false);
+    if (var && !is_falsy(var)) {
+      // Return variable's value (simplified implementation, assume var is the value)
+      return var;
+    }
+  }
+  
   SCM_ERROR_SYMTBL("find %s, not found\n", sym->data);
   return nullptr;
 }

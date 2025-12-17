@@ -471,6 +471,22 @@ entry:
       SCM *result = eval_define_macro(env, l);
       RETURN_WITH_CONTEXT(result);
     }
+    else if (is_sym_val(l->data, "define-module")) {
+      SCM *result = eval_define_module(env, l);
+      RETURN_WITH_CONTEXT(result);
+    }
+    else if (is_sym_val(l->data, "use-modules")) {
+      SCM *result = eval_use_modules(env, l);
+      RETURN_WITH_CONTEXT(result);
+    }
+    else if (is_sym_val(l->data, "export")) {
+      SCM *result = eval_export(env, l);
+      RETURN_WITH_CONTEXT(result);
+    }
+    else if (is_sym_val(l->data, "define-public")) {
+      SCM *result = eval_define_public(env, l);
+      RETURN_WITH_CONTEXT(result);
+    }
     else if (is_sym_val(l->data, "let")) {
       ast = expand_let(ast);
       goto entry;

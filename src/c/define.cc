@@ -15,7 +15,19 @@ SCM *eval_define(SCM_Environment *env, SCM_List *l) {
         SCM_DEBUG_EVAL("define proc from lambda\n");
       }
     }
-    scm_env_insert(env, varname, val, /*search_parent=*/false);
+    // If current module exists, define in module
+    extern SCM *scm_current_module();
+    SCM *current_mod = scm_current_module();
+    if (current_mod && is_module(current_mod)) {
+      extern SCM *scm_make_module(SCM_List *name, int obarray_size);
+      SCM_Module *module = cast<SCM_Module>(current_mod);
+      // Create binding in module's obarray
+      extern SCM *scm_c_hash_set_eq(SCM *table, SCM *key, SCM *value);
+      scm_c_hash_set_eq(wrap(module->obarray), wrap(varname), val);
+    } else {
+      // Otherwise define in environment
+      scm_env_insert(env, varname, val, /*search_parent=*/false);
+    }
     return scm_none();
   }
   // Define procedure: (define (name args...) body...)
@@ -83,7 +95,16 @@ SCM *eval_define(SCM_Environment *env, SCM_List *l) {
     }
     auto proc = make_proc(proc_name, proc_sig->next, l->next->next, env);
     SCM *ret = wrap(proc);
-    scm_env_insert(env, proc_name, ret, /*search_parent=*/false);
+    // If current module exists, define in module
+    extern SCM *scm_current_module();
+    SCM *current_mod = scm_current_module();
+    if (current_mod && is_module(current_mod)) {
+      SCM_Module *module = cast<SCM_Module>(current_mod);
+      extern SCM *scm_c_hash_set_eq(SCM *table, SCM *key, SCM *value);
+      scm_c_hash_set_eq(wrap(module->obarray), wrap(proc_name), ret);
+    } else {
+      scm_env_insert(env, proc_name, ret, /*search_parent=*/false);
+    }
     return ret;
   }
   
@@ -114,7 +135,16 @@ SCM *eval_define(SCM_Environment *env, SCM_List *l) {
         SCM_DEBUG_EVAL("define proc from lambda\n");
       }
     }
-    scm_env_insert(env, proc_name, val, /*search_parent=*/false);
+    // If current module exists, define in module
+    extern SCM *scm_current_module();
+    SCM *current_mod = scm_current_module();
+    if (current_mod && is_module(current_mod)) {
+      SCM_Module *module = cast<SCM_Module>(current_mod);
+      extern SCM *scm_c_hash_set_eq(SCM *table, SCM *key, SCM *value);
+      scm_c_hash_set_eq(wrap(module->obarray), wrap(proc_name), val);
+    } else {
+      scm_env_insert(env, proc_name, val, /*search_parent=*/false);
+    }
     return scm_none();
   } else {
     // Should not happen, but handle it

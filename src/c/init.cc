@@ -25,6 +25,7 @@ void init_scm() {
   init_hash_table();
   init_procedure();
   init_vector();
+  init_modules();
   init_exit();
 }
 

@@ -15,7 +15,7 @@ struct SCM_SourceLocation {
 };
 
 struct SCM {
-  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, CHAR, BOOL, SYM, STR, MACRO, HASH_TABLE, RATIO, VECTOR, PORT, PROMISE } type;
+  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, CHAR, BOOL, SYM, STR, MACRO, HASH_TABLE, RATIO, VECTOR, PORT, PROMISE, MODULE } type;
 
   void *value;
   SCM_SourceLocation *source_loc;  // Optional source location
@@ -29,7 +29,7 @@ struct SCM_Environment;
 struct SCM_List {
   SCM *data;
   SCM_List *next;
-  bool is_dotted;  // true 表示这是 dotted pair 的最后一个节点（存储 cdr 的节点）
+  bool is_dotted;  // true indicates this is the last node of a dotted pair (stores the cdr node)
 };
 
 struct SCM_Symbol {
@@ -95,6 +95,18 @@ struct SCM_Promise {
   SCM *thunk;      // A zero-argument procedure representing the delayed computation
   SCM *value;      // Cached value after forcing; nullptr if not yet forced
   bool is_forced;  // Whether the promise has been forced
+};
+
+struct SCM_Module {
+  SCM_HashTable *obarray;        // Local bindings hash table (symbol -> variable)
+  SCM_List *uses;                // List of used modules
+  SCM_Procedure *binder;         // Optional binding procedure (module symbol definep) -> variable | #f
+  SCM_Procedure *eval_closure;   // Lookup strategy function (symbol definep) -> variable | #f
+  SCM_Procedure *transformer;    // Syntax transformer (expr) -> expr
+  SCM_List *name;                // Module name list, e.g. (guile-user)
+  SCM_Symbol *kind;              // Module type: 'module, 'interface, 'directory
+  SCM_Module *public_interface;  // Public interface module (points to another module object)
+  SCM_List *exports;             // List of exported symbols (for public interface)
 };
 
 // Port types
@@ -233,6 +245,10 @@ inline bool is_promise(SCM *scm) {
 
 inline bool is_port(SCM *scm) {
   return scm->type == SCM::PORT;
+}
+
+inline bool is_module(SCM *scm) {
+  return scm->type == SCM::MODULE;
 }
 
 SCM *create_sym(const char *data, int len);
@@ -584,11 +600,28 @@ inline SCM_Port *cast<SCM_Port>(SCM *data) {
 }
 
 template <>
+inline SCM_Module *cast<SCM_Module>(SCM *data) {
+  if (!data || !is_module(data)) {
+    type_error(data, "module");
+  }
+  return (SCM_Module *)data->value;
+}
+
+template <>
 inline SCM *wrap(SCM_Vector *vec) {
   assert(vec);
   auto data = new SCM();
   data->type = SCM::VECTOR;
   data->value = vec;
+  data->source_loc = nullptr;
+  return data;
+}
+
+inline SCM *wrap(SCM_Module *module) {
+  assert(module);
+  auto data = new SCM();
+  data->type = SCM::MODULE;
+  data->value = module;
   data->source_loc = nullptr;
   return data;
 }
@@ -893,6 +926,7 @@ void init_values();
 void init_hash_table();
 void init_procedure();
 void init_vector();
+void init_modules();
 
 extern SCM_Environment g_env;
 extern SCM_List *g_wind_chain;  // Global wind chain for dynamic-wind

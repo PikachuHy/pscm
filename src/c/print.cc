@@ -202,6 +202,25 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
     printf(">");
     return;
   }
+  if (is_module(ast)) {
+    auto module = cast<SCM_Module>(ast);
+    printf("#<");
+    // Print module kind (default to "module")
+    if (module->kind) {
+      printf("%s", module->kind->data);
+    } else {
+      printf("module");
+    }
+    // Print module name if available
+    if (module->name) {
+      printf(" ");
+      _print_list(module->name, false, ctx);
+    }
+    // Print module address in hex
+    printf(" %p", (void *)module);
+    printf(">");
+    return;
+  }
   printf("%s:%d not supported %d\n", __FILE__, __LINE__, ast->type);
   exit(1);
 }
