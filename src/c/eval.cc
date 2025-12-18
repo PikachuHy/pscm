@@ -2,6 +2,9 @@
 
 #include "eval.h"
 #include <stdarg.h>
+#include <cstdio>
+#include <cstring>
+#include <cstdlib>
 
 // Helper function to print AST to stderr (moved to eval.h as inline function)
 
@@ -36,6 +39,56 @@ SCM *g_current_eval_context = nullptr;
 EvalStackFrame *g_eval_stack = nullptr;
 static const int MAX_STACK_DEPTH = 100;  // Prevent infinite recursion
 static int g_stack_depth = 0;
+
+// Helper function to convert expression to string (with length limit)
+static char *expr_to_string(SCM *expr, size_t max_len = 200) {
+  if (!expr) {
+    return nullptr;
+  }
+  
+  // Use a temporary file to capture print_ast output
+  FILE *tmp_file = tmpfile();
+  if (!tmp_file) {
+    return nullptr;
+  }
+  
+  // Save original stdout
+  FILE *original_stdout = stdout;
+  
+  // Redirect stdout to temporary file
+  stdout = tmp_file;
+  
+  // Print expression
+  print_ast(expr, false);
+  
+  // Restore stdout
+  stdout = original_stdout;
+  
+  // Get file size
+  fseek(tmp_file, 0, SEEK_END);
+  long file_size = ftell(tmp_file);
+  fseek(tmp_file, 0, SEEK_SET);
+  
+  // Allocate buffer (add 1 for null terminator, and 4 for "...")
+  size_t buf_size = (file_size < (long)max_len) ? file_size + 1 : max_len + 5;
+  char *buf = new char[buf_size];
+  if (!buf) {
+    fclose(tmp_file);
+    return nullptr;
+  }
+  
+  // Read from temporary file
+  size_t read_size = fread(buf, 1, max_len, tmp_file);
+  buf[read_size] = '\0';
+  
+  // If truncated, add "..."
+  if (file_size > (long)max_len) {
+    strcpy(buf + max_len, "...");
+  }
+  
+  fclose(tmp_file);
+  return buf;
+}
 
 // Push a frame onto the evaluation stack
 static void push_eval_stack(SCM *expr) {
@@ -76,16 +129,18 @@ static void push_eval_stack(SCM *expr) {
   }
   strcpy(loc_copy, loc);
   
+  // Convert expression to string (with length limit)
+  char *expr_str = expr_to_string(expr, 200);
+  
   EvalStackFrame *frame = new EvalStackFrame();
   if (!frame) {
-    delete[] loc_copy;  // Clean up on failure
+    delete[] loc_copy;
+    if (expr_str) delete[] expr_str;
     return;
   }
   
-  // Don't save expr pointer - it might point to a temporary stack-allocated object
-  // Only save the source location string, which is safe
   frame->source_location = loc_copy;
-  frame->expr_str = nullptr;  // Not saving expression string to avoid complexity
+  frame->expr_str = expr_str;  // Can be nullptr if conversion failed
   frame->next = g_eval_stack;
   g_eval_stack = frame;
   g_stack_depth++;
@@ -98,6 +153,9 @@ static void pop_eval_stack() {
     g_eval_stack = g_eval_stack->next;
     if (old->source_location) {
       delete[] old->source_location;
+    }
+    if (old->expr_str) {
+      delete[] old->expr_str;
     }
     delete old;
     g_stack_depth--;
@@ -121,8 +179,10 @@ void print_eval_stack() {
     } else {
       fprintf(stderr, "<no source location>\n");
     }
-    // Expression pointer is not saved to avoid dangling pointer issues
-    // Source location is sufficient for debugging
+    // Print expression if available
+    if (frame->expr_str) {
+      fprintf(stderr, "      %s\n", frame->expr_str);
+    }
     fprintf(stderr, "\n");
     frame = frame->next;
     depth++;
