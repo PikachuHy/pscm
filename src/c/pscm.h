@@ -72,6 +72,7 @@ struct SCM_Continuation {
   void *dst;
   SCM *arg;
   SCM_List *wind_chain;  // Saved wind chain when continuation was created
+  SCM *saved_module;     // Saved current module when continuation was created
 };
 
 struct SCM_Macro {
@@ -314,6 +315,7 @@ inline SCM_Continuation *make_cont(size_t stack_len, void *stack_data) {
   cont->stack_len = stack_len;
   cont->stack_data = stack_data;
   cont->wind_chain = nullptr;
+  cont->saved_module = nullptr;
   return cont;
 }
 
@@ -767,6 +769,7 @@ SCM *expand_letrec(SCM *expr);
 void scm_env_insert(SCM_Environment *env, SCM_Symbol *sym, SCM *value, bool search_parent = true);
 SCM *scm_env_search(SCM_Environment *env, SCM_Symbol *sym);
 SCM *scm_env_exist(SCM_Environment *env, SCM_Symbol *sym);
+SCM_Environment::Entry *scm_env_search_entry(SCM_Environment *env, SCM_Symbol *sym, bool search_parent = true);
 
 /*
  * Functions in eval.cc
@@ -780,6 +783,17 @@ SCM_List *eval_list_with_env(SCM_Environment *env, SCM_List *l);
  */
 SCM *scm_c_apply(SCM_List *args);
 void init_apply();
+
+/*
+ * Functions in eq.cc (internal comparison functions)
+ */
+bool _eq(SCM *lhs, SCM *rhs);
+SCM *scm_c_is_eq(SCM *lhs, SCM *rhs);
+
+/*
+ * Functions in number.cc (internal comparison functions)
+ */
+bool _number_eq(SCM *lhs, SCM *rhs);
 
 /*
  * Functions in predicate.cc
@@ -930,6 +944,37 @@ void init_modules();
 
 extern SCM_Environment g_env;
 extern SCM_List *g_wind_chain;  // Global wind chain for dynamic-wind
+extern SCM *g_root_module;  // Root module (pscm-user)
+extern long *cont_base;  // Stack base pointer for continuations
+
+/*
+ * Hash table functions
+ */
+SCM *scm_c_make_hash_table(SCM *size_arg);
+SCM *scm_c_hash_set_eq(SCM *table, SCM *key, SCM *value);
+SCM *scm_c_hash_set_eqv(SCM *table, SCM *key, SCM *value);
+SCM *scm_c_hash_set_equal(SCM *table, SCM *key, SCM *value);
+SCM *scm_c_hash_ref_eq(SCM *table, SCM *key);
+SCM *scm_c_hash_ref_eqv(SCM *table, SCM *key);
+SCM *scm_c_hash_ref_equal(SCM *table, SCM *key);
+SCM *scm_c_hash_get_handle_eq(SCM *table, SCM *key);
+SCM *scm_c_hash_get_handle_eqv(SCM *table, SCM *key);
+SCM *scm_c_hash_get_handle_equal(SCM *table, SCM *key);
+
+/*
+ * Module functions
+ */
+SCM *scm_make_module(SCM_List *name, int obarray_size);
+SCM *scm_current_module();
+SCM *scm_set_current_module(SCM *module);
+SCM *scm_module_variable(SCM_Module *module, SCM_Symbol *sym, bool definep);
+SCM *scm_resolve_module(SCM_List *name);
+void scm_module_export(SCM_Module *module, SCM_Symbol *sym);
+
+// Module helper functions (for internal use, but may be used by other modules)
+SCM *module_obarray_lookup(SCM_Module *module, SCM_Symbol *sym);
+SCM *module_search_variable(SCM_Module *module, SCM_Symbol *sym);
+SCM_Module *module_find_variable_module(SCM_Module *module, SCM_Symbol *sym);
 
 template <typename F>
 SCM_Function *_create_func(const char *name, F func_ptr) {

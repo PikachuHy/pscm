@@ -1,7 +1,6 @@
 #include "pscm.h"
 #include "eval.h"
 
-extern SCM_Environment g_env;
 
 // primitive-load: core file loading implementation used by Scheme-level load
 SCM *scm_c_primitive_load(SCM *filename) {
@@ -36,6 +35,19 @@ void init_load() {
   scm_define_function("primitive-load", 1, 0, 0, scm_c_primitive_load);
   // load: user-facing interface, initial implementation is same as primitive-load
   scm_define_function("load", 1, 0, 0, scm_c_primitive_load);
+  
+  // Define %load-path variable (initialized to empty list, like Guile 1.8)
+  // Always define in root module (pscm-user) so it's accessible from all modules
+  // Get root module directly (g_root_module is set in init_modules)
+  if (!g_root_module || !is_module(g_root_module)) {
+    eval_error("init_load: root module not initialized");
+    return;
+  }
+  SCM_Module *root_module = cast<SCM_Module>(g_root_module);
+  
+  // Define in root module's obarray
+  SCM_Symbol *load_path_sym = make_sym("%load-path");
+  scm_c_hash_set_eq(wrap(root_module->obarray), wrap(load_path_sym), scm_nil());
 }
 
 

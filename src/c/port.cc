@@ -7,7 +7,6 @@
 
 // Forward declaration
 SCM *parse(const char *s);
-extern SCM_Environment g_env;
 
 // Helper function to create a port SCM object
 static SCM *wrap_port(SCM_Port *port) {

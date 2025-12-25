@@ -3,8 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-extern long *cont_base;
-extern SCM_List *g_wind_chain;
 
 long scm_stack_size(long *start) {
   long stack;
@@ -30,11 +28,18 @@ SCM *scm_make_continuation(int *first) {
   // Save current wind chain
   cont->wind_chain = copy_wind_chain(g_wind_chain);
   
+  // Save current module (needed for variable lookup after continuation restore)
+  cont->saved_module = scm_current_module();
+  
   *first = !setjmp(cont->cont_jump_buffer);
   if (*first) {
     return data;
   }
   else {
+    // Restore current module when continuation is invoked
+    if (cont->saved_module) {
+      scm_set_current_module(cont->saved_module);
+    }
     auto ret = cont->arg;
     return ret;
   }

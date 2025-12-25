@@ -3,8 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-extern SCM_Environment g_env;
-extern SCM_List *g_wind_chain;
 
 // Forward declarations for functions used by continuation.cc
 SCM_List *copy_wind_chain(SCM_List *chain);

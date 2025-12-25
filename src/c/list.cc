@@ -448,7 +448,6 @@ static bool _eqv(SCM *lhs, SCM *rhs) {
   if (!lhs || !rhs) return false;
   
   // Special case: allow NUM <-> FLOAT comparison (same as eq.cc)
-  extern bool _number_eq(SCM *lhs, SCM *rhs);
   if ((lhs->type == SCM::NUM && rhs->type == SCM::FLOAT) ||
       (lhs->type == SCM::FLOAT && rhs->type == SCM::NUM)) {
     return _number_eq(lhs, rhs);
@@ -487,7 +486,6 @@ SCM *scm_c_memq(SCM *obj, SCM *lst) {
     // Use eq? for comparison
     // For immediate values (numbers, symbols, etc.), eq? compares by value
     // For compound types (lists, pairs), eq? uses pointer equality
-    extern SCM *scm_c_is_eq(SCM *lhs, SCM *rhs);
     SCM *eq_result = scm_c_is_eq(obj, current->data);
     if (eq_result && is_true(eq_result)) {
       // Found a match, return the sublist starting from this element
@@ -542,7 +540,6 @@ SCM *scm_c_member(SCM *obj, SCM *lst) {
     return nullptr;
   }
   
-  extern bool _eq(SCM *lhs, SCM *rhs);
   SCM_List *current = cast<SCM_List>(lst);
   
   while (current) {

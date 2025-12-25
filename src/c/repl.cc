@@ -56,8 +56,6 @@ static bool is_balanced(const char *s) {
   return depth == 0;
 }
 
-// Forward declaration for eval function (defined in main.cc)
-extern SCM *eval(SCM *ast);
 
 void repl() {
   char line_buffer[4096];  // Buffer for each line

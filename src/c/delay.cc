@@ -1,7 +1,6 @@
 #include "pscm.h"
 #include "eval.h"
 
-extern SCM_Environment g_env;
 
 // (delay <expr>): create a promise that will evaluate <expr> when forced
 SCM *eval_delay(SCM_Environment *env, SCM_List *l) {

@@ -1,7 +1,8 @@
 #include "pscm.h"
 #include "eval.h"
 #include <type_traits>
-extern bool _number_eq(SCM *lhs, SCM *rhs);
+// Forward declaration
+bool _number_eq(SCM *lhs, SCM *rhs);
 bool _eq(SCM *lhs, SCM *rhs);
 
 bool _sym_eq(SCM *lhs, SCM *rhs) {

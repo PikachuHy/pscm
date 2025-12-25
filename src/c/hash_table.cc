@@ -1,7 +1,6 @@
 #include "pscm.h"
 #include "eval.h"
 
-extern SCM_Environment g_env;
 
 // Helper function to compute content-based hash for symbols and strings
 static inline unsigned long hash_string_content(const char *data, int len) {
@@ -41,6 +40,36 @@ static unsigned long scm_hash_code_eqv(SCM *key) {
 }
 
 // Hash function for equal? (deep equality)
+// Helper function to compute hash code for a list recursively
+static unsigned long hash_list_content(SCM *list) {
+  if (!list || !is_pair(list)) {
+    return 0;
+  }
+  auto l = cast<SCM_List>(list);
+  unsigned long hash = 0;
+  while (l) {
+    // Hash the car
+    unsigned long car_hash = 0;
+    if (is_sym(l->data)) {
+      auto sym = cast<SCM_Symbol>(l->data);
+      car_hash = hash_string_content(sym->data, sym->len);
+    } else if (is_str(l->data)) {
+      auto str = cast<SCM_String>(l->data);
+      car_hash = hash_string_content(str->data, str->len);
+    } else if (is_num(l->data)) {
+      car_hash = (unsigned long)(int64_t)l->data->value;
+    } else if (is_pair(l->data)) {
+      car_hash = hash_list_content(l->data);
+    } else {
+      car_hash = (unsigned long)(uintptr_t)l->data;
+    }
+    // Combine hashes
+    hash = hash * 31 + car_hash;
+    l = l->next;
+  }
+  return hash;
+}
+
 static unsigned long scm_hash_code_equal(SCM *key) {
   // For symbols, use content-based hash (not pointer-based) for equal?
   // This ensures that different symbol objects with the same name hash to the same value
@@ -56,6 +85,10 @@ static unsigned long scm_hash_code_equal(SCM *key) {
   // For numbers, use value-based hash
   if (is_num(key)) {
     return (unsigned long)(int64_t)key->value;
+  }
+  // For lists, use content-based hash
+  if (is_pair(key)) {
+    return hash_list_content(key);
   }
   // Fallback to pointer hash
   return scm_hash_code_eq(key);
@@ -94,7 +127,6 @@ static bool scm_cmp_eqv(SCM *lhs, SCM *rhs) {
 }
 
 static bool scm_cmp_equal(SCM *lhs, SCM *rhs) {
-  extern bool _eq(SCM *lhs, SCM *rhs);
   return _eq(lhs, rhs);
 }
 
@@ -117,8 +149,10 @@ static SCM_HashTable *validate_and_get_bucket_idx(SCM *table, SCM *key,
 static void update_entry_value(SCM_List *entry, SCM *value) {
   if (entry->next) {
     entry->next->data = value;
+    entry->next->is_dotted = true;  // Ensure it's marked as dotted pair
   } else {
     entry->next = make_list(value);
+    entry->next->is_dotted = true;  // Mark as dotted pair's cdr
   }
 }
 
@@ -142,10 +176,24 @@ static SCM_List *find_entry_in_bucket(SCM *bucket, SCM *key, bool (*cmp_func)(SC
 
 // Helper function to insert entry into bucket at head
 // Returns the entry pair (key . value)
+// Note: We must create a proper dotted pair (key . value) even when value is a list.
+// Using scm_cons would expand value if it's a list, which breaks hash table semantics.
 static SCM *insert_entry_to_bucket(SCM_HashTable *hash_table, size_t idx, 
                                     SCM *key, SCM *value) {
-  auto entry_pair = scm_cons(key, value);
-  auto entry_node = make_list(entry_pair);
+  // Create a proper dotted pair (key . value) structure
+  // This ensures value is stored correctly even when it's a list
+  SCM_List *entry_pair = make_list(key);
+  if (is_nil(value)) {
+    // For nil values, create a node containing nil so hash-ref can find it
+    entry_pair->next = make_list(value);
+    entry_pair->next->is_dotted = true;
+  } else {
+    // For non-nil values, wrap in a dotted pair node
+    entry_pair->next = make_list(value);
+    entry_pair->next->is_dotted = true;  // Mark as dotted pair's cdr
+  }
+  
+  auto entry_node = make_list(wrap(entry_pair));
   if (hash_table->buckets[idx] && !is_nil(hash_table->buckets[idx])) {
     entry_node->next = cast<SCM_List>(hash_table->buckets[idx]);
   } else {
@@ -153,7 +201,7 @@ static SCM *insert_entry_to_bucket(SCM_HashTable *hash_table, size_t idx,
   }
   hash_table->buckets[idx] = wrap(entry_node);
   hash_table->size++;
-  return entry_pair;
+  return wrap(entry_pair);
 }
 
 // Helper function to remove entry from bucket
@@ -248,8 +296,16 @@ SCM *scm_c_hash_ref(SCM *table, SCM *key,
   }
   
   auto entry = find_entry_in_bucket(hash_table->buckets[idx], key, cmp_func);
-  if (entry && entry->next) {
-    return entry->next->data;
+  if (entry) {
+    // entry is (key . value) pair
+    // If entry->next is nullptr, it means value is nil (from scm_cons when cdr is nil)
+    // If entry->next exists, entry->next->data is the value
+    if (entry->next) {
+      return entry->next->data;
+    } else {
+      // entry->next is nullptr means value is nil
+      return scm_nil();
+    }
   }
   
   return scm_bool_false();
@@ -268,8 +324,8 @@ SCM *scm_c_hash_get_handle(SCM *table, SCM *key,
   auto entry = find_entry_in_bucket(hash_table->buckets[idx], key, cmp_func);
   if (entry) {
     // entry is SCM_List* representing (key . value)
-    // We need to construct a proper dotted pair from entry
-    return scm_cons(entry->data, entry->next->data);
+    // Return the entry pair directly (wrapped)
+    return wrap(entry);
   }
   
   return scm_bool_false();

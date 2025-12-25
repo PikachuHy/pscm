@@ -32,9 +32,9 @@ void my_eval(SCM *ast) {
   SCM_DEBUG_EVAL(" --> ");
   SCM_PRINT_AST(val);
   if (!is_none(val)) {
-    // In test mode, use display format (without quotes for strings)
+    // In test mode, use write format (with quotes for strings)
     // This matches the expected output format in tests
-    print_ast(val, true);
+    print_ast(val, true);  // true = write mode (with quotes for strings)
     printf("\n");
   }
 }

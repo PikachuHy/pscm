@@ -1,25 +1,12 @@
 #include "pscm.h"
 #include "eval.h"
 
-// Forward declarations for hash table functions
-extern SCM *scm_c_make_hash_table(SCM *size_arg);
-extern SCM *scm_c_hash_ref_eq(SCM *table, SCM *key);
-extern SCM *scm_c_hash_set_eq(SCM *table, SCM *key, SCM *value);
-
 // Current module (using simple global variable, can be changed to fluid in the future)
 static SCM *g_current_module = nullptr;
-static SCM *g_root_module = nullptr;  // Root module (pscm-user)
+SCM *g_root_module = nullptr;  // Root module (pscm-user), exported for use in other files
 
 // Module registry: module name -> module object
 static SCM_HashTable *g_module_registry = nullptr;
-
-// Forward declarations
-SCM *scm_make_module(SCM_List *name, int obarray_size);
-SCM *scm_current_module();
-SCM *scm_set_current_module(SCM *module);
-SCM *scm_module_variable(SCM_Module *module, SCM_Symbol *sym, bool definep);
-SCM *scm_resolve_module(SCM_List *name);
-void scm_module_export(SCM_Module *module, SCM_Symbol *sym);
 
 // Create a module
 SCM *scm_make_module(SCM_List *name, int obarray_size) {
@@ -71,12 +58,106 @@ SCM *scm_set_current_module(SCM *module) {
   return old;
 }
 
+// Helper function to lookup variable in module's obarray
+// Returns the value if found (can be #f), or nullptr if not found
+// This allows us to distinguish between "not found" and "value is #f"
+SCM *module_obarray_lookup(SCM_Module *module, SCM_Symbol *sym) {
+  
+  SCM *handle = scm_c_hash_get_handle_eq(wrap(module->obarray), wrap(sym));
+  // hash-get-handle returns #f if key not found, or (key . value) if found
+  // We check if handle is #f (not found) vs. a pair (found, value could be #f)
+  if (handle && handle != scm_bool_false() && is_pair(handle)) {
+    // Handle exists (it's a pair, not #f)
+    // handle is the entry pair (key . value) wrapped
+    auto pair = cast<SCM_List>(handle);
+    // pair->data is the key, pair->next->data is the value
+    if (pair->next) {
+      return pair->next->data;  // Return value (can be #f)
+    } else {
+      // value is nil (entry->next is nullptr)
+      return scm_nil();
+    }
+  }
+  
+  return nullptr;  // Not found
+}
+
+// Helper function to search variable in module (obarray, uses list, and root module)
+// Returns the value if found (can be #f), or nullptr if not found
+// This allows us to distinguish between "not found" and "value is #f"
+// Does not call binder (unlike scm_module_variable)
+SCM *module_search_variable(SCM_Module *module, SCM_Symbol *sym) {
+  // 1. Check module obarray
+  SCM *var = module_obarray_lookup(module, sym);
+  if (var) {
+    return var;  // Found (value can be #f)
+  }
+  
+  // 2. Search uses list
+  SCM_List *uses = module->uses;
+  while (uses) {
+    SCM *use_module_scm = uses->data;
+    if (is_module(use_module_scm)) {
+      SCM_Module *use_module = cast<SCM_Module>(use_module_scm);
+      var = module_obarray_lookup(use_module, sym);
+      if (var) {
+        return var;  // Found (value can be #f)
+      }
+    }
+    uses = uses->next;
+  }
+  
+  // 3. If not found, also search root module (pscm-user) for global variables like %load-path
+  if (g_root_module && module != cast<SCM_Module>(g_root_module)) {
+    SCM_Module *root_module = cast<SCM_Module>(g_root_module);
+    var = module_obarray_lookup(root_module, sym);
+    if (var) {
+      return var;  // Found (value can be #f)
+    }
+  }
+  
+  return nullptr;  // Not found
+}
+
+// Helper function to find which module contains a variable (for updating)
+// Returns the module that contains the variable, or nullptr if not found
+// Searches: current module obarray, uses list, and root module
+SCM_Module *module_find_variable_module(SCM_Module *module, SCM_Symbol *sym) {
+  // 1. Check module obarray
+  if (module_obarray_lookup(module, sym)) {
+    return module;  // Found in current module
+  }
+  
+  // 2. Search uses list
+  SCM_List *uses = module->uses;
+  while (uses) {
+    SCM *use_module_scm = uses->data;
+    if (is_module(use_module_scm)) {
+      SCM_Module *use_module = cast<SCM_Module>(use_module_scm);
+      if (module_obarray_lookup(use_module, sym)) {
+        return use_module;  // Found in use module
+      }
+    }
+    uses = uses->next;
+  }
+  
+  // 3. Check root module
+  if (g_root_module && module != cast<SCM_Module>(g_root_module)) {
+    SCM_Module *root_module = cast<SCM_Module>(g_root_module);
+    if (module_obarray_lookup(root_module, sym)) {
+      return root_module;  // Found in root module
+    }
+  }
+  
+  return nullptr;  // Not found
+}
+
 // Look up variable in module
 SCM *scm_module_variable(SCM_Module *module, SCM_Symbol *sym, bool definep) {
-  // 1. Check module obarray
-  SCM *var = scm_c_hash_ref_eq(wrap(module->obarray), wrap(sym));
-  if (var && !is_falsy(var)) {
-    return var;
+  // 1. Check module obarray, uses list, and root module
+  SCM *var = module_search_variable(module, sym);
+  if (var) {
+    return var;  // Found (value can be #f)
   }
   
   // 2. Call binder (if exists and not a define operation)
@@ -85,41 +166,73 @@ SCM *scm_module_variable(SCM_Module *module, SCM_Symbol *sym, bool definep) {
     // Skip for now
   }
   
-  // 3. Search uses list
-  SCM_List *uses = module->uses;
-  while (uses) {
-    SCM *use_module_scm = uses->data;
-    if (is_module(use_module_scm)) {
-      SCM_Module *use_module = cast<SCM_Module>(use_module_scm);
-      SCM *var = scm_module_variable(use_module, sym, false);
-      if (var && !is_falsy(var)) {
-        return var;
-      }
+  return scm_bool_false();  // #f (not found)
+}
+
+// Helper function to convert module name to file path
+// e.g., (test) -> "test.scm"
+// e.g., (ice-9 common-list) -> "ice-9/common-list.scm"
+// Returns allocated string, caller must free it
+static char *module_name_to_path(SCM_List *name) {
+  // First pass: calculate total length needed
+  size_t total_len = 0;
+  SCM_List *current = name;
+  bool first = true;
+  while (current && current->data) {
+    if (!first) {
+      total_len += 1; // "/"
     }
-    uses = uses->next;
+    first = false;
+    if (is_sym(current->data)) {
+      SCM_Symbol *sym = cast<SCM_Symbol>(current->data);
+      total_len += sym->len;
+    }
+    current = current->next;
+  }
+  total_len += 5; // ".scm" + null terminator
+  
+  // Allocate buffer
+  char *path = (char *)malloc(total_len);
+  if (!path) {
+    return nullptr;
   }
   
-  return scm_bool_false();  // #f
+  // Second pass: build the path
+  char *p = path;
+  current = name;
+  first = true;
+  while (current && current->data) {
+    if (!first) {
+      *p++ = '/';
+    }
+    first = false;
+    if (is_sym(current->data)) {
+      SCM_Symbol *sym = cast<SCM_Symbol>(current->data);
+      memcpy(p, sym->data, sym->len);
+      p += sym->len;
+    }
+    current = current->next;
+  }
+  memcpy(p, ".scm", 4);
+  p += 4;
+  *p = '\0';
+  
+  return path;
+}
+
+// Helper function to check if file exists
+static bool file_exists(const char *path) {
+  FILE *f = fopen(path, "r");
+  if (f) {
+    fclose(f);
+    return true;
+  }
+  return false;
 }
 
 // Resolve module name, return module object
 SCM *scm_resolve_module(SCM_List *name) {
-  // 1. Check registry
-  if (g_module_registry) {
-    SCM *name_key = wrap(name);
-    SCM *module = scm_c_hash_ref_eq(wrap(g_module_registry), name_key);
-    if (module && is_module(module)) {
-      return module;
-    }
-  }
-  
-  // 2. Try to load from file system (future implementation)
-  // For now, create a new module
-  
-  // Create a new module temporarily (simplified implementation)
-  SCM *module = scm_make_module(name, 31);
-  
-  // Register module
+  // Initialize registry if needed
   if (!g_module_registry) {
     g_module_registry = new SCM_HashTable();
     g_module_registry->capacity = 61;
@@ -129,7 +242,122 @@ SCM *scm_resolve_module(SCM_List *name) {
       g_module_registry->buckets[i] = scm_nil();
     }
   }
-  scm_c_hash_set_eq(wrap(g_module_registry), wrap(name), module);
+  
+  // 1. Check registry
+  SCM *name_key = wrap(name);
+  // Use equal? comparison for module names (lists), not eq?
+  SCM *module = scm_c_hash_ref_equal(wrap(g_module_registry), name_key);
+  // scm_c_hash_ref_equal returns #f if not found, so check for #f explicitly
+  if (module && !is_falsy(module) && is_module(module)) {
+    return module;
+  }
+  
+  // 2. Try to load from file system
+  // Convert module name to file path
+  char *module_path = module_name_to_path(name);
+  if (!module_path) {
+    // If path conversion failed, create empty module
+    module = scm_make_module(name, 31);
+    scm_c_hash_set_equal(wrap(g_module_registry), wrap(name), module);
+    return module;
+  }
+  
+  // Get %load-path from root module
+  SCM *load_path = nullptr;
+  if (g_root_module) {
+    SCM_Module *root_module = cast<SCM_Module>(g_root_module);
+    SCM_Symbol *load_path_sym = make_sym("%load-path");
+    load_path = module_obarray_lookup(root_module, load_path_sym);
+  }
+  
+  // Search in %load-path
+  const char *found_path = nullptr;
+  char *full_path = nullptr;
+  if (load_path && is_pair(load_path)) {
+    SCM_List *path_list = cast<SCM_List>(load_path);
+    while (path_list && path_list->data) {
+      if (is_str(path_list->data)) {
+        SCM_String *path_str = cast<SCM_String>(path_list->data);
+        size_t path_str_len = path_str->len;
+        size_t module_path_len = strlen(module_path);
+        
+        // Calculate total length: path_str + "/" (if needed) + module_path + null
+        size_t total_len = path_str_len + module_path_len + 2;
+        if (path_str_len > 0 && path_str->data[path_str_len - 1] != '/') {
+          total_len += 1; // Need to add "/"
+        }
+        
+        char *full = (char *)malloc(total_len);
+        if (full) {
+          memcpy(full, path_str->data, path_str_len);
+          char *p = full + path_str_len;
+          if (path_str_len > 0 && path_str->data[path_str_len - 1] != '/') {
+            *p++ = '/';
+          }
+          memcpy(p, module_path, module_path_len);
+          p += module_path_len;
+          *p = '\0';
+          
+          if (file_exists(full)) {
+            found_path = full;
+            full_path = full;
+            break;
+          } else {
+            free(full);
+          }
+        }
+      }
+      path_list = path_list->next;
+    }
+  }
+  
+  // If not found in %load-path, try current directory
+  if (!found_path) {
+    if (file_exists(module_path)) {
+      size_t len = strlen(module_path);
+      full_path = (char *)malloc(len + 1);
+      if (full_path) {
+        strcpy(full_path, module_path);
+        found_path = full_path;
+      }
+    }
+  }
+  
+  // Free module_path (no longer needed)
+  free(module_path);
+  
+  // Create module (before loading, so define-module can find it)
+  module = scm_make_module(name, 31);
+  
+  // Register module (before loading, so define-module can register it)
+  scm_c_hash_set_equal(wrap(g_module_registry), wrap(name), module);
+  
+  // If file found, load it
+  if (found_path) {
+    // Save current module
+    SCM *old_module = scm_current_module();
+    
+    // Set current module to the new module
+    scm_set_current_module(module);
+    
+    // Load and evaluate file
+    SCM_List *expr_list = parse_file(found_path);
+    if (expr_list) {
+      SCM_Environment *top_env = g_env.parent ? g_env.parent : &g_env;
+      SCM_List *it = expr_list;
+      while (it) {
+        eval_with_env(top_env, it->data);
+        it = it->next;
+      }
+    }
+    
+    // Restore current module
+    scm_set_current_module(old_module);
+    
+    if (full_path) {
+      free(full_path);
+    }
+  }
   
   return module;
 }
@@ -155,7 +383,8 @@ void scm_update_module_public_interface(SCM_Module *module) {
 }
 
 // C API 函数
-SCM *scm_c_current_module(SCM_List *args) {
+SCM *scm_c_current_module(SCM *arg) {
+  (void)arg;  // Unused
   return scm_current_module();
 }
 
@@ -163,33 +392,55 @@ SCM *scm_c_set_current_module(SCM *module) {
   return scm_set_current_module(module);
 }
 
-SCM *scm_c_resolve_module(SCM_List *name) {
-  if (!name || !name->data) {
+SCM *scm_c_resolve_module(SCM *name_arg) {
+  if (!name_arg) {
     eval_error("resolve-module: expected module name");
   }
-  if (!is_pair(name->data)) {
+  if (!is_pair(name_arg)) {
     eval_error("resolve-module: module name must be a list");
   }
-  return scm_resolve_module(cast<SCM_List>(name->data));
+  return scm_resolve_module(cast<SCM_List>(name_arg));
 }
 
-SCM *scm_c_module_ref(SCM *module, SCM *symbol, SCM *default_val) {
+SCM *scm_c_module_ref(SCM_List *args) {
+  if (!args || !args->data) {
+    eval_error("module-ref: requires at least 2 arguments");
+    return nullptr;
+  }
+  
+  SCM *module = args->data;
   if (!is_module(module)) {
     eval_error("module-ref: expected module");
+    return nullptr;
   }
+  
+  if (!args->next || !args->next->data) {
+    eval_error("module-ref: expected symbol");
+    return nullptr;
+  }
+  
+  SCM *symbol = args->next->data;
   if (!is_sym(symbol)) {
     eval_error("module-ref: expected symbol");
+    return nullptr;
+  }
+  
+  // Get optional default value
+  SCM *default_val = nullptr;
+  if (args->next->next && args->next->next->data) {
+    default_val = args->next->next->data;
   }
   
   SCM_Module *mod = cast<SCM_Module>(module);
   SCM_Symbol *sym = cast<SCM_Symbol>(symbol);
-  SCM *var = scm_module_variable(mod, sym, false);
   
-  if (var && !is_falsy(var)) {
-    // Return variable's value (simplified implementation, assume var is the value)
-    return var;
+  // Search module (obarray, uses list, and root module)
+  SCM *var = module_search_variable(mod, sym);
+  if (var) {
+    return var;  // Found (value can be #f)
   }
   
+  // Variable not found, return default value if provided
   if (default_val) {
     return default_val;
   }
@@ -213,6 +464,10 @@ SCM *scm_c_module_bound_p(SCM *module, SCM *symbol) {
   return var && !is_falsy(var) ? scm_bool_true() : scm_bool_false();
 }
 
+SCM *scm_c_module_p(SCM *obj) {
+  return is_module(obj) ? scm_bool_true() : scm_bool_false();
+}
+
 // define-module special form
 SCM *eval_define_module(SCM_Environment *env, SCM_List *l) {
   // Syntax: (define-module name [options ...])
@@ -230,13 +485,7 @@ SCM *eval_define_module(SCM_Environment *env, SCM_List *l) {
   // Parse options (simplified version, only handle basic options)
   SCM_List *options = l->next->next;
   
-  // Create module
-  SCM *module_scm = scm_make_module(name, 31);
-  
-  // Process options (simplified handling, need to parse #:use-module, #:export, etc.)
-  // TODO: Implement complete option parsing
-  
-  // Register module
+  // Check if module already exists in registry (e.g., created by scm_resolve_module)
   if (!g_module_registry) {
     g_module_registry = new SCM_HashTable();
     g_module_registry->capacity = 61;
@@ -246,12 +495,29 @@ SCM *eval_define_module(SCM_Environment *env, SCM_List *l) {
       g_module_registry->buckets[i] = scm_nil();
     }
   }
-  scm_c_hash_set_eq(wrap(g_module_registry), wrap(name), module_scm);
+  
+  // Use equal? comparison for module names (lists), not eq?
+  SCM *existing = scm_c_hash_ref_equal(wrap(g_module_registry), wrap(name));
+  if (existing && !is_falsy(existing) && is_module(existing)) {
+    // Module already exists (e.g., created by scm_resolve_module), use it
+    scm_set_current_module(existing);
+    return scm_none();
+  }
+  
+  // Create new module
+  SCM *module_scm = scm_make_module(name, 31);
+  
+  // Process options (simplified handling, need to parse #:use-module, #:export, etc.)
+  // TODO: Implement complete option parsing
+  
+  // Register module
+  // Use equal? comparison for module names (lists), not eq?
+  scm_c_hash_set_equal(wrap(g_module_registry), wrap(name), module_scm);
   
   // Set current module
   scm_set_current_module(module_scm);
   
-  return module_scm;
+  return scm_none();
 }
 
 // use-modules special form
@@ -349,13 +615,15 @@ void init_modules() {
   }
   
   // Register root module
-  scm_c_hash_set_eq(wrap(g_module_registry), wrap(name), g_root_module);
+  // Use equal? comparison for module names (lists), not eq?
+  scm_c_hash_set_equal(wrap(g_module_registry), wrap(name), g_root_module);
   
   // Register built-in functions
   scm_define_function("current-module", 0, 0, 0, scm_c_current_module);
   scm_define_function("set-current-module", 1, 0, 0, scm_c_set_current_module);
   scm_define_function("resolve-module", 1, 0, 0, scm_c_resolve_module);
-  scm_define_function("module-ref", 2, 1, 0, scm_c_module_ref);
+  scm_define_vararg_function("module-ref", scm_c_module_ref);
   scm_define_function("module-bound?", 2, 0, 0, scm_c_module_bound_p);
+  scm_define_function("module?", 1, 0, 0, scm_c_module_p);
 }
 

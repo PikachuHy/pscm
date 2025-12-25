@@ -313,14 +313,38 @@ static SCM *eval_set(SCM_Environment *env, SCM_List *l) {
   assert(l->next && is_sym(l->next->data));
   auto sym = cast<SCM_Symbol>(l->next->data);
   auto val = eval_with_env(env, l->next->next->data);
-  scm_env_insert(env, sym, val);
+  
+  // First try to update in environment (searches parent environments)
+  auto entry = scm_env_search_entry(env, sym, /*search_parent=*/true);
+  if (entry) {
+    entry->value = val;
+  } else {
+    // Not found in environment, check if it's in the current module
+    SCM *current_mod = scm_current_module();
+    if (current_mod && is_module(current_mod)) {
+      SCM_Module *module = cast<SCM_Module>(current_mod);
+      SCM_Module *var_module = module_find_variable_module(module, sym);
+      if (var_module) {
+        // Variable exists in a module, update it
+        scm_c_hash_set_eq(wrap(var_module->obarray), wrap(sym), val);
+      } else {
+        // Variable not found in any module, create new binding in environment
+        scm_env_insert(env, sym, val, /*search_parent=*/false);
+      }
+    } else {
+      // No module, create new binding in environment
+      scm_env_insert(env, sym, val, /*search_parent=*/false);
+    }
+  }
+  
   if (debug_enabled) {
     SCM_DEBUG_EVAL("set! ");
     printf("%s to ", sym->data);
     print_ast(val);
     printf("\n");
   }
-  return scm_nil();
+  // set! returns an unspecified value, which should not be printed
+  return scm_none();
 }
 
 SCM *eval_lambda(SCM_Environment *env, SCM_List *l) {
@@ -799,8 +823,6 @@ entry:
 }
 
 // Scheme eval function: (eval expr) -> evaluates expr in the current environment
-extern SCM_Environment g_env;
-
 SCM *scm_c_eval(SCM *expr) {
   // Evaluate the expression in the global environment
   return eval_with_env(&g_env, expr);
