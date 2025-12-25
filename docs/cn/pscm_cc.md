@@ -2,7 +2,7 @@
 
 ![logo](/logo.png)
 
-pscm cc 是 PikachuHy's Scheme 的 C++ 实现版本，代码规模约 12000+ 行。该版本参考 Guile 1.8，基于 `setjmp/longjmp` 实现了 continuation 支持。
+pscm cc 是 PikachuHy's Scheme 的 C++ 实现版本，代码规模约 12000+ 行（40 个源文件）。该版本参考 Guile 1.8，基于 `setjmp/longjmp` 实现了 continuation 支持，并完整实现了模块系统和文件加载功能。
 
 ::: warning
 pscm 依然处于非常简陋的状态
@@ -20,7 +20,7 @@ pscm 依然处于非常简陋的状态
 
 - **统一类型**：所有值都是 `struct SCM`（内部为 `void*`）
 - **类型转换**：通过 `cast<Type>(scm)` 转换为具体类型，通过 `wrap(type)` 包装为 `SCM`
-- **支持类型**：18 种数据类型（`NIL`, `LIST`, `NUM`, `FLOAT`, `RATIO`, `CHAR`, `STR`, `SYM`, `BOOL`, `PROC`, `FUNC`, `CONT`, `MACRO`, `HASH_TABLE`, `VECTOR`, `PORT`, `PROMISE`）
+- **支持类型**：19 种数据类型（`NONE`, `NIL`, `LIST`, `NUM`, `FLOAT`, `RATIO`, `CHAR`, `STR`, `SYM`, `BOOL`, `PROC`, `FUNC`, `CONT`, `MACRO`, `HASH_TABLE`, `VECTOR`, `PORT`, `PROMISE`, `MODULE`）
 - **源位置跟踪**：每个 AST 节点携带可选的源位置信息（文件名、行号、列号），用于错误报告
 
 ### 数据结构
@@ -34,12 +34,13 @@ pscm 依然处于非常简陋的状态
 
 - **尾递归优化**：使用 `goto` 减少栈深度
 - **模块化设计**：每个特殊形式独立文件，统一接口在 `eval.h` 声明
-- **支持的特殊形式**：`define`, `lambda`, `if`, `cond`, `case`, `and`, `or`, `begin`, `let`/`let*`/`letrec`, `do`, `for-each`, `map`, `quote`, `quasiquote`, `apply`, `call/cc`, `call-with-values`, `dynamic-wind`, `delay` 等
+- **支持的特殊形式**：`define`, `lambda`, `if`, `cond`, `case`, `and`, `or`, `begin`, `let`/`let*`/`letrec`, `do`, `for-each`, `map`, `quote`, `quasiquote`, `apply`, `call/cc`, `call-with-values`, `dynamic-wind`, `delay`, `define-module`, `use-modules`, `export`, `define-public` 等
 
 ### Continuation 实现
 
 - **机制**：基于 `setjmp/longjmp`，通过栈复制保存和恢复执行上下文
 - **动态 wind**：支持 `dynamic-wind`，在 continuation 跳转时执行 before/after thunk
+- **模块状态保存**：continuation 会保存和恢复当前模块上下文，确保变量查找正确
 - **打印格式**：`#<continuation@地址>`
 
 ### 解析器
@@ -71,6 +72,8 @@ pscm 依然处于非常简陋的状态
 - **端口操作**：`open-input-file`, `open-output-file`, `open-input-string`, `open-output-string`, `read`, `read-char`, `peek-char`, `write-char`, `eof-object?`, `char-ready?`, `call-with-input-file`, `call-with-output-file` 等
 - **系统操作**：`exit` 等
 - **延迟求值**：`delay`, `force`（Promise 支持）
+- **模块操作**：`current-module`, `set-current-module`, `resolve-module`, `module-ref`, `module-bound?` 等
+- **文件加载**：`load`, `primitive-load`（支持 `%load-path` 路径搜索）
 - **其他**：`gensym`, `not`, `eval`, `equal?`, `eq?`, `eqv?` 等
 
 ## 代码组织
@@ -78,9 +81,10 @@ pscm 依然处于非常简陋的状态
 ### 模块划分
 
 - **核心**：`pscm.h`（类型定义）、`eval.h`（求值接口）、`eval.cc`（主求值器）
-- **特殊形式**：`do.cc`, `cond.cc`, `case.cc`, `map.cc`, `apply.cc`, `quasiquote.cc`, `macro.cc`, `let.cc`, `for_each.cc`, `values.cc`, `delay.cc`（`and` 和 `or` 在 `eval.cc` 中实现）
+- **特殊形式**：`do.cc`, `cond.cc`, `case.cc`, `map.cc`, `apply.cc`, `quasiquote.cc`, `macro.cc`, `let.cc`, `for_each.cc`, `values.cc`, `delay.cc`, `define.cc`（`and` 和 `or` 在 `eval.cc` 中实现）
 - **内置函数**：`predicate.cc`, `number.cc`, `list.cc`, `string.cc`, `char.cc`, `eq.cc`, `alist.cc`, `hash_table.cc`, `vector.cc`, `port.cc`, `exit.cc`
-- **基础设施**：`parse.cc`（解析器）、`print.cc`（打印）、`continuation.cc`（continuation）、`environment.cc`（环境）、`source_location.cc`（源位置）
+- **模块系统**：`module.cc`（模块定义、查找、导入导出）、`load.cc`（文件加载）
+- **基础设施**：`parse.cc`（解析器）、`print.cc`（打印）、`continuation.cc`（continuation）、`environment.cc`（环境）、`source_location.cc`（源位置）、`dynwind.cc`（dynamic-wind）
 
 ### 错误处理
 
@@ -95,15 +99,29 @@ pscm 依然处于非常简陋的状态
 1. **内存管理**：未实现垃圾回收（GC），所有分配的内存不会释放，存在内存泄漏风险
 2. **错误处理**：多数情况下直接 `exit(1)`，缺少优雅的错误恢复机制（已有调用栈追踪）
 3. **性能**：环境查找使用线性搜索（O(n)），符号比较使用 `memcmp`
-4. **缺失功能**：模块系统、文件加载函数（`load`）、Guile API 兼容层等
+4. **缺失功能**：Guile API 兼容层（C API 接口）、垃圾回收机制等
 
 ## 下一步计划
 
 ### 高优先级
 - 实现垃圾回收机制
-- 文件加载函数（`load`、`primitive-load`）
 - Guile API 兼容层（C API 接口）
 
 ### 中优先级
-- 模块系统（代码组织）
 - 错误处理机制（异常捕获，当前已有调用栈追踪）
+- 模块系统完善（公共接口、延迟绑定等高级特性）
+
+## 已实现功能
+
+### 模块系统 ✅
+- **模块定义**：`define-module` 支持模块命名和选项
+- **模块使用**：`use-modules` 支持从其他模块导入符号
+- **模块导出**：`export` 和 `define-public` 支持符号导出
+- **模块查找**：支持从模块的 `obarray`、`uses` 列表和根模块中查找变量
+- **模块解析**：`resolve-module` 支持从文件系统加载模块（通过 `%load-path`）
+- **模块查询**：`module-ref`、`module-bound?` 等查询函数
+
+### 文件加载 ✅
+- **文件加载**：`load` 和 `primitive-load` 支持加载 Scheme 文件
+- **路径搜索**：支持 `%load-path` 变量，可配置模块搜索路径
+- **模块集成**：加载文件时自动处理 `define-module`，支持模块文件自动加载

@@ -1,9 +1,11 @@
-## 文件加载函数实现方案（`load` / `primitive-load`）
+## 文件加载函数实现（`load` / `primitive-load`）
 
-本文档描述在 `pscm cc` 中实现文件加载相关函数的设计方案，目标是：
+✅ **已实现**：文件加载功能已完整实现，支持 `load` 和 `primitive-load`，并与模块系统集成。
+
+本文档描述 `pscm cc` 中文件加载相关函数的实现，目标是：
 
 - 提供与 R4RS 兼容的 `(load filename)` 行为，用于在当前环境中顺序加载并执行 Scheme 文件；
-- 预留与 Guile 1.8 兼容的底层接口 `primitive-load`，便于后续扩展模块系统和加载路径。
+- 提供与 Guile 1.8 兼容的底层接口 `primitive-load`，支持模块系统和加载路径。
 
 ### 1. 需求与语义
 
@@ -43,7 +45,7 @@
 - 在初始化阶段注册 Scheme 函数：
   - `scm_define_function("primitive-load", 1, 0, 0, scm_c_primitive_load);`
   - `scm_define_function("load", 1, 0, 0, scm_c_primitive_load);`
-    - 初期 `load` 直接复用 `primitive-load` 的实现，后续如果引入 `%load-path` 或模块系统，可在 Scheme 层为 `load` 包一层搜索路径逻辑。
+  - ✅ **已实现**：`load` 和 `primitive-load` 已注册，并支持 `%load-path` 模块搜索路径
 
 #### 3.2 错误处理与源位置
 
@@ -67,17 +69,28 @@
     - `%load-path`：搜索目录列表；
     - 处理相对路径与模块路径。
 
-- **模块系统集成**
-  - 将来实现模块系统时，可以重用 `primitive-load` 作为“从文件加载并 eval”的底层原语；
-  - 模块加载（如 `use-modules`）可以在此基础上增加模块环境管理和导出/导入机制。
+- **模块系统集成** ✅ **已实现**
+  - `primitive-load` 作为"从文件加载并 eval"的底层原语，已与模块系统集成；
+  - 模块加载（如 `use-modules`）通过 `scm_resolve_module` 自动从文件系统加载模块文件；
+  - 支持 `%load-path` 变量配置模块搜索路径，在根模块（`pscm-user`）中定义
 
-### 6. 测试策略
+### 6. 实现状态
 
-- 使用你提供的命令运行 R4RS 测试：
+✅ **已完成**：
+- `load` 和 `primitive-load` 函数已实现并注册
+- 支持文件解析和顺序求值
+- 错误处理包含清晰的错误信息
+- 与模块系统集成，支持 `%load-path` 路径搜索
+- 模块文件自动加载（通过 `scm_resolve_module`）
+
+### 7. 测试策略
+
+- 使用命令运行 R4RS 测试：
   - `./pscm_cc --test test/r4rs/r4rstest.scm`
 - 重点验证：
-  - 原先报错位置 `(load "tmp1")` 不再出现“symbol 'load' not found”；
-  - 加载的文件中定义的 `foo` 能在后续表达式中被正常引用；
-  - 若传入不存在的文件名，会得到清晰的错误信息。
+  - ✅ `(load "tmp1")` 正常工作，不再出现"symbol 'load' not found"
+  - ✅ 加载的文件中定义的变量能在后续表达式中被正常引用
+  - ✅ 若传入不存在的文件名，会得到清晰的错误信息
+  - ✅ 模块文件可以通过 `use-modules` 自动加载
 
 

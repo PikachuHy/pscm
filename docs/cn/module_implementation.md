@@ -1,4 +1,10 @@
-# 模块系统实现方案：参考 Guile 1.8
+# 模块系统实现：参考 Guile 1.8
+
+✅ **已实现**：模块系统核心功能已完整实现，包括模块定义、使用、导出、查找和文件加载。
+
+为了最终能够驱动TeXmacs，pscm目前的Modules实现方案几乎完全按照guile api设计与实现。
+
+具体参考 [Guile Modules](https://www.gnu.org/software/guile/manual/html_node/Modules.html)
 
 本文档描述在 `pscm_cc` 中实现模块系统的方案，参考 Guile 1.8 的设计。目标是：
 
@@ -6,6 +12,48 @@
 - 实现模块的命名空间隔离和导入导出机制；
 - 支持模块的延迟加载和解析；
 - 兼容当前的类型系统和求值器结构。
+
+## API
+
+### 模块定义
+- `(define-module name [options ...])`：定义一个新模块
+- `(current-module)`：获取当前模块
+- `(set-current-module module)`：设置当前模块
+
+### 模块使用
+- `(use-modules spec ...)`：使用其他模块的公共接口，接受一个或多个接口规范，在当前模块中可用
+
+### 模块查询
+- `(resolve-module name)`：解析模块名称，返回模块对象（支持从文件系统加载）
+- `(module-ref module symbol [default])`：从模块中获取变量，支持可选的默认值
+- `(module-bound? module symbol)`：检查模块中是否有绑定
+
+### 模块导出
+- `(define-public name value)`：定义并导出变量
+- `(export symbol ...)`：导出符号列表
+- `(re-export symbol ...)`：重新导出符号（计划中）
+
+### 文件加载
+- `(load filename)`：加载 Scheme 文件
+- `(primitive-load filename)`：底层文件加载实现
+- `%load-path`：模块搜索路径列表（在根模块中定义）
+
+## 实现特性
+
+### 模块查找策略
+1. 首先在模块的 `obarray`（本地绑定哈希表）中查找
+2. 如果没找到，在 `uses` 列表中的模块递归查找
+3. 如果还没找到，在根模块（`pscm-user`）的 `obarray` 中查找
+4. 使用 `hash-get-handle` 正确区分"变量未找到"和"变量值为 #f"
+
+### 模块文件加载
+- 支持通过 `%load-path` 配置模块搜索路径
+- 自动将模块名称转换为文件路径（如 `(test)` -> `test.scm`，`(ice-9 common-list)` -> `ice-9/common-list.scm`）
+- 加载文件时自动设置当前模块，确保 `define-module` 正常工作
+
+### Continuation 支持
+- Continuation 会保存和恢复当前模块状态
+- 确保在 continuation 跳转后变量查找仍然正确
 
 ## 1. 需求与语义
 
@@ -488,10 +536,12 @@ void init_modules() {
 3. ✅ 测试模块与环境的交互
 
 ### 阶段 6：完善功能
-1. ⏳ 实现 `module-ref`、`module-bound?` 等查询函数
-2. ⏳ 实现模块文件加载（与 `load` 集成）
-3. ⏳ 实现模块路径搜索（`%load-path`）
-4. ⏳ 错误处理和边界情况
+1. ✅ 实现 `module-ref`、`module-bound?` 等查询函数
+2. ✅ 实现模块文件加载（与 `load` 集成）
+3. ✅ 实现模块路径搜索（`%load-path`）
+4. ✅ 错误处理和边界情况
+5. ✅ 模块变量查找优化（使用 `hash-get-handle` 区分"未找到"和"值为 #f"）
+6. ✅ Continuation 中模块状态保存和恢复
 
 ## 4. 测试与兼容性
 
