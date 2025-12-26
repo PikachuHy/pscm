@@ -10,8 +10,15 @@ SCM *scm_c_map(SCM_List *args) {
   return nullptr;
 }
 
-void init_map() {
-  scm_define_vararg_function("map", scm_c_map);
+// map-in-order: Like map, but guarantees order (in pscm, map already preserves order)
+// This is essentially an alias for map, but provided for Guile compatibility
+// Wrapper function for map-in-order as a builtin function
+// This function is called when map-in-order is used as a value (not as a special form)
+SCM *scm_c_map_in_order(SCM_List *args) {
+  // This function should never be called directly
+  // It's registered as a placeholder, and eval.cc will handle it specially
+  eval_error("map-in-order: internal error - should be handled as special form");
+  return nullptr;
 }
 
 // Helper function for map special form
@@ -127,3 +134,7 @@ SCM *eval_map(SCM_Environment *env, SCM_List *l) {
   return scm_nil();
 }
 
+void init_map() {
+  scm_define_vararg_function("map", scm_c_map);
+  scm_define_vararg_function("map-in-order", scm_c_map_in_order);
+}

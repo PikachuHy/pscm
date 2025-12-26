@@ -673,6 +673,10 @@ entry:
       SCM *result = eval_map(env, l);
       RETURN_WITH_CONTEXT(result);
     }
+    else if (is_sym_val(l->data, "map-in-order")) {
+      SCM *result = eval_map(env, l);
+      RETURN_WITH_CONTEXT(result);
+    }
     else if (is_sym_val(l->data, "apply")) {
       SCM *result = eval_apply(env, l);
       RETURN_WITH_CONTEXT(result);
@@ -724,6 +728,13 @@ entry:
       // For map, when called as a function value, arguments are already evaluated
       // We need to pass them to eval_map, which will handle them correctly
       // l->data is the map function, l->next contains the already-evaluated arguments
+      SCM *result = eval_map(env, l);
+      RETURN_WITH_CONTEXT(result);
+    }
+    if (func->name && strcmp(func->name->data, "map-in-order") == 0) {
+      // For map-in-order, when called as a function value, arguments are already evaluated
+      // We need to pass them to eval_map, which will handle them correctly
+      // l->data is the map-in-order function, l->next contains the already-evaluated arguments
       SCM *result = eval_map(env, l);
       RETURN_WITH_CONTEXT(result);
     }
