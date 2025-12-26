@@ -44,6 +44,18 @@ add_test(
 )
 
 add_test(
+    NAME r4rstest.scm
+    COMMAND $<TARGET_FILE:pscm_cc> --test r4rstest.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/r4rs
+)
+
+add_test(
+    NAME r4rs_cont_test.scm
+    COMMAND $<TARGET_FILE:pscm_cc> --test r4rs_cont_test.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/r4rs
+)
+
+add_test(
         NAME module_r5rs_test.scm_DIRECT
         COMMAND $<TARGET_FILE:pscm_cc> --test r5rs_test.scm
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
@@ -65,4 +77,10 @@ add_test(
     NAME module_use_tests
     COMMAND $<TARGET_FILE:pscm_cc> --test module_use_tests.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
+)
+
+add_test(
+    NAME module_texmacs_module
+    COMMAND $<TARGET_FILE:pscm_cc> --test init.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
 )
