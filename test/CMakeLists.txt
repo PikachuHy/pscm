@@ -25,6 +25,13 @@ add_test(
 )
 
 add_test(
+    NAME module_re_export_tests
+    COMMAND $<TARGET_FILE:pscm_cc> --test module_re_export_tests.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
+)
+
+
+add_test(
     NAME module_isolation_tests
     COMMAND $<TARGET_FILE:pscm_cc> --test module_isolation_tests.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module

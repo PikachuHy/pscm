@@ -77,6 +77,7 @@ SCM *eval_delay(SCM_Environment *env, SCM_List *l);
 SCM *eval_define_module(SCM_Environment *env, SCM_List *l);
 SCM *eval_use_modules(SCM_Environment *env, SCM_List *l);
 SCM *eval_export(SCM_Environment *env, SCM_List *l);
+SCM *eval_re_export(SCM_Environment *env, SCM_List *l);
 SCM *eval_define_public(SCM_Environment *env, SCM_List *l);
 
 // List evaluation (used by macros and other special forms)

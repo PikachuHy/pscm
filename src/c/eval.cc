@@ -567,6 +567,10 @@ entry:
       SCM *result = eval_export(env, l);
       RETURN_WITH_CONTEXT(result);
     }
+    else if (is_sym_val(l->data, "re-export")) {
+      SCM *result = eval_re_export(env, l);
+      RETURN_WITH_CONTEXT(result);
+    }
     else if (is_sym_val(l->data, "define-public")) {
       SCM *result = eval_define_public(env, l);
       RETURN_WITH_CONTEXT(result);

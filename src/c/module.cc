@@ -584,6 +584,37 @@ SCM *eval_export(SCM_Environment *env, SCM_List *l) {
   return scm_none();
 }
 
+// re-export special form
+// Re-export symbols from other modules (typically imported via use-modules)
+SCM *eval_re_export(SCM_Environment *env, SCM_List *l) {
+  // Syntax: (re-export symbol ...)
+  // Similar to export, but used to re-export symbols from other modules
+  SCM_Module *module = cast<SCM_Module>(scm_current_module());
+  
+  // l is (re-export symbol ...), so symbols start from l->next
+  SCM_List *symbols = l->next;
+  while (symbols) {
+    SCM *sym_scm = symbols->data;
+    if (is_sym(sym_scm)) {
+      // Check if symbol is available in current module (from uses or obarray)
+      SCM_Symbol *sym = cast<SCM_Symbol>(sym_scm);
+      SCM *var = module_search_variable(module, sym);
+      if (!var) {
+        // Symbol not found, but we still add it to exports
+        // This allows re-exporting symbols that will be available later
+        // (e.g., from modules that will be used)
+        // In a strict implementation, we might want to error here
+        // For now, we allow it for flexibility
+      }
+      // Add to export list regardless
+      scm_module_export(module, sym);
+    }
+    symbols = symbols->next;
+  }
+  
+  return scm_none();
+}
+
 // define-public special form
 SCM *eval_define_public(SCM_Environment *env, SCM_List *l) {
   // Syntax: (define-public name value) or (define-public (name args ...) body ...)
