@@ -91,6 +91,8 @@ static SCM *quasi(SCM_Environment *env, SCM *p, int depth) {
 - ✅ **简化嵌套处理**：使用简单的递归，逻辑清晰
 - ✅ **正确处理 unquote-splicing**：直接合并列表，使用 `append_two_lists` 辅助函数
 - ✅ **支持 dotted pair**：正确处理 `unquote-splicing` 后跟 dotted pair 的情况
+  - 当 `expanded_cdr` 是 proper list 时，使用 `append_two_lists` 直接追加所有元素
+  - 当 `expanded_cdr` 不是列表时，创建 dotted pair 结构
 - ✅ **错误检查**：检查 `unquote-splicing` 的结果是否是列表
 
 #### 2. `append_two_lists` - 合并两个列表
@@ -113,6 +115,7 @@ static SCM *append_two_lists(SCM *list1, SCM *list2) {
 **实现特点：**
 - 直接合并两个列表，不生成 `append` 调用
 - 正确处理 dotted pair 的标记
+- 移除了多余的 `is_nil(wrap(...))` 检查，简化了循环逻辑
 
 #### 3. `eval_quasiquote` - 入口函数
 

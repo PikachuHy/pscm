@@ -3,17 +3,18 @@
 本文档总结 pscm_cc 的现有功能特性，并规划实现驱动 TeXmacs 所需的功能。
 
 pscm_cc 已实现 Scheme 的核心功能，包括：
-- ✅ 完整的类型系统（18 种数据类型）
+- ✅ 完整的类型系统（19 种数据类型，包括 `MODULE`）
 - ✅ 核心特殊形式（包括 `delay`/`force`）
 - ✅ Continuation 支持
-- ✅ 宏系统（支持 dotted pair 参数）
+- ✅ 宏系统（支持 dotted pair 参数，包含 `macroexpand-1` 和 `macroexpand` 调试工具）
+- ✅ 模块系统和文件加载（完整的模块定义、使用、导出和文件加载功能）
 - ✅ 丰富的内置函数（包括 `gcd`、`lcm`）
 
 ## 一、现有功能总结
 
 ### 1.1 核心基础设施 ✅
 
-- **类型系统**：统一 `SCM` 类型，支持 18 种数据类型（包括 `PORT`、`PROMISE`）
+- **类型系统**：统一 `SCM` 类型，支持 19 种数据类型（包括 `PORT`、`PROMISE`、`MODULE`）
 - **解析器**：递归下降解析器，支持完整 Scheme 语法
 - **求值器**：支持尾递归优化，模块化特殊形式处理
 - **环境系统**：词法作用域，链表结构环境
@@ -40,6 +41,7 @@ pscm_cc 已实现 Scheme 的核心功能，包括：
 | `VECTOR` | ✅ | 向量 |
 | `PORT` | ✅ | 端口 |
 | `PROMISE` | ✅ | Promise（延迟求值） |
+| `MODULE` | ✅ | 模块 |
 
 ### 1.3 特殊形式支持 ✅
 
@@ -91,6 +93,9 @@ pscm_cc 已实现 Scheme 的核心功能，包括：
 #### 延迟求值
 `delay`, `force`
 
+#### 宏调试工具
+`macroexpand-1`, `macroexpand`
+
 #### 其他
 `gensym`, `not`, `eval`
 
@@ -104,11 +109,16 @@ pscm_cc 已实现 Scheme 的核心功能，包括：
 
 - **宏定义**：`define-macro` 支持定义宏，支持 dotted pair 参数列表（如 `(define-macro (foo x y . z) ...)`）
 - **宏展开**：正确处理宏参数绑定和展开，包括 rest 参数的绑定
+- **宏调试工具**：
+  - `macroexpand-1 expr`：展开宏一次（如果 `expr` 是宏调用），类似 Guile 1.8 的 `macroexpand-1`
+  - `macroexpand expr`：递归展开宏直到没有更多宏可展开，类似 Guile 1.8 的 `macroexpand`
+  - 支持在模块环境中查找宏，正确处理用户定义的宏（如重新定义的 `letrec`）
 - **Dotted Pair 支持**：
   - 宏展开时正确保留 dotted pair 结构（`is_dotted` 标记）
   - `expand_macros` 函数在递归展开列表时保留 `is_dotted` 标记
-  - `quasi` 函数正确处理 quasiquote 中的 dotted pair，包括 `(quote ...)` 形式
+  - `quasi` 函数正确处理 quasiquote 中的 dotted pair，包括 `unquote-splicing` 后跟 dotted pair 的情况
 - **Quasiquote 集成**：宏中使用的 `quasiquote` 正确处理 dotted pair，确保 `(lambda (x y . z) z)` 等结构在宏展开后仍保持正确
+- **Unquote-splicing 修复**：修复了 `unquote-splicing` (`,@`) 在处理 dotted pair 时的 BUG，现在可以正确展开包含多个元素的列表（如 `letrec` 宏中的多个 `set!` 表达式）
 - **测试覆盖**：包含 rest 参数宏、dotted pair 参数宏、quasiquote 中 dotted pair 的完整测试
 
 ## 二、缺失功能分析
@@ -146,53 +156,51 @@ pscm_cc 已实现 Scheme 的核心功能，包括：
   - `call-with-input-string string proc` ✅
   - `call-with-output-string proc` ✅
 
-### 2.2 文件加载系统 ⚠️
+### 2.2 文件加载系统 ✅
 
-**优先级**：🔴 高
+**优先级**：✅ 已完成
 
-#### 部分实现
+#### 已实现功能
 - `parse_file`：解析文件为 AST 列表 ✅
-- `load`：加载并执行文件 ❌
+- `load filename`：加载并执行 Scheme 文件 ✅
+- `primitive-load filename`：底层加载函数（Guile 兼容）✅
+- 加载路径管理：`%load-path` 支持路径搜索 ✅
+- 模块集成：加载文件时自动处理 `define-module`，支持模块文件自动加载 ✅
 
-#### 缺失功能
-- `load filename`：加载并执行 Scheme 文件
-- `primitive-load filename`：底层加载函数（Guile 兼容）
-- 加载路径管理：`%load-path`
+#### 实现特点
+1. ✅ `load` 函数调用 `parse_file` 并逐个求值
+2. ✅ 支持相对路径和搜索路径（通过 `%load-path`）
+3. ✅ 错误处理：文件不存在、解析错误等
 
-#### 实现要点
-1. 实现 `load` 函数，调用 `parse_file` 并逐个求值
-2. 支持相对路径和搜索路径
-3. 错误处理：文件不存在、解析错误等
+### 2.3 模块系统 ✅
 
-### 2.3 模块系统 ❌
-
-**优先级**：🟡 中
+**优先级**：✅ 已完成
 
 TeXmacs 大量使用模块系统组织代码。
 
-#### 缺失功能
+#### 已实现功能
 - **模块定义**：
-  - `define-module name`：定义模块
-  - `current-module`：获取当前模块
+  - `define-module name`：定义模块 ✅
+  - `current-module`：获取当前模块 ✅
 - **模块使用**：
-  - `use-modules spec ...`：使用模块
-  - `module-use! module spec`：模块操作
+  - `use-modules spec ...`：使用模块 ✅
+  - `module-use! module spec`：模块操作 ✅
 - **模块查询**：
-  - `resolve-module name`：解析模块
-  - `module-ref module symbol`：获取模块变量
-  - `module-map proc module`：遍历模块绑定
+  - `resolve-module name`：解析模块 ✅
+  - `module-ref module symbol`：获取模块变量 ✅
+  - `module-bound? module symbol`：检查模块绑定 ✅
 - **模块导出**：
-  - `define-public name value`：定义并导出
-  - `export symbol ...`：导出符号
-  - `re-export symbol ...`：重新导出
+  - `define-public name value`：定义并导出 ✅
+  - `export symbol ...`：导出符号 ✅
 - **模块接口**：
-  - `%module-public-interface`：模块公共接口
+  - 模块环境管理：每个模块有独立环境 ✅
+  - 模块解析：支持模块路径搜索（通过 `%load-path`）✅
 
-#### 实现要点
-1. 添加 `MODULE` 类型
-2. 模块环境管理：每个模块有独立环境
-3. 模块解析：支持模块路径搜索
-4. 模块接口：公共接口与私有接口分离
+#### 实现特点
+1. ✅ 添加了 `MODULE` 类型
+2. ✅ 模块环境管理：每个模块有独立环境
+3. ✅ 模块解析：支持模块路径搜索
+4. ✅ 模块查找：支持从模块的 `obarray`、`uses` 列表和根模块中查找变量
 
 ### 2.4 错误处理机制 ⚠️
 

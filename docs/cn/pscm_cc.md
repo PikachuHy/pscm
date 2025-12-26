@@ -2,7 +2,7 @@
 
 ![logo](/logo.png)
 
-pscm cc 是 PikachuHy's Scheme 的 C++ 实现版本，代码规模约 12000+ 行（40 个源文件）。该版本参考 Guile 1.8，基于 `setjmp/longjmp` 实现了 continuation 支持，并完整实现了模块系统和文件加载功能。
+pscm cc 是 PikachuHy's Scheme 的 C++ 实现版本，代码规模约 14000+ 行（42 个源文件）。该版本参考 Guile 1.8，基于 `setjmp/longjmp` 实现了 continuation 支持，并完整实现了模块系统和文件加载功能。
 
 ::: warning
 pscm 依然处于非常简陋的状态
@@ -35,6 +35,7 @@ pscm 依然处于非常简陋的状态
 - **尾递归优化**：使用 `goto` 减少栈深度
 - **模块化设计**：每个特殊形式独立文件，统一接口在 `eval.h` 声明
 - **支持的特殊形式**：`define`, `lambda`, `if`, `cond`, `case`, `and`, `or`, `begin`, `let`/`let*`/`letrec`, `do`, `for-each`, `map`, `quote`, `quasiquote`, `apply`, `call/cc`, `call-with-values`, `dynamic-wind`, `delay`, `define-module`, `use-modules`, `export`, `define-public` 等
+- **宏系统**：`define-macro` 支持定义宏，支持 dotted pair 参数列表；`macroexpand-1` 和 `macroexpand` 用于调试宏展开
 
 ### Continuation 实现
 
@@ -74,6 +75,7 @@ pscm 依然处于非常简陋的状态
 - **延迟求值**：`delay`, `force`（Promise 支持）
 - **模块操作**：`current-module`, `set-current-module`, `resolve-module`, `module-ref`, `module-bound?` 等
 - **文件加载**：`load`, `primitive-load`（支持 `%load-path` 路径搜索）
+- **宏调试工具**：`macroexpand-1`, `macroexpand`（用于调试宏展开）
 - **其他**：`gensym`, `not`, `eval`, `equal?`, `eq?`, `eqv?` 等
 
 ## 代码组织
