@@ -19,6 +19,19 @@ void print_ast(SCM *ast, bool write_mode) {
 }
 
 static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContext &ctx) {
+  // Safety check: validate ast pointer and type before processing
+  if (!ast) {
+    printf("<null>");
+    return;
+  }
+  
+  // Check if type is valid (within enum range)
+  if (ast->type < SCM::NONE || ast->type > SCM::MODULE) {
+    // Invalid type - print error message instead of crashing
+    printf("<invalid-type:%d(0x%x)@%p>", ast->type, ast->type, (void *)ast);
+    return;
+  }
+  
   if (is_proc(ast)) {
     auto proc = cast<SCM_Procedure>(ast);
     printf("#<");
@@ -223,7 +236,18 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
     printf(">");
     return;
   }
-  printf("%s:%d not supported %d\n", __FILE__, __LINE__, ast->type);
+  // Enhanced error reporting for unsupported types
+  fprintf(stderr, "%s:%d: Error: unsupported type value %d (0x%x)\n", 
+          __FILE__, __LINE__, ast->type, ast->type);
+  fprintf(stderr, "  AST pointer: %p\n", (void *)ast);
+  if (ast) {
+    fprintf(stderr, "  Type enum values: NONE=%d, NIL=%d, LIST=%d, PROC=%d, CONT=%d, FUNC=%d, NUM=%d, FLOAT=%d, CHAR=%d, BOOL=%d, SYM=%d, STR=%d, MACRO=%d, HASH_TABLE=%d, RATIO=%d, VECTOR=%d, PORT=%d, PROMISE=%d, MODULE=%d\n",
+            (int)SCM::NONE, (int)SCM::NIL, (int)SCM::LIST, (int)SCM::PROC, (int)SCM::CONT, 
+            (int)SCM::FUNC, (int)SCM::NUM, (int)SCM::FLOAT, (int)SCM::CHAR, (int)SCM::BOOL,
+            (int)SCM::SYM, (int)SCM::STR, (int)SCM::MACRO, (int)SCM::HASH_TABLE, (int)SCM::RATIO,
+            (int)SCM::VECTOR, (int)SCM::PORT, (int)SCM::PROMISE, (int)SCM::MODULE);
+  }
+  fflush(stderr);
   exit(1);
 }
 

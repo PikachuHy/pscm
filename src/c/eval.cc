@@ -212,6 +212,9 @@ static const char *get_type_name(SCM::Type type) {
     case SCM::HASH_TABLE: return "hash-table";
     case SCM::RATIO: return "ratio";
     case SCM::VECTOR: return "vector";
+    case SCM::PORT: return "port";
+    case SCM::PROMISE: return "promise";
+    case SCM::MODULE: return "module";
     default: return "unknown";
   }
 }
@@ -699,6 +702,38 @@ entry:
       if (!val) {
         val = lookup_symbol(env, sym);
       }
+      
+      // Safety check: validate val before using it
+      if (!val) {
+        eval_error("symbol '%s' not found", sym->data);
+        return nullptr;
+      }
+      
+      // Check if val has a valid type before creating new list
+      // Use try-catch to safely check type
+      bool type_valid = false;
+      try {
+        if (val->type >= SCM::NONE && val->type <= SCM::MODULE) {
+          type_valid = true;
+        }
+      } catch (...) {
+        type_valid = false;
+      }
+      
+      if (!type_valid) {
+        fprintf(stderr, "Error: symbol '%s' resolved to invalid value with type %d (0x%x) at %p\n",
+                sym->data, 
+                (val ? (int)val->type : -1), 
+                (val ? (unsigned int)val->type : 0), 
+                (void *)val);
+        fprintf(stderr, "  This suggests the symbol lookup returned a corrupted pointer.\n");
+        fprintf(stderr, "  Valid type range: %d (NONE) to %d (MODULE)\n", 
+                (int)SCM::NONE, (int)SCM::MODULE);
+        fflush(stderr);
+        eval_error("symbol '%s' resolved to corrupted value", sym->data);
+        return nullptr;
+      }
+      
       auto new_list = make_list(val);
       new_list->next = l->next;
       ast = wrap(new_list);
@@ -816,48 +851,179 @@ entry:
   }
   else {
     // Enhanced error reporting for unsupported expression types
-    SCM *expr = l->data;
-    const char *type_name = get_type_name(expr ? expr->type : SCM::NONE);
+    SCM *expr = l ? l->data : nullptr;
+    const char *type_name = "unknown";
     const char *loc_str = nullptr;
+    const char *list_loc_str = nullptr;
     
-    // Try to get source location from the expression or current context
+    // First, immediately print basic error info to stderr and flush
+    // This ensures we see something even if accessing expr crashes
+    fprintf(stderr, "<unknown location>: Error: not supported expression type: ");
+    fflush(stderr);
+    
+    // Safely get type name - check if expr is valid before accessing
     if (expr) {
-      loc_str = get_source_location_str(expr);
-    }
-    if (!loc_str && g_current_eval_context) {
-      loc_str = get_source_location_str(g_current_eval_context);
-    }
-    
-    // Print location if available
-    if (loc_str) {
-      fprintf(stderr, "%s: ", loc_str);
+      // Check if expr is a valid pointer by checking if it's within reasonable bounds
+      // This is a basic sanity check - in practice, if expr is corrupted, we might still crash
+      // but at least we try to get the type safely
+      try {
+        type_name = get_type_name(expr->type);
+        fprintf(stderr, "%s\n", type_name);
+      } catch (...) {
+        type_name = "corrupted";
+        fprintf(stderr, "%s\n", type_name);
+      }
     } else {
-      fprintf(stderr, "<unknown location>: ");
+      type_name = get_type_name(SCM::NONE);
+      fprintf(stderr, "%s\n", type_name);
+    }
+    fflush(stderr);
+    
+    // Now try to get location info - but if it crashes, we've at least printed the error
+    // Add safety check: validate expr->type before accessing expr->source_loc
+    if (expr) {
+      // First check if type is valid before accessing source_loc
+      // This prevents crashes from accessing corrupted memory
+      bool type_valid = false;
+      try {
+        // Check if type is within valid enum range
+        if (expr->type >= SCM::NONE && expr->type <= SCM::MODULE) {
+          type_valid = true;
+        }
+      } catch (...) {
+        // If accessing expr->type crashes, skip location info
+        type_valid = false;
+      }
+      
+      if (type_valid) {
+        try {
+          loc_str = get_source_location_str(expr);
+        } catch (...) {
+          // If accessing source_loc crashes, just skip location info
+          loc_str = nullptr;
+        }
+      }
     }
     
-    // Print error message with type information
-    fprintf(stderr, "Error: not supported expression type: %s", type_name);
+    // Try to get source location from the list structure
+    if (l) {
+      try {
+        SCM *list_wrapped = wrap(l);
+        if (list_wrapped) {
+          // Check if list_wrapped type is valid before accessing source_loc
+          bool list_type_valid = false;
+          try {
+            if (list_wrapped->type >= SCM::NONE && list_wrapped->type <= SCM::MODULE) {
+              list_type_valid = true;
+            }
+          } catch (...) {
+            list_type_valid = false;
+          }
+          
+          if (list_type_valid) {
+            try {
+              list_loc_str = get_source_location_str(list_wrapped);
+            } catch (...) {
+              list_loc_str = nullptr;
+            }
+          }
+        }
+      } catch (...) {
+        // If wrap or accessing crashes, just skip
+        list_loc_str = nullptr;
+      }
+    }
     
-    // Print the problematic expression
+    // If still no location, try current eval context
+    if (!loc_str && !list_loc_str && g_current_eval_context) {
+      try {
+        // Check if context type is valid before accessing source_loc
+        bool ctx_type_valid = false;
+        try {
+          if (g_current_eval_context->type >= SCM::NONE && g_current_eval_context->type <= SCM::MODULE) {
+            ctx_type_valid = true;
+          }
+        } catch (...) {
+          ctx_type_valid = false;
+        }
+        
+        if (ctx_type_valid) {
+          try {
+            loc_str = get_source_location_str(g_current_eval_context);
+          } catch (...) {
+            loc_str = nullptr;
+          }
+        }
+      } catch (...) {
+        // If accessing context crashes, just skip
+        loc_str = nullptr;
+      }
+    }
+    
+    // If we got location info, print it (but we already printed error above)
+    if (loc_str || list_loc_str) {
+      fprintf(stderr, "  Location: %s\n", loc_str ? loc_str : list_loc_str);
+    }
+    
+    // Print the problematic expression with its location
+    // Use try-catch to handle potential crashes from corrupted pointers
     if (expr) {
-      fprintf(stderr, "\n  Expression value: ");
-      print_ast_to_stderr(expr);
+      fprintf(stderr, "\n  Problematic expression");
+      if (loc_str) {
+        fprintf(stderr, " (at %s)", loc_str);
+      }
+      fprintf(stderr, ": ");
+      try {
+        print_ast_to_stderr(expr);
+      } catch (...) {
+        fprintf(stderr, "<unable to print - corrupted pointer>");
+      }
     } else {
       fprintf(stderr, "\n  Expression is null");
     }
     
-    // Print the full expression being evaluated (if different from expr)
-    if (g_current_eval_context) {
-      SCM *ctx_wrapped = wrap(l);
-      if (g_current_eval_context != expr && g_current_eval_context != ctx_wrapped) {
-        fprintf(stderr, "\n  While evaluating: ");
-        print_ast_to_stderr(g_current_eval_context);
+    // Print the full list structure for context with its location
+    fprintf(stderr, "\n  Full expression");
+    if (list_loc_str) {
+      fprintf(stderr, " (at %s)", list_loc_str);
+    }
+    fprintf(stderr, ": ");
+    try {
+      if (l) {
+        print_ast_to_stderr(wrap(l));
+      } else {
+        fprintf(stderr, "<list is null>");
       }
+    } catch (...) {
+      fprintf(stderr, "<unable to print - corrupted pointer>");
     }
     
-    // Print the full list structure for context
-    fprintf(stderr, "\n  Full expression: ");
-    print_ast_to_stderr(wrap(l));
+    // Print the full expression being evaluated (if different from expr)
+    if (g_current_eval_context) {
+      try {
+        SCM *ctx_wrapped = l ? wrap(l) : nullptr;
+        if (g_current_eval_context != expr && g_current_eval_context != ctx_wrapped) {
+          const char *ctx_loc = nullptr;
+          try {
+            ctx_loc = get_source_location_str(g_current_eval_context);
+          } catch (...) {
+            // Skip location if it crashes
+          }
+          fprintf(stderr, "\n  While evaluating");
+          if (ctx_loc) {
+            fprintf(stderr, " (at %s)", ctx_loc);
+          }
+          fprintf(stderr, ": ");
+          try {
+            print_ast_to_stderr(g_current_eval_context);
+          } catch (...) {
+            fprintf(stderr, "<unable to print - corrupted pointer>");
+          }
+        }
+      } catch (...) {
+        // If accessing context crashes, just skip it
+      }
+    }
     fprintf(stderr, "\n");
     
     // Print the evaluation call stack to show the evaluation path
@@ -868,6 +1034,28 @@ entry:
       fprintf(stderr, "Call stack is empty (error occurred at top level)\n");
     }
     fprintf(stderr, "=== End of Call Stack ===\n");
+    
+    // Print summary at the end for quick reference
+    fprintf(stderr, "\n=== Error Summary ===\n");
+    fprintf(stderr, "Error Type: not supported expression type: %s\n", type_name);
+    if (loc_str) {
+      fprintf(stderr, "Error Location: %s\n", loc_str);
+    } else if (list_loc_str) {
+      fprintf(stderr, "Error Location: %s\n", list_loc_str);
+    } else {
+      fprintf(stderr, "Error Location: <unknown> (check call stack above for details)\n");
+    }
+    fprintf(stderr, "Problematic Expression: ");
+    if (expr) {
+      try {
+        print_ast_to_stderr(expr);
+      } catch (...) {
+        fprintf(stderr, "<unable to print - corrupted pointer>");
+      }
+    } else {
+      fprintf(stderr, "<null>");
+    }
+    fprintf(stderr, "\n");
     
     // Flush stderr to ensure all output is visible before exiting
     fflush(stderr);
