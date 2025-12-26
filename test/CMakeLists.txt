@@ -30,7 +30,6 @@ add_test(
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
 )
 
-
 add_test(
     NAME module_isolation_tests
     COMMAND $<TARGET_FILE:pscm_cc> --test module_isolation_tests.scm
@@ -41,6 +40,18 @@ add_test(
     NAME module_lookup_tests
     COMMAND $<TARGET_FILE:pscm_cc> --test module_lookup_tests.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
+)
+
+add_test(
+    NAME r4rs_mini.scm
+    COMMAND $<TARGET_FILE:pscm_cc> --test r4rs_mini.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/r4rs
+)
+
+add_test(
+    NAME r4rs_mini_2.scm
+    COMMAND $<TARGET_FILE:pscm_cc> --test r4rs_mini_2.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/r4rs
 )
 
 add_test(

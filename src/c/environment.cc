@@ -43,7 +43,9 @@ void scm_env_insert(SCM_Environment *env, SCM_Symbol *sym, SCM *value, bool sear
 }
 
 SCM *scm_env_exist(SCM_Environment *env, SCM_Symbol *sym) {
-  auto entry = scm_env_search_entry(env, sym);
+  // Search only in current environment (no parent search)
+  // This ensures local bindings take precedence over parent bindings
+  auto entry = scm_env_search_entry(env, sym, /*search_parent=*/false);
   if (entry) {
     return entry->value;
   }
@@ -51,13 +53,24 @@ SCM *scm_env_exist(SCM_Environment *env, SCM_Symbol *sym) {
 }
 
 SCM *scm_env_search(SCM_Environment *env, SCM_Symbol *sym) {
-  // 1. First search in lexical environment
+  // 1. First search in lexical environment (local bindings, no parent search)
+  // This ensures local bindings in let/lambda take precedence
   auto ret = scm_env_exist(env, sym);
   if (ret) {
     return ret;
   }
   
-  // 2. If current module exists, search in module
+  // 2. Search in parent environments (let/lambda bindings)
+  // This must come before module search to ensure lexical scoping works correctly
+  // Parent environments (from let/lambda) should take precedence over module bindings
+  auto entry = scm_env_search_entry(env, sym, /*search_parent=*/true);
+  if (entry) {
+    return entry->value;
+  }
+  
+  // 3. If current module exists, search in module (module bindings override global)
+  // This is important: when define is used in a module, it should shadow global bindings
+  // But module bindings come after lexical bindings (let/lambda)
   SCM *current_mod = scm_current_module();
   if (current_mod && is_module(current_mod)) {
     SCM_Module *module = cast<SCM_Module>(current_mod);

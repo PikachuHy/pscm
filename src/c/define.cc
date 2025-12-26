@@ -22,17 +22,26 @@ SCM *eval_define(SCM_Environment *env, SCM_List *l) {
       // We're in a nested environment (lambda/let), create local binding
       scm_env_insert(env, varname, val, /*search_parent=*/false);
       } else {
-        // Top-level: check if current module exists, define in module
-        SCM *current_mod = scm_current_module();
-        if (current_mod && is_module(current_mod)) {
-          SCM_Module *module = cast<SCM_Module>(current_mod);
-          // Create binding in module's obarray
-          scm_c_hash_set_eq(wrap(module->obarray), wrap(varname), val);
-      } else {
-        // Otherwise define in environment
-        scm_env_insert(env, varname, val, /*search_parent=*/false);
+        // Top-level: check if symbol exists in global environment
+        // If it exists, update it; otherwise define in module or environment
+        auto global_entry = scm_env_search_entry(&g_env, varname, /*search_parent=*/false);
+        if (global_entry) {
+          // Symbol exists in global environment, update it
+          global_entry->value = val;
+        } else {
+          // Symbol doesn't exist in global environment
+          // Check if current module exists, define in module
+          SCM *current_mod = scm_current_module();
+          if (current_mod && is_module(current_mod)) {
+            SCM_Module *module = cast<SCM_Module>(current_mod);
+            // Create binding in module's obarray
+            scm_c_hash_set_eq(wrap(module->obarray), wrap(varname), val);
+          } else {
+            // Otherwise define in environment
+            scm_env_insert(env, varname, val, /*search_parent=*/false);
+          }
+        }
       }
-    }
     return scm_none();
   }
   // Define procedure: (define (name args...) body...)
