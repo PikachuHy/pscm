@@ -9,6 +9,8 @@ set(PSCM_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(PSCM_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 add_executable(pscm_cc)
+target_sources(pscm_cc PRIVATE src/main.cc)
+target_include_directories(pscm_cc PRIVATE src/c)
 add_subdirectory(src/c)
 add_subdirectory(src/lit)
 add_subdirectory(test)

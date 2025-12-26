@@ -1,11 +1,4 @@
-#include "pscm.h"
 #include "pscm_api.h"
-#include "eval.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdnoreturn.h>
-#include <string.h>
-#include <assert.h>
 
 // Global state (defined here for the executable)
 bool debug_enabled = false;
