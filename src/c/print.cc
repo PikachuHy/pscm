@@ -373,12 +373,15 @@ static void _print_list(SCM_List *l, bool nested, bool write_mode, const PrintCo
       
       if (cdr_is_proper) {
         // Expand: (a b . (c d)) -> (a b c d)
+        // Print all elements before last (which contains the cdr)
         printf("(");
         SCM_List *current = l;
+        bool first = true;
         while (current && current != last) {
-          if (current != l) {
+          if (!first) {
             printf(" ");
           }
+          first = false;
           if (is_pair(current->data)) {
             _print_list(cast<SCM_List>(current->data), true, write_mode, new_ctx);
           } else {
@@ -389,9 +392,10 @@ static void _print_list(SCM_List *l, bool nested, bool write_mode, const PrintCo
         // Now print the cdr list elements
         SCM_List *cdr_current = cdr_list;
         while (cdr_current) {
-          if (l != last || cdr_current != cdr_list) {
+          if (!first) {
             printf(" ");
           }
+          first = false;
           if (is_pair(cdr_current->data)) {
             _print_list(cast<SCM_List>(cdr_current->data), true, write_mode, new_ctx);
           } else {

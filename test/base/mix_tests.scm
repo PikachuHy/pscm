@@ -61,7 +61,7 @@
 
 ;; Test 2.1: Basic unquote-splicing with dotted pair
 ;; Note: The fix ensures dotted pair is handled correctly (not crashing)
-;; CHECK-NEXT: (a b . d)
+;; CHECK-NEXT: (a b c . d)
 `(a ,@'(b c) . d)
 
 ;; Test 2.2: Unquote-splicing with empty list and dotted pair
@@ -69,27 +69,27 @@
 `(a ,@'() . b)
 
 ;; Test 2.3: Unquote-splicing with single element and dotted pair
-;; CHECK-NEXT: (a . b)
+;; CHECK-NEXT: (a 1 . b)
 `(a ,@'(1) . b)
 
 ;; Test 2.4: Unquote-splicing with multiple elements and dotted pair
-;; CHECK-NEXT: (a 1 2 . b)
+;; CHECK-NEXT: (a 1 2 3 . b)
 `(a ,@'(1 2 3) . b)
 
 ;; Test 2.5: Unquote-splicing with computed list and dotted pair
-;; CHECK-NEXT: (a 1 2 . end)
+;; CHECK-NEXT: (a 1 2 3 . end)
 `(a ,@(list 1 2 3) . end)
 
 ;; Test 2.6: Multiple unquote-splicing with dotted pair
-;; CHECK-NEXT: (a 1 2 b 3 . c)
+;; CHECK-NEXT: (a 1 2 b 3 4 . c)
 `(a ,@'(1 2) b ,@'(3 4) . c)
 
 ;; Test 2.7: Unquote-splicing at beginning with dotted pair
-;; CHECK-NEXT: (1 2 . tail)
+;; CHECK-NEXT: (1 2 3 . tail)
 `(,@'(1 2 3) . tail)
 
 ;; Test 2.8: Complex case: unquote-splicing with map and dotted pair
-;; CHECK-NEXT: (a 2 4 . rest)
+;; CHECK-NEXT: (a 2 4 6 . rest)
 `(a ,@(map (lambda (x) (* x 2)) '(1 2 3)) . rest)
 
 ;; Test 2.9: Nested unquote-splicing with dotted pair (edge case)

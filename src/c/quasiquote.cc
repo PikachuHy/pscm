@@ -102,24 +102,30 @@ static SCM *append_two_lists(SCM *list1, SCM *list2) {
     tail->next = make_list(current->data);
     tail = tail->next;
     
-    // Check if this is the last element (nil or dotted pair)
-    if (!current->next || is_nil(wrap(current->next))) {
+    // Move to next element
+    // For a proper list, we continue until current->next is nullptr
+    if (!current->next) {
+      // Reached the end of the list
       break;
     }
-    // Check if this is a dotted pair
+    // Check if current node itself is a dotted pair (shouldn't happen in proper list)
     if (current->is_dotted) {
       // This shouldn't happen in a proper list, but handle it
       break;
     }
+    // Continue to next element
     current = current->next;
   }
   
   // Check if list1 ends with a dotted pair
+  // Note: We've already copied all elements from list1 above
+  // If list1 ends with a dotted pair, the last node's is_dotted flag would be set
+  // But for proper lists, this shouldn't happen
   bool list1_is_dotted = false;
   SCM *list1_cdr = nullptr;
   if (l1) {
     SCM_List *last = l1;
-    while (last->next && !is_nil(wrap(last->next))) {
+    while (last->next) {
       if (last->is_dotted) {
         list1_is_dotted = true;
         list1_cdr = last->data;
@@ -127,6 +133,7 @@ static SCM *append_two_lists(SCM *list1, SCM *list2) {
       }
       last = last->next;
     }
+    // Check the last node itself
     if (!list1_is_dotted && last->is_dotted) {
       list1_is_dotted = true;
       list1_cdr = last->data;
@@ -142,8 +149,10 @@ static SCM *append_two_lists(SCM *list1, SCM *list2) {
       tail->next = make_list(current2->data);
       tail = tail->next;
       
-      // Check if this is the last element
-      if (!current2->next || is_nil(wrap(current2->next))) {
+      // Move to next element
+      // For a proper list, we continue until current2->next is nullptr
+      if (!current2->next) {
+        // Reached the end of the list
         break;
       }
       // Check if this is a dotted pair
@@ -151,19 +160,21 @@ static SCM *append_two_lists(SCM *list1, SCM *list2) {
         tail->is_dotted = true;
         break;
       }
+      // Continue to next element
       current2 = current2->next;
     }
     
     // Check if list2 ends with a dotted pair
     if (l2) {
       SCM_List *last2 = l2;
-      while (last2->next && !is_nil(wrap(last2->next))) {
+      while (last2->next) {
         if (last2->is_dotted) {
           tail->is_dotted = true;
           break;
         }
         last2 = last2->next;
       }
+      // Check the last node itself
       if (last2->is_dotted) {
         tail->is_dotted = true;
       }
@@ -230,41 +241,49 @@ static SCM *quasi(SCM_Environment *env, SCM *p, int depth) {
         if (rest_is_dotted && rest_cdr_data) {
           // Process the cdr of the dotted pair
           SCM *expanded_cdr = quasi(env, rest_cdr_data, depth);
-          // Append list elements, then create dotted pair with expanded_cdr
+          // Append list elements, then append or create dotted pair with expanded_cdr
           if (is_nil(list)) {
             // If list is empty, return just the cdr
             return expanded_cdr;
           }
-          // Otherwise, copy all elements from list, then create dotted pair with expanded_cdr
-          SCM_List *l = cast<SCM_List>(list);
-          SCM_List dummy = make_list_dummy();
-          SCM_List *tail = &dummy;
           
-          // Copy all elements from list using the exact same logic as append_two_lists
-          SCM_List *current = l;
-          while (current) {
-            tail->next = make_list(current->data);
-            tail = tail->next;
+          // Check if expanded_cdr is a proper list
+          if (is_pair(expanded_cdr)) {
+            // If expanded_cdr is a list, append all elements
+            return append_two_lists(list, expanded_cdr);
+          } else if (is_nil(expanded_cdr)) {
+            // If expanded_cdr is nil, just return list
+            return list;
+          } else {
+            // If expanded_cdr is not a list, create a dotted pair
+            // Copy all elements from list, then create dotted pair with expanded_cdr
+            SCM_List *l = cast<SCM_List>(list);
+            SCM_List dummy = make_list_dummy();
+            SCM_List *tail = &dummy;
             
-            // Check if this is the last element (nil or dotted pair)
-            // Use the exact same check as append_two_lists
-            if (!current->next || is_nil(wrap(current->next))) {
-              break;
+            // Copy all elements from list
+            SCM_List *current = l;
+            while (current) {
+              tail->next = make_list(current->data);
+              tail = tail->next;
+              
+              // Move to next element
+              if (!current->next) {
+                break;
+              }
+              if (current->is_dotted) {
+                break;
+              }
+              current = current->next;
             }
-            // Check if this is a dotted pair
-            if (current->is_dotted) {
-              // This shouldn't happen in a proper list, but handle it
-              break;
-            }
-            current = current->next;
+            
+            // Make the last element a dotted pair with expanded_cdr
+            // Create a new node for the cdr
+            tail->next = make_list(expanded_cdr);
+            tail->next->is_dotted = true;
+            
+            return dummy.next ? wrap(dummy.next) : expanded_cdr;
           }
-          
-          // Make the last element a dotted pair with expanded_cdr
-          // This creates: (elem1 elem2 ... . expanded_cdr)
-          tail->is_dotted = true;
-          tail->data = expanded_cdr;
-          
-          return dummy.next ? wrap(dummy.next) : expanded_cdr;
         } else {
           // Normal case: process rest and merge
           SCM *rest = get_list_rest(p);

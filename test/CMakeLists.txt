@@ -61,13 +61,44 @@ add_test(
 )
 
 add_test(
+    NAME r4rs_load_letrec.scm
+    COMMAND $<TARGET_FILE:pscm_cc> --test r4rs_load_letrec.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/r4rs
+)
+
+add_test(
+    NAME r4rs_load
+    COMMAND $<TARGET_FILE:pscm_cc> --test load.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/r4rs
+)
+
+add_test(
     NAME r4rs_cont_test.scm
     COMMAND $<TARGET_FILE:pscm_cc> --test r4rs_cont_test.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/r4rs
 )
 
+
 add_test(
-        NAME module_r5rs_test.scm_DIRECT
+    NAME r5rstest.scm
+    COMMAND $<TARGET_FILE:pscm_cc> --test r5rstest.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/r5rs
+)
+
+add_test(
+    NAME r5rs_cont_test.scm
+    COMMAND $<TARGET_FILE:pscm_cc> --test r5rs_cont_test.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/r5rs
+)
+
+add_test(
+        NAME r5rs_load
+        COMMAND $<TARGET_FILE:pscm_cc> --test load.scm
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/r5rs
+)
+
+add_test(
+        NAME module_r5rs_test.scm
         COMMAND $<TARGET_FILE:pscm_cc> --test r5rs_test.scm
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
 )
