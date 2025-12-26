@@ -1,4 +1,5 @@
 #include "pscm.h"
+#include "pscm_api.h"
 #include "eval.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -6,17 +7,16 @@
 #include <string.h>
 #include <assert.h>
 
+// Global state (defined here for the executable)
 bool debug_enabled = false;
 bool ast_debug_enabled = false;
-long *cont_base;
-
+long *cont_base = nullptr;
 SCM_Environment g_env;
 SCM_List *g_wind_chain = nullptr;
 
+// Wrapper for backward compatibility (used by repl.cc)
 SCM *eval(SCM *ast) {
-  long stack_base;
-  cont_base = &stack_base;
-  return eval_with_env(&g_env, ast);
+  return pscm_eval(ast);
 }
 
 #define SCM_PRINT_AST(ast)                                                                                             \
@@ -54,8 +54,8 @@ void show_usage() {
 }
 
 int do_eval(const char *filename) {
-  init_scm();
-  auto l = parse_file(filename);
+  pscm_init();
+  auto l = pscm_parse_file(filename);
   if (!l) {
     fprintf(stderr, "ERROR: failed to parse file: %s\n", filename);
     return 1;
@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
   setup_abort_handler();
   if (argc < 2) {
     // No arguments: enter REPL mode
-    init_scm();
+    pscm_init();
     repl();
     return 0;
   }

@@ -70,6 +70,10 @@ function sidebarGuideZh() {
           link: '/cn/pscm_cc_roadmap'
         },
         {
+          text: 'pscm_cc 库 API 使用指南',
+          link: '/cn/library_api'
+        },
+        {
           text: 'pscm-cc 字符支持实现说明',
           link: '/cn/char_support'
         },
