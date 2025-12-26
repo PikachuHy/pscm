@@ -203,6 +203,46 @@ SCM *eval_apply(SCM_Environment *env, SCM_List *l) {
       map_call.next = args_dummy.next;
       return eval_map(env, &map_call);
     }
+    // Special handling for call-with-current-continuation: if it's being applied, handle it specially
+    if (func_obj->name && (strcmp(func_obj->name->data, "call-with-current-continuation") == 0 || 
+                           strcmp(func_obj->name->data, "call/cc") == 0)) {
+      // This is call-with-current-continuation being applied
+      // args_dummy.next should contain a single argument (the procedure)
+      if (!args_dummy.next) {
+        eval_error("call-with-current-continuation: requires 1 argument (procedure)");
+        return nullptr;
+      }
+      // The argument might be wrapped in quote, so we need to evaluate it
+      SCM *proc_arg_expr = args_dummy.next->data;
+      SCM *proc_arg = eval_with_env(env, proc_arg_expr);
+      if (!proc_arg) {
+        eval_error("call-with-current-continuation: failed to evaluate argument");
+        return nullptr;
+      }
+      if (!is_proc(proc_arg) && !is_func(proc_arg)) {
+        eval_error("call-with-current-continuation: argument must be a procedure");
+        return nullptr;
+      }
+      // Create continuation and call procedure
+      int first;
+      auto cont = scm_make_continuation(&first);
+      if (!first) {
+        // Continuation was invoked, return the argument
+        return cont;
+      }
+      // Call procedure with continuation
+      SCM_List *cont_list = make_list(cont);
+      if (is_proc(proc_arg)) {
+        return apply_procedure(env, cast<SCM_Procedure>(proc_arg), cont_list);
+      } else {
+        // For function, evaluate arguments and call
+        SCM_List *evaled_args = eval_list_with_env(env, cont_list);
+        SCM_List func_call;
+        func_call.data = proc_arg;
+        func_call.next = evaled_args;
+        return eval_with_func(cast<SCM_Function>(proc_arg), &func_call);
+      }
+    }
     SCM_List *evaled_args = eval_list_with_env(env, args_dummy.next);
     SCM_List func_call;
     func_call.data = proc;

@@ -1,4 +1,5 @@
 #include "pscm.h"
+#include "eval.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -74,4 +75,18 @@ void scm_dynthrow(SCM *cont, SCM *args) {
 void grow_stack(SCM *cont, SCM *args) {
   long growth[100];
   scm_dynthrow(cont, args);
+}
+
+// Wrapper function for call-with-current-continuation as a builtin function
+// This function is called when call-with-current-continuation is used as a value (not as a special form)
+SCM *scm_c_call_with_current_continuation(SCM_List *args) {
+  // This function should never be called directly
+  // It's registered as a placeholder, and eval.cc will handle it specially
+  eval_error("call-with-current-continuation: internal error - should be handled as special form");
+  return nullptr;
+}
+
+void init_continuation() {
+  scm_define_vararg_function("call-with-current-continuation", scm_c_call_with_current_continuation);
+  scm_define_vararg_function("call/cc", scm_c_call_with_current_continuation);
 }

@@ -927,6 +927,7 @@ void init_symbol();
 void init_apply();
 void init_map();
 void init_number();
+void init_continuation();
 void init_eq();
 void init_alist();
 void init_char();

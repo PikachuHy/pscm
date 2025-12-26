@@ -742,6 +742,47 @@ entry:
       SCM *result = eval_map(env, l);
       RETURN_WITH_CONTEXT(result);
     }
+    if (func->name && (strcmp(func->name->data, "call-with-current-continuation") == 0 || 
+                       strcmp(func->name->data, "call/cc") == 0)) {
+      // For call-with-current-continuation, when called as a function value, arguments are already evaluated
+      // We need to handle it specially, similar to how it's handled as a special form
+      // l->data is the call-with-current-continuation function, l->next contains the already-evaluated arguments
+      if (!l->next) {
+        eval_error("call-with-current-continuation: requires 1 argument (procedure)");
+        RETURN_WITH_CONTEXT(nullptr);
+      }
+      // The argument is already evaluated, so we can use it directly
+      // But we need to create a continuation and call the procedure with it
+      SCM *proc = l->next->data;
+      if (!is_proc(proc) && !is_func(proc)) {
+        eval_error("call-with-current-continuation: argument must be a procedure");
+        RETURN_WITH_CONTEXT(nullptr);
+      }
+      // Create continuation and call procedure
+      int first;
+      auto cont = scm_make_continuation(&first);
+      if (!first) {
+        // Continuation was invoked, return the argument
+        RETURN_WITH_CONTEXT(cont);
+      }
+      // Call procedure with continuation
+      SCM_List *cont_list = make_list(cont);
+      SCM_List proc_call;
+      proc_call.data = proc;
+      proc_call.next = cont_list;
+      if (is_proc(proc)) {
+        SCM *result = apply_procedure(env, cast<SCM_Procedure>(proc), cont_list);
+        RETURN_WITH_CONTEXT(result);
+      } else {
+        // For function, evaluate arguments and call
+        SCM_List *evaled_args = eval_list_with_env(env, cont_list);
+        SCM_List func_call;
+        func_call.data = proc;
+        func_call.next = evaled_args;
+        SCM *result = eval_with_func(cast<SCM_Function>(proc), &func_call);
+        RETURN_WITH_CONTEXT(result);
+      }
+    }
     auto func_argl = eval_list_with_env(env, l->next);
     if (debug_enabled) {
       SCM_DEBUG_EVAL(" ");
