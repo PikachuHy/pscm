@@ -385,11 +385,16 @@ SCM *expand_letrec(SCM *expr) {
       auto arg = cast<SCM_List>(argl->data);
       assert(arg->next);
 
-      auto new_param = make_list(scm_list2(arg->data, scm_bool_false()));
+      // Save arg->data and arg->next->data to avoid issues with temporary objects
+      // These are SCM * pointers, so we can use them directly
+      SCM *var_sym = arg->data;  // The variable name (symbol)
+      SCM *var_val = arg->next->data;  // The value expression
+
+      auto new_param = make_list(scm_list2(var_sym, scm_bool_false()));
       params->next = new_param;
       params = params->next;
 
-      auto new_arg = make_list(scm_list3(scm_sym_set(), arg->data, arg->next->data));
+      auto new_arg = make_list(scm_list3(scm_sym_set(), var_sym, var_val));
       args->next = new_arg;
       args = args->next;
       argl = argl->next;
@@ -399,7 +404,26 @@ SCM *expand_letrec(SCM *expr) {
   new_l->next = make_list(wrap(dummy_params.next));
   if (dummy_args.next) {
     new_l->next->next = dummy_args.next;
-    args->next = l->next->next;
+    // Find the last node in the args list and append the body
+    // args currently points to the last node we added
+    // We need to append the body (l->next->next) to the end of the args list
+    SCM_List *last_args_node = args;  // args is already pointing to the last node
+    // The body (l->next->next) is a SCM_List * that contains the body expressions
+    // We need to copy the body list structure properly
+    SCM_List *body_list = l->next->next;
+    if (body_list) {
+      // Body is a list of expressions, copy each element
+      SCM_List *body_current = body_list;
+      while (body_current) {
+        SCM_List *body_node = make_list(body_current->data);
+        last_args_node->next = body_node;
+        last_args_node = body_node;
+        body_current = body_current->next;
+      }
+    } else {
+      // Body is empty, this shouldn't happen but handle it
+      // Do nothing, last_args_node already points to the end
+    }
   }
   else {
     new_l->next->next = l->next->next;

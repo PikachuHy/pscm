@@ -206,11 +206,16 @@ static SCM *quasi(SCM_Environment *env, SCM *p, int depth) {
       }
       
       // Check if rest is a dotted pair
+      // In a list like (a b ,@(list ...) . c), the unquote-splicing is followed by a dotted pair
+      // We need to check if p_list->next exists and if it's marked as dotted
       bool rest_is_dotted = false;
       SCM *rest_cdr_data = nullptr;
-      if (p_list->next && p_list->next->is_dotted) {
-        rest_is_dotted = true;
-        rest_cdr_data = p_list->next->data;
+      if (p_list->next) {
+        // Check if the next node is a dotted pair (i.e., it's the cdr of a dotted pair)
+        if (p_list->next->is_dotted) {
+          rest_is_dotted = true;
+          rest_cdr_data = p_list->next->data;
+        }
       }
       
       if (depth == 1) {
@@ -226,32 +231,36 @@ static SCM *quasi(SCM_Environment *env, SCM *p, int depth) {
           // Process the cdr of the dotted pair
           SCM *expanded_cdr = quasi(env, rest_cdr_data, depth);
           // Append list elements, then create dotted pair with expanded_cdr
-          // We need to append list to an empty list, then make it a dotted pair
           if (is_nil(list)) {
-            // If list is empty, return just the cdr (which will be combined with car by caller)
+            // If list is empty, return just the cdr
             return expanded_cdr;
           }
-          // Otherwise, append list elements, then create dotted pair with expanded_cdr
+          // Otherwise, copy all elements from list, then create dotted pair with expanded_cdr
           SCM_List *l = cast<SCM_List>(list);
           SCM_List dummy = make_list_dummy();
           SCM_List *tail = &dummy;
           
-          // Copy all elements from list
+          // Copy all elements from list using the exact same logic as append_two_lists
           SCM_List *current = l;
           while (current) {
             tail->next = make_list(current->data);
             tail = tail->next;
             
+            // Check if this is the last element (nil or dotted pair)
+            // Use the exact same check as append_two_lists
             if (!current->next || is_nil(wrap(current->next))) {
               break;
             }
+            // Check if this is a dotted pair
             if (current->is_dotted) {
+              // This shouldn't happen in a proper list, but handle it
               break;
             }
             current = current->next;
           }
           
           // Make the last element a dotted pair with expanded_cdr
+          // This creates: (elem1 elem2 ... . expanded_cdr)
           tail->is_dotted = true;
           tail->data = expanded_cdr;
           

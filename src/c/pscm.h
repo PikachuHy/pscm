@@ -984,6 +984,7 @@ SCM_Function *_create_func(const char *name, F func_ptr) {
   func_name->len = strlen(name);
   func_name->data = (char *)malloc(sizeof(char) * (func_name->len + 1));
   memcpy(func_name->data, name, func_name->len);
+  func_name->data[func_name->len] = '\0';  // Ensure null termination
   func->name = func_name;
   func->func_ptr = (void *)func_ptr;
   return func;
@@ -994,7 +995,7 @@ void scm_define_function(const char *name, int req, int opt, int rst, F func_ptr
   auto func = _create_func(name, func_ptr);
   func->n_args = req;
   auto data = wrap(func);
-  scm_env_insert(&g_env, func->name, data);
+  scm_env_insert(&g_env, func->name, data, /*search_parent=*/false);
 }
 
 template <typename F>
@@ -1003,7 +1004,7 @@ void scm_define_generic_function(const char *name, F func_ptr, SCM *init_val) {
   func->generic = init_val;
   func->n_args = -1;
   auto data = wrap(func);
-  scm_env_insert(&g_env, func->name, data);
+  scm_env_insert(&g_env, func->name, data, /*search_parent=*/false);
 }
 
 template <typename F>
@@ -1012,7 +1013,7 @@ void scm_define_vararg_function(const char *name, F func_ptr) {
   func->n_args = -2;  // Special value for variable argument functions
   func->generic = nullptr;
   auto data = wrap(func);
-  scm_env_insert(&g_env, func->name, data);
+  scm_env_insert(&g_env, func->name, data, /*search_parent=*/false);
 }
 
 inline bool is_sym_val(SCM *scm, const char *val) {
