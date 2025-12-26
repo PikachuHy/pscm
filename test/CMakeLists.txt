@@ -41,3 +41,21 @@ add_test(
         COMMAND $<TARGET_FILE:pscm_cc> --test r5rs_test.scm
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
 )
+
+add_test(
+    NAME module_public_interface_tests
+    COMMAND $<TARGET_FILE:pscm_cc> --test module_public_interface_tests.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
+)
+
+add_test(
+    NAME module_map_tests
+    COMMAND $<TARGET_FILE:pscm_cc> --test module_map_tests.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
+)
+
+add_test(
+    NAME module_use_tests
+    COMMAND $<TARGET_FILE:pscm_cc> --test module_use_tests.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
+)

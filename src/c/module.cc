@@ -434,6 +434,17 @@ SCM *scm_c_module_ref(SCM_List *args) {
   SCM_Module *mod = cast<SCM_Module>(module);
   SCM_Symbol *sym = cast<SCM_Symbol>(symbol);
   
+  // Special handling for %module-public-interface
+  if (strcmp(sym->data, "%module-public-interface") == 0) {
+    // Return the public interface module, or the module itself if no public interface exists
+    if (mod->public_interface) {
+      return wrap(mod->public_interface);
+    } else {
+      // If no public interface, return the module itself (Guile behavior)
+      return module;
+    }
+  }
+  
   // Search module (obarray, uses list, and root module)
   SCM *var = module_search_variable(mod, sym);
   if (var) {
@@ -599,6 +610,151 @@ SCM *eval_define_public(SCM_Environment *env, SCM_List *l) {
   return result;
 }
 
+// module-map: Apply procedure to each binding in module
+// (module-map proc module) -> list of results
+SCM *scm_c_module_map(SCM_List *args) {
+  if (!args || !args->data) {
+    eval_error("module-map: requires at least 2 arguments");
+    return nullptr;
+  }
+  
+  SCM *proc = args->data;
+  if (!is_proc(proc) && !is_func(proc)) {
+    eval_error("module-map: first argument must be a procedure");
+    return nullptr;
+  }
+  
+  if (!args->next || !args->next->data) {
+    eval_error("module-map: requires module argument");
+    return nullptr;
+  }
+  
+  SCM *module = args->next->data;
+  if (!is_module(module)) {
+    eval_error("module-map: second argument must be a module");
+    return nullptr;
+  }
+  
+  SCM_Module *mod = cast<SCM_Module>(module);
+  
+  // Collect results by iterating over module's obarray
+  SCM_List *result_head = nullptr;
+  SCM_List *result_tail = nullptr;
+  
+  // Iterate over all buckets in the hash table
+  for (size_t i = 0; i < mod->obarray->capacity; i++) {
+    SCM *bucket = mod->obarray->buckets[i];
+    if (bucket && !is_nil(bucket)) {
+      auto l = cast<SCM_List>(bucket);
+      while (l) {
+        if (is_pair(l->data)) {
+          auto entry = cast<SCM_List>(l->data);
+          if (entry->data && entry->next) {
+            SCM *key = entry->data;  // Symbol
+            SCM *value = entry->next->data;  // Variable value
+            
+            // Call proc with (key value)
+            // Build call expression: (proc key value)
+            SCM_List args_dummy = make_list_dummy();
+            args_dummy.data = proc;
+            auto args_tail = &args_dummy;
+            
+            // Wrap key in quote to prevent re-evaluation
+            SCM *quoted_key = scm_list2(scm_sym_quote(), key);
+            args_tail->next = make_list(quoted_key);
+            args_tail = args_tail->next;
+            
+            // Wrap value in quote
+            SCM *quoted_value = scm_list2(scm_sym_quote(), value);
+            args_tail->next = make_list(quoted_value);
+            
+            // Build and evaluate call expression
+            SCM call_expr;
+            call_expr.type = SCM::LIST;
+            call_expr.value = &args_dummy;
+            call_expr.source_loc = nullptr;  // Mark as temporary to skip call stack tracking
+            
+            SCM *proc_result = eval_with_env(&g_env, &call_expr);
+            
+            // Append result to result list
+            SCM_List *new_node = make_list(proc_result);
+            if (!result_head) {
+              result_head = new_node;
+              result_tail = new_node;
+            } else {
+              result_tail->next = new_node;
+              result_tail = new_node;
+            }
+          }
+        }
+        l = l->next;
+      }
+    }
+  }
+  
+  return result_head ? wrap(result_head) : scm_nil();
+}
+
+// module-use!: Add module to uses list
+// (module-use! module spec) -> unspecified
+SCM *scm_c_module_use(SCM_List *args) {
+  if (!args || !args->data) {
+    eval_error("module-use!: requires at least 2 arguments");
+    return nullptr;
+  }
+  
+  SCM *module = args->data;
+  if (!is_module(module)) {
+    eval_error("module-use!: first argument must be a module");
+    return nullptr;
+  }
+  
+  if (!args->next || !args->next->data) {
+    eval_error("module-use!: requires module spec argument");
+    return nullptr;
+  }
+  
+  SCM *spec = args->next->data;
+  SCM_Module *mod = cast<SCM_Module>(module);
+  
+  // spec can be a module name list or a module object
+  SCM *use_module = nullptr;
+  if (is_pair(spec)) {
+    // spec is a module name list, resolve it
+    SCM_List *name = cast<SCM_List>(spec);
+    use_module = scm_resolve_module(name);
+  } else if (is_module(spec)) {
+    // spec is already a module object
+    use_module = spec;
+  } else {
+    eval_error("module-use!: second argument must be a module name list or module object");
+    return nullptr;
+  }
+  
+  if (!use_module || !is_module(use_module)) {
+    eval_error("module-use!: failed to resolve module");
+    return nullptr;
+  }
+  
+  SCM_Module *use_mod = cast<SCM_Module>(use_module);
+  
+  // Get module's public interface
+  SCM_Module *interface = use_mod->public_interface;
+  if (!interface) {
+    // If no public interface, use module itself
+    interface = use_mod;
+  }
+  
+  // Add to uses list
+  SCM_List *new_use = make_list(wrap(interface));
+  if (mod->uses) {
+    new_use->next = mod->uses;
+  }
+  mod->uses = new_use;
+  
+  return scm_none();
+}
+
 void init_modules() {
   // Create root module
   SCM_List *name = make_list(wrap(make_sym("pscm-user")));
@@ -625,5 +781,7 @@ void init_modules() {
   scm_define_vararg_function("module-ref", scm_c_module_ref);
   scm_define_function("module-bound?", 2, 0, 0, scm_c_module_bound_p);
   scm_define_function("module?", 1, 0, 0, scm_c_module_p);
+  scm_define_vararg_function("module-map", scm_c_module_map);
+  scm_define_vararg_function("module-use!", scm_c_module_use);
 }
 
