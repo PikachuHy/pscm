@@ -7,6 +7,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+// Forward declarations
+struct SCM_Smob;
+
 // Source location information
 struct SCM_SourceLocation {
   const char *filename;
@@ -15,7 +18,7 @@ struct SCM_SourceLocation {
 };
 
 struct SCM {
-  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, CHAR, BOOL, SYM, STR, MACRO, HASH_TABLE, RATIO, VECTOR, PORT, PROMISE, MODULE } type;
+  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, CHAR, BOOL, SYM, STR, MACRO, HASH_TABLE, RATIO, VECTOR, PORT, PROMISE, MODULE, SMOB } type;
 
   void *value;
   SCM_SourceLocation *source_loc;  // Optional source location
@@ -250,6 +253,10 @@ inline bool is_port(SCM *scm) {
 
 inline bool is_module(SCM *scm) {
   return scm->type == SCM::MODULE;
+}
+
+inline bool is_smob(SCM *scm) {
+  return scm && scm->type == SCM::SMOB;
 }
 
 SCM *create_sym(const char *data, int len);
@@ -610,6 +617,14 @@ inline SCM_Module *cast<SCM_Module>(SCM *data) {
 }
 
 template <>
+inline SCM_Smob *cast<SCM_Smob>(SCM *data) {
+  if (!data || !is_smob(data)) {
+    type_error(data, "smob");
+  }
+  return (SCM_Smob *)data->value;
+}
+
+template <>
 inline SCM *wrap(SCM_Vector *vec) {
   assert(vec);
   auto data = new SCM();
@@ -624,6 +639,15 @@ inline SCM *wrap(SCM_Module *module) {
   auto data = new SCM();
   data->type = SCM::MODULE;
   data->value = module;
+  data->source_loc = nullptr;
+  return data;
+}
+
+inline SCM *wrap(SCM_Smob *smob) {
+  assert(smob);
+  auto data = new SCM();
+  data->type = SCM::SMOB;
+  data->value = smob;
   data->source_loc = nullptr;
   return data;
 }
@@ -943,6 +967,7 @@ void init_hash_table();
 void init_procedure();
 void init_vector();
 void init_modules();
+void init_smob();
 
 extern SCM_Environment g_env;
 extern SCM_List *g_wind_chain;  // Global wind chain for dynamic-wind

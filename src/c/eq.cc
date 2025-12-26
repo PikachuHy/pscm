@@ -1,5 +1,6 @@
 #include "pscm.h"
 #include "eval.h"
+#include "smob.h"
 #include <type_traits>
 // Forward declaration
 bool _number_eq(SCM *lhs, SCM *rhs);
@@ -360,6 +361,25 @@ static bool _equal_recursive(SCM *lhs, SCM *rhs) {
   case SCM::SYM:
   case SCM::STR:
     return _sym_eq(lhs, rhs);
+  case SCM::SMOB:
+    {
+      SCM_Smob *s1 = cast<SCM_Smob>(lhs);
+      SCM_Smob *s2 = cast<SCM_Smob>(rhs);
+      
+      // Types must match
+      if (s1->tag != s2->tag) {
+        return false;
+      }
+      
+      SCM_SmobDescriptor *desc = scm_get_smob_descriptor(s1->tag);
+      if (desc && desc->equalp) {
+        SCM *result = desc->equalp(lhs, rhs);
+        return is_true(result);
+      } else {
+        // Default: pointer equality (eq?)
+        return lhs == rhs;
+      }
+    }
   default:
     return false;
   }

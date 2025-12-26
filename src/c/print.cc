@@ -1,4 +1,5 @@
 #include "pscm.h"
+#include "smob.h"
 
 // Print context to track if we're inside a quasiquote expression
 struct PrintContext {
@@ -26,7 +27,7 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
   }
   
   // Check if type is valid (within enum range)
-  if (ast->type < SCM::NONE || ast->type > SCM::MODULE) {
+  if (ast->type < SCM::NONE || ast->type > SCM::SMOB) {
     // Invalid type - print error message instead of crashing
     printf("<invalid-type:%d(0x%x)@%p>", ast->type, ast->type, (void *)ast);
     return;
@@ -186,6 +187,19 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
   }
   if (is_none(ast)) {
     printf("none");
+    return;
+  }
+  if (is_smob(ast)) {
+    SCM_Smob *s = cast<SCM_Smob>(ast);
+    SCM_SmobDescriptor *desc = scm_get_smob_descriptor(s->tag);
+    
+    if (desc && desc->print) {
+      desc->print(ast, write_mode);
+    } else {
+      // Use default print function from smob.cc
+      extern void default_smob_print(SCM *, bool);
+      default_smob_print(ast, write_mode);
+    }
     return;
   }
   if (is_bool(ast)) {

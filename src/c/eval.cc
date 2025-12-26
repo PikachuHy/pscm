@@ -1,6 +1,7 @@
 #include "pscm.h"
 
 #include "eval.h"
+#include "smob.h"
 #include <stdarg.h>
 #include <cstdio>
 #include <cstring>
@@ -765,6 +766,47 @@ entry:
   else if (is_proc(l->data)) {
     auto proc = cast<SCM_Procedure>(l->data);
     SCM *result = apply_procedure(env, proc, l->next);
+    RETURN_WITH_CONTEXT(result);
+  }
+  else if (is_smob(l->data)) {
+    SCM_Smob *s = cast<SCM_Smob>(l->data);
+    SCM_SmobDescriptor *desc = scm_get_smob_descriptor(s->tag);
+    
+    if (!desc) {
+      eval_error("eval: invalid smob type");
+      RETURN_WITH_CONTEXT(scm_none());
+    }
+    
+    // Count arguments
+    int arg_count = 0;
+    SCM_List *arg_list = l->next;
+    while (arg_list) {
+      arg_count++;
+      if (!arg_list->next) break;
+      arg_list = arg_list->next;
+    }
+    
+    // Call appropriate apply function
+    SCM *result = scm_none();
+    if (arg_count == 0 && desc->apply_0) {
+      result = desc->apply_0(l->data);
+    } else if (arg_count == 1 && desc->apply_1) {
+      SCM *arg1 = eval_with_env(env, l->next->data);
+      result = desc->apply_1(l->data, arg1);
+    } else if (arg_count == 2 && desc->apply_2) {
+      SCM *arg1 = eval_with_env(env, l->next->data);
+      SCM *arg2 = eval_with_env(env, l->next->next->data);
+      result = desc->apply_2(l->data, arg1, arg2);
+    } else if (arg_count == 3 && desc->apply_3) {
+      SCM *arg1 = eval_with_env(env, l->next->data);
+      SCM *arg2 = eval_with_env(env, l->next->next->data);
+      SCM *arg3 = eval_with_env(env, l->next->next->next->data);
+      result = desc->apply_3(l->data, arg1, arg2, arg3);
+    } else {
+      eval_error("eval: smob does not support %d arguments", arg_count);
+      RETURN_WITH_CONTEXT(scm_none());
+    }
+    
     RETURN_WITH_CONTEXT(result);
   }
   else if (is_func(l->data)) {
