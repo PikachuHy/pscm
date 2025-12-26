@@ -839,6 +839,36 @@ SCM *scm_c_eval(SCM *expr) {
   return eval_with_env(&g_env, expr);
 }
 
+// defined?: Check if a symbol is defined in the current environment or module
+// (defined? sym) -> #t if sym is defined, #f otherwise
+SCM *scm_c_defined(SCM *sym) {
+  if (!is_sym(sym)) {
+    eval_error("defined?: expected symbol");
+    return nullptr;  // Never reached, but satisfies compiler
+  }
+  
+  SCM_Symbol *symbol = cast<SCM_Symbol>(sym);
+  
+  // 1. Check in lexical environment (search parent environments too)
+  SCM_Environment::Entry *entry = scm_env_search_entry(&g_env, symbol, /*search_parent=*/true);
+  if (entry) {
+    return scm_bool_true();  // Found in environment
+  }
+  
+  // 2. Check in current module
+  SCM *current_mod = scm_current_module();
+  if (current_mod && is_module(current_mod)) {
+    SCM_Module *module = cast<SCM_Module>(current_mod);
+    SCM *var = module_search_variable(module, symbol);
+    if (var) {
+      return scm_bool_true();  // Found in module (value can be #f, but it's still defined)
+    }
+  }
+  
+  return scm_bool_false();  // Not found
+}
+
 void init_eval() {
   scm_define_function("eval", 1, 0, 0, scm_c_eval);
+  scm_define_function("defined?", 1, 0, 0, scm_c_defined);
 }
