@@ -175,6 +175,9 @@ function(pscm_add_lit_target target comment)
 
   set(LIT_COMMAND "${Python3_EXECUTABLE};${lit_base_dir}/${lit_file_name}")
   list(APPEND LIT_COMMAND ${LIT_ARGS})
+  # Add -v (verbose) flag to show detailed error output on failure, similar to LLVM's check-clang
+  # This ensures error logs are displayed when tests fail
+  list(APPEND LIT_COMMAND -v)
   foreach(param ${ARG_PARAMS})
     list(APPEND LIT_COMMAND --param ${param})
   endforeach()

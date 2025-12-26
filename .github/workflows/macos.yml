@@ -16,24 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Clone Deps
-        run: git submodule update --init
-        working-directory: ${{github.workspace}}
-
-      - name: Install LLVM
-        run: env HOMEBREW_NO_AUTO_UPDATE=1 brew install llvm
-
       - name: Install Ninja
         run: env HOMEBREW_NO_AUTO_UPDATE=1 brew install ninja
-
-      - name: Install SDL2
-        run: env HOMEBREW_NO_AUTO_UPDATE=1 brew install sdl2 sdl2_image sdl2_mixer sdl2_ttf
-
-      - name: Install icu4c
-        run: |
-          env HOMEBREW_NO_AUTO_UPDATE=1 brew reinstall icu4c
-          ls /opt/homebrew/Cellar/icu4c@78/78.1
-          ls /opt/homebrew/Cellar/icu4c@78/78.1/lib/pkgconfig
 
       - name: ccache
         uses: hendrikmuhs/ccache-action@v1.2
@@ -43,7 +27,7 @@ jobs:
         run: cmake --version
 
       - name: Configure CMake
-        run: PKG_CONFIG_PATH=/opt/homebrew/Cellar/icu4c@78/78.1/lib/pkgconfig cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja -DUSE_CCACHE=ON -DICU4C_ROOT=/opt/homebrew/Cellar/icu4c@78/78.1
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{matrix.mode}} -G Ninja
 
       - name: Build
         run: cmake --build ${{github.workspace}}/build --config ${{matrix.mode}} --verbose -j
