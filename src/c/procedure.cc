@@ -1,6 +1,100 @@
 #include "pscm.h"
 #include "eval.h"
 
+// Apply procedure with already-evaluated arguments (values)
+// This is used by catch/throw handlers, where arguments are already evaluated
+SCM *apply_procedure_with_values(SCM_Environment *env, SCM_Procedure *proc, SCM_List *args) {
+  auto proc_env = make_env(proc->env);
+  auto args_l = proc->args;
+  // args are ALREADY evaluated, so we don't call eval_with_env on them
+  
+  // Check if the last parameter is a rest parameter (dotted pair: (a b . c))
+  bool has_rest_param = false;
+  SCM_Symbol *rest_param_sym = nullptr;
+  SCM_List *penultimate_param = nullptr;
+  bool only_rest_param = false;
+  if (args_l) {
+    SCM_List *last_param = args_l;
+    SCM_List *penultimate = nullptr;
+    while (last_param->next) {
+      penultimate = last_param;
+      last_param = last_param->next;
+    }
+    
+    if (last_param->is_dotted && is_sym(last_param->data)) {
+      has_rest_param = true;
+      rest_param_sym = cast<SCM_Symbol>(last_param->data);
+      penultimate_param = penultimate;
+      only_rest_param = (penultimate == nullptr);
+    }
+  }
+  
+  // Bind regular parameters
+  SCM_List *current_param = args_l;
+  SCM_List *args_iter = args;
+  
+  // Special case: only rest parameter (e.g., (values . things))
+  if (only_rest_param) {
+    // Bind all arguments to the rest parameter (args are already evaluated)
+    SCM *rest_val = args_iter ? wrap(args_iter) : scm_nil();
+    scm_env_insert(proc_env, rest_param_sym, rest_val, /*search_parent=*/false);
+    
+    // Execute procedure body
+    auto body = proc->body;
+    return eval_with_list(proc_env, body);
+  }
+  
+  // Bind regular parameters (not rest parameter)
+  while (current_param && current_param != penultimate_param && !only_rest_param) {
+    if (!is_sym(current_param->data)) {
+      eval_error("procedure parameter must be a symbol");
+    }
+    SCM_Symbol *param_sym = cast<SCM_Symbol>(current_param->data);
+    
+    if (!args_iter) {
+      eval_error("procedure called with too few arguments");
+    }
+    
+    // args_iter->data is already evaluated
+    scm_env_insert(proc_env, param_sym, args_iter->data, /*search_parent=*/false);
+    
+    current_param = current_param->next;
+    args_iter = args_iter->next;
+  }
+  
+  // Handle penultimate parameter before rest (e.g., for (key . args), bind key)
+  if (has_rest_param && penultimate_param && !only_rest_param) {
+    if (!is_sym(penultimate_param->data)) {
+      eval_error("procedure parameter must be a symbol");
+    }
+    SCM_Symbol *param_sym = cast<SCM_Symbol>(penultimate_param->data);
+    
+    if (!args_iter) {
+      eval_error("procedure called with too few arguments");
+    }
+    
+    // args_iter->data is already evaluated
+    scm_env_insert(proc_env, param_sym, args_iter->data, /*search_parent=*/false);
+    args_iter = args_iter->next;
+  }
+  
+  // Bind rest parameter if present
+  if (has_rest_param) {
+    // Collect remaining arguments into a list (they are already evaluated)
+    SCM *rest_val = args_iter ? wrap(args_iter) : scm_nil();
+    scm_env_insert(proc_env, rest_param_sym, rest_val, /*search_parent=*/false);
+  } else {
+    // No rest parameter - check for too many arguments
+    if (args_iter) {
+      eval_error("procedure called with too many arguments");
+    }
+  }
+  
+  // Execute procedure body
+  auto body = proc->body;
+  return eval_with_list(proc_env, body);
+}
+
 // Helper function to apply procedure with arguments
 SCM *apply_procedure(SCM_Environment *env, SCM_Procedure *proc, SCM_List *args) {
   auto proc_env = make_env(proc->env);

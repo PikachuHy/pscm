@@ -2,6 +2,7 @@
 
 #include "eval.h"
 #include "smob.h"
+#include "throw.h"
 #include <stdarg.h>
 #include <cstdio>
 #include <cstring>
@@ -221,89 +222,101 @@ static const char *get_type_name(SCM::Type type) {
 }
 
 [[noreturn]] void type_error(SCM *data, const char *expected_type) {
-  // Try to get source location from the data itself first
+  // Build error message
+  char message[1024];
+  int pos = 0;
+  
+  // Add source location
   const char *loc_str = nullptr;
   if (data) {
     loc_str = get_source_location_str(data);
   }
-  
-  // If not available, try current eval context
   if (!loc_str && g_current_eval_context) {
     loc_str = get_source_location_str(g_current_eval_context);
   }
   
   if (loc_str) {
-    fprintf(stderr, "%s: ", loc_str);
-  } else {
-    fprintf(stderr, "<unknown location>: ");
+    pos += snprintf(message + pos, sizeof(message) - pos, "%s: ", loc_str);
   }
   
-  fprintf(stderr, "Type error: expected %s, but got ", expected_type);
+  pos += snprintf(message + pos, sizeof(message) - pos, "Type error: expected %s, but got ", expected_type);
   
   if (data) {
     const char *actual_type = get_type_name(data->type);
-    fprintf(stderr, "%s", actual_type);
-    fprintf(stderr, "\n  Value: ");
-    print_ast(data);
-    fprintf(stderr, "\n");
+    pos += snprintf(message + pos, sizeof(message) - pos, "%s", actual_type);
   } else {
-    fprintf(stderr, "null\n");
+    pos += snprintf(message + pos, sizeof(message) - pos, "null");
   }
   
-  // Also print current eval context if available and different
+  // Add current eval context if available and different
   if (g_current_eval_context && g_current_eval_context != data) {
     const char *ctx_loc = get_source_location_str(g_current_eval_context);
     if (ctx_loc) {
-      fprintf(stderr, "  While evaluating at %s: ", ctx_loc);
-    } else {
-      fprintf(stderr, "  While evaluating: ");
+      pos += snprintf(message + pos, sizeof(message) - pos, "\n  While evaluating at %s", ctx_loc);
     }
-    print_ast(g_current_eval_context);
-    fprintf(stderr, "\n");
   }
   
-  exit(1);
+  // Use eval_error to throw the error
+  eval_error("%s", message);
 }
 
 [[noreturn]] void eval_error(const char *format, ...) {
   va_list args;
   va_start(args, format);
 
-  // Print source location if available
-  bool printed_location = false;
+  // Format error message
+  char message[1024];
+  vsnprintf(message, sizeof(message), format, args);
+  va_end(args);
+  
+  // Build error message with context
+  char full_message[2048];
+  int pos = 0;
+  
+  // Add source location if available
   if (g_current_eval_context) {
     const char *loc_str = get_source_location_str(g_current_eval_context);
     if (loc_str) {
-      fprintf(stderr, "%s: ", loc_str);
-      printed_location = true;
+      pos += snprintf(full_message + pos, sizeof(full_message) - pos, "%s: ", loc_str);
     }
-    fprintf(stderr, "Error while evaluating: ");
-    print_ast_to_stderr(g_current_eval_context);
-    fprintf(stderr, "\n");
-    if (!printed_location) {
-      fprintf(stderr, "  (no source location available)\n");
-    }
-    fprintf(stderr, "  ");
   }
-  else {
-    fprintf(stderr, "%s:%d: ", __FILE__, __LINE__);
-  }
-
-  vfprintf(stderr, format, args);
-  fprintf(stderr, "\n");
-  va_end(args);
   
-  // Print the evaluation call stack
-  fprintf(stderr, "\n=== Evaluation Call Stack ===\n");
-  if (g_eval_stack) {
-    print_eval_stack();
+  // Add error message
+  pos += snprintf(full_message + pos, sizeof(full_message) - pos, "%s", message);
+  
+  // Create error arguments: (message)
+  // Helper function to create string from C string
+  SCM_String *s = new SCM_String();
+  int len = (int)strlen(full_message);
+  s->data = new char[len + 1];
+  memcpy(s->data, full_message, len);
+  s->data[len] = '\0';
+  s->len = len;
+  SCM *error_message = new SCM();
+  error_message->type = SCM::STR;
+  error_message->value = s;
+  error_message->source_loc = nullptr;
+  
+  SCM_List *error_args = make_list(error_message);
+  SCM *error_args_wrapped = wrap(error_args);
+  
+  // Throw exception instead of exit(1)
+  // Note: g_error_key is initialized in init_throw()
+  if (g_error_key) {
+    scm_throw(g_error_key, error_args_wrapped);
   } else {
-    fprintf(stderr, "Call stack is empty (error occurred at top level)\n");
+    // Fallback if throw system not initialized yet
+    fprintf(stderr, "%s\n", full_message);
+    fprintf(stderr, "\n=== Evaluation Call Stack ===\n");
+    if (g_eval_stack) {
+      print_eval_stack();
+    } else {
+      fprintf(stderr, "Call stack is empty (error occurred at top level)\n");
+    }
+    fprintf(stderr, "=== End of Call Stack ===\n");
+    fflush(stderr);
+    exit(1);
   }
-  fprintf(stderr, "=== End of Call Stack ===\n");
-  fflush(stderr);
-  
-  exit(1);
 }
 
 // Helper functions for special forms

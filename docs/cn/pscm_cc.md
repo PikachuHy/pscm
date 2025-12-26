@@ -34,7 +34,7 @@ pscm 依然处于非常简陋的状态
 
 - **尾递归优化**：使用 `goto` 减少栈深度
 - **模块化设计**：每个特殊形式独立文件，统一接口在 `eval.h` 声明
-- **支持的特殊形式**：`define`, `lambda`, `if`, `cond`, `case`, `and`, `or`, `begin`, `let`/`let*`/`letrec`, `do`, `for-each`, `map`, `quote`, `quasiquote`, `apply`, `call/cc`, `call-with-values`, `dynamic-wind`, `delay`, `define-module`, `use-modules`, `export`, `define-public` 等
+- **支持的特殊形式**：`define`, `lambda`, `if`, `cond`, `case`, `and`, `or`, `begin`, `let`/`let*`/`letrec`, `do`, `for-each`, `map`, `quote`, `quasiquote`, `apply`, `call/cc`, `call-with-values`, `dynamic-wind`, `delay`, `catch`, `throw`, `define-module`, `use-modules`, `export`, `define-public` 等
 - **宏系统**：`define-macro` 支持定义宏，支持 dotted pair 参数列表；`macroexpand-1` 和 `macroexpand` 用于调试宏展开
 
 ### Continuation 实现
@@ -73,6 +73,7 @@ pscm 依然处于非常简陋的状态
 - **端口操作**：`open-input-file`, `open-output-file`, `open-input-string`, `open-output-string`, `read`, `read-char`, `peek-char`, `write-char`, `eof-object?`, `char-ready?`, `call-with-input-file`, `call-with-output-file` 等
 - **系统操作**：`exit` 等
 - **延迟求值**：`delay`, `force`（Promise 支持）
+- **异常处理**：`catch`, `throw`（异常捕获和抛出）
 - **模块操作**：`current-module`, `set-current-module`, `resolve-module`, `module-ref`, `module-bound?` 等
 - **文件加载**：`load`, `primitive-load`（支持 `%load-path` 路径搜索）
 - **宏调试工具**：`macroexpand-1`, `macroexpand`（用于调试宏展开）
@@ -95,13 +96,18 @@ pscm 依然处于非常简陋的状态
 - 宏展开时自动传播源位置
 - **调用栈追踪**：自动追踪表达式求值路径，错误时显示完整调用栈（最多 20 层）
 - **增强的错误报告**：包含表达式类型、值、源位置和完整求值上下文
+- **异常处理**：`catch` 和 `throw` 支持异常捕获和抛出
+  - `catch tag thunk handler`：捕获指定标签的异常
+  - `catch #t thunk handler`：捕获所有异常
+  - `throw key args ...`：抛出异常
+  - `eval_error` 和 `type_error` 使用 `throw` 机制，可被 `catch` 捕获
 
 ## 已知限制
 
 1. **内存管理**：未实现垃圾回收（GC），所有分配的内存不会释放，存在内存泄漏风险
-2. **错误处理**：多数情况下直接 `exit(1)`，缺少优雅的错误恢复机制（已有调用栈追踪）
+2. **错误处理**：未捕获的异常会调用 `scm_uncaught_throw` 打印错误信息后退出（已有调用栈追踪和异常捕获机制）
 3. **性能**：环境查找使用线性搜索（O(n)），符号比较使用 `memcmp`
-4. **缺失功能**：Guile API 兼容层（C API 接口）、垃圾回收机制等
+4. **缺失功能**：Guile API 兼容层（C API 接口）、垃圾回收机制、结构化错误对象系统等
 
 ## 下一步计划
 
@@ -110,7 +116,7 @@ pscm 依然处于非常简陋的状态
 - Guile API 兼容层（C API 接口）
 
 ### 中优先级
-- 错误处理机制（异常捕获，当前已有调用栈追踪）
+- 错误对象系统（结构化错误对象，当前使用简单字符串消息）
 - 模块系统完善（公共接口、延迟绑定等高级特性）
 
 ## 已实现功能
