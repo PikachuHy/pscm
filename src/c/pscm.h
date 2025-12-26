@@ -937,6 +937,7 @@ void init_exit();
 void init_load();
 void init_delay();
 void init_eval();
+void init_macro();
 void init_values();
 void init_hash_table();
 void init_procedure();

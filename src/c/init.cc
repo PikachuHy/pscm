@@ -20,6 +20,7 @@ void init_scm() {
   init_port();
   init_delay();
   init_eval();
+  init_macro();  // Initialize macro functions (macroexpand-1, macroexpand)
   init_values();
   init_hash_table();
   init_procedure();

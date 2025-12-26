@@ -297,3 +297,62 @@ SCM *eval_define_macro(SCM_Environment *env, SCM_List *l) {
   return scm_none();
 }
 
+// macroexpand-1: Expand macro once (if it's a macro call)
+// Similar to Guile 1.8's macroexpand-1
+// Usage: (macroexpand-1 expr)
+SCM *scm_c_macroexpand_1(SCM *expr) {
+  if (!is_pair(expr)) {
+    return expr;  // Atoms don't need expansion
+  }
+  
+  SCM_List *l = cast<SCM_List>(expr);
+  if (!l || !l->data) {
+    return expr;
+  }
+  
+  // Check if first element is a symbol (potential macro name)
+  if (is_sym(l->data)) {
+    SCM_Symbol *sym = cast<SCM_Symbol>(l->data);
+    
+    // Search for macro in current environment
+    // Use scm_env_search to search in lexical environment, modules, and global
+    SCM *val = scm_env_search(&g_env, sym);
+    
+    if (val && is_macro(val)) {
+      // Found a macro, expand it once
+      SCM_Macro *macro = cast<SCM_Macro>(val);
+      SCM *expanded = expand_macro_call(&g_env, macro, l->next, expr);
+      
+      if (!expanded) {
+        return expr;  // Expansion failed, return original
+      }
+      
+      return expanded;  // Return expanded form (only one level)
+    }
+  }
+  
+  // Not a macro call, return as-is
+  return expr;
+}
+
+// macroexpand: Recursively expand macros until no more macros
+// Similar to Guile 1.8's macroexpand
+// Usage: (macroexpand expr)
+SCM *scm_c_macroexpand(SCM *expr) {
+  SCM *current = expr;
+  SCM *expanded = scm_c_macroexpand_1(current);
+  
+  // Keep expanding until no change (no more macros to expand)
+  while (expanded != current) {
+    current = expanded;
+    expanded = scm_c_macroexpand_1(current);
+  }
+  
+  return expanded;
+}
+
+void init_macro() {
+  scm_define_function("macroexpand-1", 1, 0, 0, scm_c_macroexpand_1);
+  scm_define_function("macroexpand", 1, 0, 0, scm_c_macroexpand);
+}
+
