@@ -210,16 +210,24 @@ SCM *scm_append(SCM_List *args) {
 
 // list-head: Copy the first k elements from lst into a new list
 SCM *scm_c_list_head(SCM *lst, SCM *k) {
-  if (!is_pair(lst)) {
-    eval_error("list-head: first argument must be a pair");
-    return nullptr;
-  }
   if (!is_num(k)) {
     eval_error("list-head: second argument must be a number");
     return nullptr;
   }
   
   size_t count = (size_t)(int64_t)k->value;
+  
+  // If k is 0, return empty list regardless of lst
+  if (count == 0) {
+    return scm_nil();
+  }
+  
+  // For k > 0, lst must be a pair
+  if (!is_pair(lst)) {
+    eval_error("list-head: first argument must be a pair");
+    return nullptr;
+  }
+  
   SCM_List dummy = make_list_dummy();
   SCM_List *tail = &dummy;
   SCM_List *current = cast<SCM_List>(lst);
