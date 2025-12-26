@@ -56,14 +56,22 @@ SCM *eval_with_func(SCM_Function *func, SCM_List *l) {
   }
   if (func->n_args == -2) {
     // Variable argument function (like list)
-    // Special handling for apply: it needs access to environment
-    // But we can't access env here, so we need to handle it differently
-    // Actually, apply should never reach here because eval.cc handles it specially
-    if (func->name && strcmp(func->name->data, "apply") == 0) {
-      // This should not happen - apply should be handled in eval.cc
-      // But if it does, we need to handle it
-      eval_error("apply: internal error - should be handled in eval.cc");
-      return nullptr;
+    // Special handling for apply, map, and map-in-order: they need access to environment
+    // But we can't access env here, so these should be handled in eval.cc
+    // If they reach here, it's an error
+    if (func->name) {
+      if (strcmp(func->name->data, "apply") == 0) {
+        eval_error("apply: internal error - should be handled as special form");
+        return nullptr;
+      }
+      if (strcmp(func->name->data, "map") == 0) {
+        eval_error("map: internal error - should be handled as special form");
+        return nullptr;
+      }
+      if (strcmp(func->name->data, "map-in-order") == 0) {
+        eval_error("map-in-order: internal error - should be handled as special form");
+        return nullptr;
+      }
     }
     typedef SCM *(*func_var)(SCM_List *);
     auto f = (func_var)func->func_ptr;

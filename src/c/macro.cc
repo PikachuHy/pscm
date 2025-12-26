@@ -120,6 +120,12 @@ SCM *expand_macro_call(SCM_Environment *env, SCM_Macro *macro, SCM_List *args, S
   // Call the macro transformer (evaluate in macro environment)
   SCM *expanded = eval_with_list(macro_env, macro->transformer->body);
 
+  // Basic safety check: expanded should not be null
+  if (!expanded) {
+    eval_error("macro expansion returned null");
+    return nullptr;
+  }
+
   // Copy source location from original macro call to expanded result
   // This ensures errors in macro-expanded code point to the original macro call location
   if (original_call && expanded) {
@@ -142,12 +148,17 @@ SCM *expand_macro_call(SCM_Environment *env, SCM_Macro *macro, SCM_List *args, S
 
 // Helper function to expand macros in an expression
 SCM *expand_macros(SCM_Environment *env, SCM *ast) {
+  // Basic safety check: null check
+  if (!ast) {
+    return ast;
+  }
+  
   if (!is_pair(ast)) {
     return ast; // Atoms don't need expansion
   }
 
   SCM_List *l = cast<SCM_List>(ast);
-  if (!l->data) {
+  if (!l || !l->data) {
     return ast;
   }
 
@@ -160,6 +171,12 @@ SCM *expand_macros(SCM_Environment *env, SCM *ast) {
       // Found a macro, expand it
       SCM_Macro *macro = cast<SCM_Macro>(val);
       SCM *expanded = expand_macro_call(env, macro, l->next, ast);
+      
+      // Basic safety check: if expansion failed, return original
+      if (!expanded) {
+        return ast;
+      }
+      
       // Recursively expand the result
       return expand_macros(env, expanded);
     }
@@ -171,7 +188,20 @@ SCM *expand_macros(SCM_Environment *env, SCM *ast) {
   SCM_List *current = l;
 
   while (current) {
+    if (!current->data) {
+      // Skip null data
+      current = current->next;
+      continue;
+    }
+    
     SCM *expanded = expand_macros(env, current->data);
+    
+    // Basic safety check: if expansion returned null, skip this element
+    if (!expanded) {
+      current = current->next;
+      continue;
+    }
+    
     SCM_List *node = make_list(expanded);
     // Preserve dotted-pair structure: copy is_dotted flag from original node.
     // This is critical for forms like (lambda (x y . z) ...) where the

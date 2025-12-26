@@ -4,11 +4,15 @@ SCM_Environment::Entry *scm_env_search_entry(SCM_Environment *env, SCM_Symbol *s
   SCM_DEBUG_SYMTBL("search %p\n", env);
   auto l = env->dummy.next;
   while (l) {
-    if (strcmp(l->data->key, sym->data) == 0) {
+    if (l->data && l->data->key && sym && sym->data && strcmp(l->data->key, sym->data) == 0) {
       SCM_DEBUG_SYMTBL("find %s\n", sym->data);
       if (debug_enabled) {
         printf("  ->  ");
-        print_ast(l->data->value);
+        if (l->data->value) {
+          print_ast(l->data->value);
+        } else {
+          printf("<null>");
+        }
         printf("\n");
       }
 
@@ -23,10 +27,6 @@ SCM_Environment::Entry *scm_env_search_entry(SCM_Environment *env, SCM_Symbol *s
 }
 
 void scm_env_insert(SCM_Environment *env, SCM_Symbol *sym, SCM *value, bool search_parent) {
-  if (value == nullptr) {
-    printf("got it\n");
-    exit(1);
-  }
   auto entry = scm_env_search_entry(env, sym, search_parent);
   if (entry) {
     entry->value = value;
@@ -35,6 +35,7 @@ void scm_env_insert(SCM_Environment *env, SCM_Symbol *sym, SCM *value, bool sear
   entry = new SCM_Environment::Entry();
   entry->key = new char[sym->len + 1];
   memcpy(entry->key, sym->data, sym->len);
+  entry->key[sym->len] = '\0';  // Ensure null termination
   entry->value = value;
   auto node = new SCM_Environment::List();
   node->data = entry;
@@ -47,7 +48,7 @@ SCM *scm_env_exist(SCM_Environment *env, SCM_Symbol *sym) {
   // This ensures local bindings take precedence over parent bindings
   auto entry = scm_env_search_entry(env, sym, /*search_parent=*/false);
   if (entry) {
-    return entry->value;
+    return entry->value;  // Value can be null (e.g., for #f)
   }
   return nullptr;
 }
@@ -65,7 +66,7 @@ SCM *scm_env_search(SCM_Environment *env, SCM_Symbol *sym) {
   // Parent environments (from let/lambda) should take precedence over module bindings
   auto entry = scm_env_search_entry(env, sym, /*search_parent=*/true);
   if (entry) {
-    return entry->value;
+    return entry->value;  // Value can be null (e.g., for #f)
   }
   
   // 3. If current module exists, search in module (module bindings override global)
@@ -77,6 +78,18 @@ SCM *scm_env_search(SCM_Environment *env, SCM_Symbol *sym) {
     SCM *var = module_search_variable(module, sym);
     if (var) {
       return var;  // Found (value can be #f)
+    }
+  }
+  
+  // 4. Finally, search in global environment (g_env) if we haven't found it yet
+  // This ensures built-in functions registered via scm_define_function are accessible
+  // This is needed because when env != &g_env, we need to check g_env for built-ins
+  // When env == &g_env, we've already searched it in step 1 and 2, so this is a fallback
+  // for cases where the symbol might be in g_env but not found in the current search path
+  if (env != &g_env) {
+    auto global_entry = scm_env_search_entry(&g_env, sym, /*search_parent=*/false);
+    if (global_entry) {
+      return global_entry->value;  // Value can be null (e.g., for #f)
     }
   }
   
