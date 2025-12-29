@@ -120,3 +120,20 @@ bool pscm_get_ast_debug_enabled(void) {
   return ast_debug_enabled;
 }
 
+// Variable operations (compatible with Guile 1.8 API)
+SCM *pscm_c_lookup(const char *name) {
+  return scm_c_lookup(name);
+}
+
+SCM *pscm_variable_ref(SCM *var) {
+  return scm_variable_ref(var);
+}
+
+SCM *pscm_make_variable(SCM *init) {
+  return scm_make_variable(init);
+}
+
+SCM *pscm_make_undefined_variable(void) {
+  return scm_make_undefined_variable();
+}
+

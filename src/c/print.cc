@@ -27,7 +27,7 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
   }
   
   // Check if type is valid (within enum range)
-  if (ast->type < SCM::NONE || ast->type > SCM::SMOB) {
+  if (ast->type < SCM::NONE || ast->type > SCM::VARIABLE) {
     // Invalid type - print error message instead of crashing
     printf("<invalid-type:%d(0x%x)@%p>", ast->type, ast->type, (void *)ast);
     return;
@@ -250,16 +250,28 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
     printf(">");
     return;
   }
+  if (is_variable(ast)) {
+    auto var = cast<SCM_Variable>(ast);
+    printf("#<variable %p", (void *)var);
+    if (var->value) {
+      printf(" value: ");
+      _print_ast_with_context(var->value, write_mode, ctx);
+    } else {
+      printf(" unbound");
+    }
+    printf(">");
+    return;
+  }
   // Enhanced error reporting for unsupported types
   fprintf(stderr, "%s:%d: Error: unsupported type value %d (0x%x)\n", 
           __FILE__, __LINE__, ast->type, ast->type);
   fprintf(stderr, "  AST pointer: %p\n", (void *)ast);
   if (ast) {
-    fprintf(stderr, "  Type enum values: NONE=%d, NIL=%d, LIST=%d, PROC=%d, CONT=%d, FUNC=%d, NUM=%d, FLOAT=%d, CHAR=%d, BOOL=%d, SYM=%d, STR=%d, MACRO=%d, HASH_TABLE=%d, RATIO=%d, VECTOR=%d, PORT=%d, PROMISE=%d, MODULE=%d\n",
+    fprintf(stderr, "  Type enum values: NONE=%d, NIL=%d, LIST=%d, PROC=%d, CONT=%d, FUNC=%d, NUM=%d, FLOAT=%d, CHAR=%d, BOOL=%d, SYM=%d, STR=%d, MACRO=%d, HASH_TABLE=%d, RATIO=%d, VECTOR=%d, PORT=%d, PROMISE=%d, MODULE=%d, SMOB=%d, VARIABLE=%d\n",
             (int)SCM::NONE, (int)SCM::NIL, (int)SCM::LIST, (int)SCM::PROC, (int)SCM::CONT, 
             (int)SCM::FUNC, (int)SCM::NUM, (int)SCM::FLOAT, (int)SCM::CHAR, (int)SCM::BOOL,
             (int)SCM::SYM, (int)SCM::STR, (int)SCM::MACRO, (int)SCM::HASH_TABLE, (int)SCM::RATIO,
-            (int)SCM::VECTOR, (int)SCM::PORT, (int)SCM::PROMISE, (int)SCM::MODULE);
+            (int)SCM::VECTOR, (int)SCM::PORT, (int)SCM::PROMISE, (int)SCM::MODULE, (int)SCM::SMOB, (int)SCM::VARIABLE);
   }
   fflush(stderr);
   exit(1);

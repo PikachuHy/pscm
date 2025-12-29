@@ -38,7 +38,8 @@ struct SCM {
     PORT,
     PROMISE,
     MODULE,
-    SMOB
+    SMOB,
+    VARIABLE
   } type;
 
   void *value;
@@ -132,6 +133,11 @@ struct SCM_Module {
   SCM_Symbol *kind;             // Module type: 'module, 'interface, 'directory
   SCM_Module *public_interface; // Public interface module (points to another module object)
   SCM_List *exports;            // List of exported symbols (for public interface)
+};
+
+// Variable object (wraps a value, similar to Guile's variable cells)
+struct SCM_Variable {
+  SCM *value;  // The value stored in the variable (can be nullptr for unbound)
 };
 
 // Port types
@@ -275,6 +281,10 @@ inline bool is_module(SCM *scm) {
 
 inline bool is_smob(SCM *scm) {
   return scm && scm->type == SCM::SMOB;
+}
+
+inline bool is_variable(SCM *scm) {
+  return scm && scm->type == SCM::VARIABLE;
 }
 
 SCM *create_sym(const char *data, int len);
@@ -682,6 +692,24 @@ inline SCM_Smob *cast<SCM_Smob>(SCM *data) {
 }
 
 template <>
+inline SCM_Variable *cast<SCM_Variable>(SCM *data) {
+  if (!data || !is_variable(data)) {
+    type_error(data, "variable");
+  }
+  return (SCM_Variable *)data->value;
+}
+
+template <>
+inline SCM *wrap(SCM_Variable *var) {
+  assert(var);
+  auto data = new SCM();
+  data->type = SCM::VARIABLE;
+  data->value = var;
+  data->source_loc = nullptr;
+  return data;
+}
+
+template <>
 inline SCM *wrap(SCM_Vector *vec) {
   assert(vec);
   auto data = new SCM();
@@ -1046,6 +1074,17 @@ void init_procedure();
 void init_vector();
 void init_modules();
 void init_smob();
+void init_variable();
+
+// Variable operations (compatible with Guile 1.8 API)
+SCM *scm_c_lookup(const char *name);  // Look up a variable by name, returns variable object
+SCM *scm_lookup(SCM *sym);            // Look up a variable by symbol, returns variable object
+SCM *scm_variable_ref(SCM *var);      // Get the value of a variable object
+SCM *scm_make_variable(SCM *init);    // Create a variable initialized to a value
+SCM *scm_make_undefined_variable(void); // Create an unbound variable
+SCM *scm_variable_p(SCM *obj);        // Check if an object is a variable
+SCM *scm_variable_set_x(SCM *var, SCM *val); // Set the value of a variable
+SCM *scm_variable_bound_p(SCM *var);  // Check if a variable is bound
 
 extern SCM_Environment g_env;
 extern SCM_List *g_wind_chain; // Global wind chain for dynamic-wind

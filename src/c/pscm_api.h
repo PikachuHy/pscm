@@ -24,6 +24,12 @@ SCM_List *pscm_parse_file(const char *filename);
 SCM_Environment *pscm_get_global_env(void);
 SCM_Environment *pscm_create_env(SCM_Environment *parent);
 
+// Variable operations (compatible with Guile 1.8 API)
+SCM *pscm_c_lookup(const char *name);  // Look up a variable by name, returns variable object
+SCM *pscm_variable_ref(SCM *var);      // Get the value of a variable object
+SCM *pscm_make_variable(SCM *init);    // Create a variable initialized to a value
+SCM *pscm_make_undefined_variable(void); // Create an unbound variable
+
 // Error handling
 typedef void (*pscm_error_handler_t)(const char *message);
 void pscm_set_error_handler(pscm_error_handler_t handler);

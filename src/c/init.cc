@@ -29,6 +29,7 @@ void init_scm() {
   init_modules();  // Initialize modules before load, so %load-path can be defined in module
   init_load();     // Initialize load after modules, so %load-path can be defined in current module
   init_smob();     // Initialize smob system
+  init_variable(); // Initialize variable system (scm_variable_ref, scm_c_lookup)
   init_exit();
 }
 
