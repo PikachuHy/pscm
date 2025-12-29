@@ -18,10 +18,31 @@ struct SCM_SourceLocation {
 };
 
 struct SCM {
-  enum Type { NONE, NIL, LIST, PROC, CONT, FUNC, NUM, FLOAT, CHAR, BOOL, SYM, STR, MACRO, HASH_TABLE, RATIO, VECTOR, PORT, PROMISE, MODULE, SMOB } type;
+  enum Type {
+    NONE,
+    NIL,
+    LIST,
+    PROC,
+    CONT,
+    FUNC,
+    NUM,
+    FLOAT,
+    CHAR,
+    BOOL,
+    SYM,
+    STR,
+    MACRO,
+    HASH_TABLE,
+    RATIO,
+    VECTOR,
+    PORT,
+    PROMISE,
+    MODULE,
+    SMOB
+  } type;
 
   void *value;
-  SCM_SourceLocation *source_loc;  // Optional source location
+  SCM_SourceLocation *source_loc; // Optional source location
 };
 
 // Forward declaration for type_error (implemented in eval.cc)
@@ -32,7 +53,7 @@ struct SCM_Environment;
 struct SCM_List {
   SCM *data;
   SCM_List *next;
-  bool is_dotted;  // true indicates this is the last node of a dotted pair (stores the cdr node)
+  bool is_dotted; // true indicates this is the last node of a dotted pair (stores the cdr node)
 };
 
 struct SCM_Symbol {
@@ -50,8 +71,8 @@ struct SCM_String {
 // Example: 3/4 would have numerator=3, denominator=4
 // The fraction is always in simplified form (GCD reduced)
 struct SCM_Rational {
-  int64_t numerator;    // The numerator (top part) of the fraction
-  int64_t denominator;  // The denominator (bottom part) of the fraction, always > 0
+  int64_t numerator;   // The numerator (top part) of the fraction
+  int64_t denominator; // The denominator (bottom part) of the fraction, always > 0
 };
 
 struct SCM_Procedure {
@@ -74,64 +95,59 @@ struct SCM_Continuation {
   void *stack_data;
   void *dst;
   SCM *arg;
-  SCM_List *wind_chain;  // Saved wind chain when continuation was created
-  SCM *saved_module;     // Saved current module when continuation was created
+  SCM_List *wind_chain; // Saved wind chain when continuation was created
+  SCM *saved_module;    // Saved current module when continuation was created
 };
 
 struct SCM_Macro {
   SCM_Symbol *name;
-  SCM_Procedure *transformer;  // Macro transformer procedure
-  SCM_Environment *env;        // Environment where macro was defined
+  SCM_Procedure *transformer; // Macro transformer procedure
+  SCM_Environment *env;       // Environment where macro was defined
 };
 
 struct SCM_HashTable {
-  SCM **buckets;        // Array of buckets (each bucket is a list of (key . value) pairs)
-  size_t capacity;      // Number of buckets
-  size_t size;          // Number of entries in the table
+  SCM **buckets;   // Array of buckets (each bucket is a list of (key . value) pairs)
+  size_t capacity; // Number of buckets
+  size_t size;     // Number of entries in the table
 };
 
 struct SCM_Vector {
-  SCM **elements;       // Array of SCM pointers
-  size_t length;        // Number of elements
+  SCM **elements; // Array of SCM pointers
+  size_t length;  // Number of elements
 };
 
 struct SCM_Promise {
-  SCM *thunk;      // A zero-argument procedure representing the delayed computation
-  SCM *value;      // Cached value after forcing; nullptr if not yet forced
-  bool is_forced;  // Whether the promise has been forced
+  SCM *thunk;     // A zero-argument procedure representing the delayed computation
+  SCM *value;     // Cached value after forcing; nullptr if not yet forced
+  bool is_forced; // Whether the promise has been forced
 };
 
 struct SCM_Module {
-  SCM_HashTable *obarray;        // Local bindings hash table (symbol -> variable)
-  SCM_List *uses;                // List of used modules
-  SCM_Procedure *binder;         // Optional binding procedure (module symbol definep) -> variable | #f
-  SCM_Procedure *eval_closure;   // Lookup strategy function (symbol definep) -> variable | #f
-  SCM_Procedure *transformer;    // Syntax transformer (expr) -> expr
-  SCM_List *name;                // Module name list, e.g. (guile-user)
-  SCM_Symbol *kind;              // Module type: 'module, 'interface, 'directory
-  SCM_Module *public_interface;  // Public interface module (points to another module object)
-  SCM_List *exports;             // List of exported symbols (for public interface)
+  SCM_HashTable *obarray;       // Local bindings hash table (symbol -> variable)
+  SCM_List *uses;               // List of used modules
+  SCM_Procedure *binder;        // Optional binding procedure (module symbol definep) -> variable | #f
+  SCM_Procedure *eval_closure;  // Lookup strategy function (symbol definep) -> variable | #f
+  SCM_Procedure *transformer;   // Syntax transformer (expr) -> expr
+  SCM_List *name;               // Module name list, e.g. (guile-user)
+  SCM_Symbol *kind;             // Module type: 'module, 'interface, 'directory
+  SCM_Module *public_interface; // Public interface module (points to another module object)
+  SCM_List *exports;            // List of exported symbols (for public interface)
 };
 
 // Port types
-enum PortType {
-  PORT_FILE_INPUT,
-  PORT_FILE_OUTPUT,
-  PORT_STRING_INPUT,
-  PORT_STRING_OUTPUT
-};
+enum PortType { PORT_FILE_INPUT, PORT_FILE_OUTPUT, PORT_STRING_INPUT, PORT_STRING_OUTPUT };
 
 struct SCM_Port {
   PortType port_type;
-  bool is_input;         // true for input port, false for output port
-  bool is_closed;        // true if port is closed
-  FILE *file;            // For file ports
-  char *string_data;     // For string input ports (read-only)
-  int string_pos;        // Current position in string
-  int string_len;        // Length of string
-  char *output_buffer;   // For string output ports (growing buffer)
-  int output_len;        // Current length of output buffer
-  int output_capacity;   // Capacity of output buffer
+  bool is_input;       // true for input port, false for output port
+  bool is_closed;      // true if port is closed
+  FILE *file;          // For file ports
+  char *string_data;   // For string input ports (read-only)
+  int string_pos;      // Current position in string
+  int string_len;      // Length of string
+  char *output_buffer; // For string output ports (growing buffer)
+  int output_len;      // Current length of output buffer
+  int output_capacity; // Capacity of output buffer
 };
 
 struct SCM_Environment {
@@ -199,14 +215,16 @@ inline bool is_bool(SCM *scm) {
 
 // Check if a value is truthy (in Scheme, only #f is falsy, everything else is truthy)
 inline bool is_truthy(SCM *scm) {
-  if (!scm) return false;
+  if (!scm)
+    return false;
   // Only #f is falsy in Scheme
   return !(is_bool(scm) && scm->value == nullptr);
 }
 
 // Check if a value is falsy (only #f is falsy in Scheme)
 inline bool is_falsy(SCM *scm) {
-  if (!scm) return true;
+  if (!scm)
+    return true;
   // Only #f is falsy in Scheme
   return is_bool(scm) && scm->value == nullptr;
 }
@@ -348,13 +366,23 @@ SCM *scm_nil();
 SCM *scm_bool_false();
 SCM *scm_bool_true();
 
+inline SCM *bool_to_scm(bool b) {
+  return b ? scm_bool_true() : scm_bool_false();
+}
+
+inline bool scm_to_bool(SCM *scm) {
+  assert(is_bool(scm));
+  return is_true(scm);
+}
+
 // Float number helper functions
 // double <-> void* conversion helpers (for 64-bit systems)
-inline void* double_to_ptr(double val) {
+inline void *double_to_ptr(double val) {
   union {
     double d;
     void *p;
   } u;
+
   u.d = val;
   return u.p;
 }
@@ -364,8 +392,30 @@ inline double ptr_to_double(void *ptr) {
     double d;
     void *p;
   } u;
+
   u.p = ptr;
   return u.d;
+}
+
+inline SCM *int_to_scm(int val) {
+  SCM *scm = new SCM();
+  scm->type = SCM::NUM;
+  scm->value = (void *)(int64_t)val;
+  scm->source_loc = nullptr;
+  return scm;
+}
+
+inline int scm_to_int(SCM *scm) {
+  assert(is_num(scm));
+  return (int)(int64_t)scm->value;
+}
+
+inline SCM *long_to_scm(long val) {
+  SCM *scm = new SCM();
+  scm->type = SCM::NUM;
+  scm->value = (void *)val;
+  scm->source_loc = nullptr;
+  return scm;
 }
 
 // Create a float number
@@ -377,13 +427,19 @@ inline SCM *scm_from_double(double val) {
   return scm;
 }
 
+inline SCM *double_to_scm(double val) {
+  return scm_from_double(val);
+}
+
 // Convert SCM to double (handles NUM, FLOAT, and RATIO)
 inline double scm_to_double(SCM *scm) {
   if (is_float(scm)) {
     return ptr_to_double(scm->value);
-  } else if (is_num(scm)) {
+  }
+  else if (is_num(scm)) {
     return (double)(int64_t)scm->value;
-  } else if (is_ratio(scm)) {
+  }
+  else if (is_ratio(scm)) {
     SCM_Rational *rat = (SCM_Rational *)scm->value;
     return (double)rat->numerator / (double)rat->denominator;
   }
@@ -392,8 +448,8 @@ inline double scm_to_double(SCM *scm) {
 
 // Character helper functions
 // char <-> void* conversion helpers
-inline void* char_to_ptr(char val) {
-  return (void*)(uintptr_t)(unsigned char)val;
+inline void *char_to_ptr(char val) {
+  return (void *)(uintptr_t)(unsigned char)val;
 }
 
 inline char ptr_to_char(void *ptr) {
@@ -416,6 +472,7 @@ inline char scm_to_char(SCM *scm) {
   }
   return 0;
 }
+
 SCM *scm_sym_lambda();
 SCM *scm_sym_set();
 SCM *scm_sym_let();
@@ -682,10 +739,14 @@ inline SCM *cdr(SCM *data) {
   auto new_data = new SCM();
   new_data->type = SCM::LIST;
   new_data->value = l->next;
-  new_data->source_loc = nullptr;  // Initialize to nullptr
+  new_data->source_loc = nullptr; // Initialize to nullptr
   // Copy source location from original list
   copy_source_location(new_data, data);
   return new_data;
+}
+
+inline SCM *caar(SCM *data) {
+  return car(car(data));
 }
 
 inline SCM *cadr(SCM *data) {
@@ -704,12 +765,25 @@ inline SCM *cadr(SCM *data) {
   return result;
 }
 
+inline SCM *cdar(SCM *data) {
+  return cdr(car(data));
+}
+
 inline SCM *cddr(SCM *data) {
   return cdr(cdr(data));
 }
 
 inline SCM *caddr(SCM *data) {
   SCM *result = car(cdr(cdr(data)));
+  // Copy source location if result doesn't have one
+  if (result && !result->source_loc && data->source_loc) {
+    copy_source_location(result, data);
+  }
+  return result;
+}
+
+inline SCM *cadddr(SCM *data) {
+  SCM *result = car(cdr(cdr(cdr(data))));
   // Copy source location if result doesn't have one
   if (result && !result->source_loc && data->source_loc) {
     copy_source_location(result, data);
@@ -813,6 +887,7 @@ void init_apply();
  */
 bool _eq(SCM *lhs, SCM *rhs);
 SCM *scm_c_is_eq(SCM *lhs, SCM *rhs);
+SCM *scm_c_is_equal(SCM *lhs, SCM *rhs);
 
 /*
  * Functions in number.cc (internal comparison functions)
@@ -852,6 +927,8 @@ SCM *scm_list3(SCM *arg1, SCM *arg2, SCM *arg3);
 SCM *scm_list(SCM_List *args);
 SCM *scm_cons(SCM *car_val, SCM *cdr_val);
 SCM *scm_append(SCM_List *args);
+SCM *scm_c_set_car(SCM *pair, SCM *value);
+SCM *scm_c_set_cdr(SCM *pair, SCM *value);
 
 /*
  * Macro
@@ -971,9 +1048,9 @@ void init_modules();
 void init_smob();
 
 extern SCM_Environment g_env;
-extern SCM_List *g_wind_chain;  // Global wind chain for dynamic-wind
-extern SCM *g_root_module;  // Root module (pscm-user)
-extern long *cont_base;  // Stack base pointer for continuations
+extern SCM_List *g_wind_chain; // Global wind chain for dynamic-wind
+extern SCM *g_root_module;     // Root module (pscm-user)
+extern long *cont_base;        // Stack base pointer for continuations
 
 /*
  * Hash table functions
@@ -1011,7 +1088,7 @@ SCM_Function *_create_func(const char *name, F func_ptr) {
   func_name->len = strlen(name);
   func_name->data = (char *)malloc(sizeof(char) * (func_name->len + 1));
   memcpy(func_name->data, name, func_name->len);
-  func_name->data[func_name->len] = '\0';  // Ensure null termination
+  func_name->data[func_name->len] = '\0'; // Ensure null termination
   func->name = func_name;
   func->func_ptr = (void *)func_ptr;
   return func;
@@ -1037,7 +1114,7 @@ void scm_define_generic_function(const char *name, F func_ptr, SCM *init_val) {
 template <typename F>
 void scm_define_vararg_function(const char *name, F func_ptr) {
   auto func = _create_func(name, func_ptr);
-  func->n_args = -2;  // Special value for variable argument functions
+  func->n_args = -2; // Special value for variable argument functions
   func->generic = nullptr;
   auto data = wrap(func);
   scm_env_insert(&g_env, func->name, data, /*search_parent=*/false);
