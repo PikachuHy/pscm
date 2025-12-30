@@ -30,6 +30,14 @@ struct catch_info {
   void *handler_data;     // Handler data
 };
 
+// Structure to hold lazy catch handler information
+struct lazy_catch_data {
+  SCM *tag;
+  scm_t_catch_handler handler;
+  void *handler_data;
+  int lazy_catch_p;
+};
+
 // Helper function to check if two tags match
 static bool tags_match(SCM *tag, SCM *key) {
   // If tag is #t, it matches all keys
@@ -124,7 +132,48 @@ SCM *scm_c_catch(SCM *tag,
 
 // Throw exception
 SCM *scm_throw(SCM *key, SCM *args) {
-  // Find matching catch in the catch stack
+  // First, check for lazy catch handlers in the wind chain
+  extern SCM_List *g_wind_chain;
+  SCM_List *wind_current = g_wind_chain;
+  
+  // Static storage for lazy catch data (same as in scm_c_with_throw_handler)
+  static struct lazy_catch_data lazy_catch_storage[100];
+  
+  while (wind_current) {
+    SCM *entry = wind_current->data;
+    if (is_pair(entry)) {
+      SCM_List *pair = cast<SCM_List>(entry);
+      if (pair->data && tags_match(pair->data, key)) {
+        // Check if this is a lazy catch entry
+        if (pair->next && is_pair(pair->next->data)) {
+          SCM_List *marker_pair = cast<SCM_List>(pair->next->data);
+          if (marker_pair->data && is_sym(marker_pair->data)) {
+            SCM_Symbol *marker = cast<SCM_Symbol>(marker_pair->data);
+            if (strcmp(marker->data, "__lazy_catch__") == 0) {
+              // This is a lazy catch entry
+              if (marker_pair->next && marker_pair->next->data) {
+                SCM *index_list = marker_pair->next->data;
+                if (is_pair(index_list)) {
+                  SCM_List *index_pair = cast<SCM_List>(index_list);
+                  if (index_pair->data && is_num(index_pair->data)) {
+                    int storage_index = (int)(int64_t)index_pair->data->value;
+                    if (storage_index >= 0 && storage_index < 100) {
+                      struct lazy_catch_data *lcd = &lazy_catch_storage[storage_index];
+                      // Call the handler
+                      return lcd->handler(lcd->handler_data, key, args);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    wind_current = wind_current->next;
+  }
+  
+  // Then, find matching catch in the catch stack (normal catch with stack unwinding)
   // Search from top to bottom (most recent catch first)
   for (int i = g_catch_stack_top - 1; i >= 0; i--) {
     struct catch_info *info = g_catch_stack[i];
@@ -273,6 +322,108 @@ SCM *scm_handle_by_message_noexit(void *handler_data, SCM *tag, SCM *args) {
 SCM *scm_ithrow(SCM *key, SCM *args, int noreturn) {
   (void)noreturn;  // Unused for now
   return scm_throw(key, args);
+}
+
+// Helper function to check if a wind chain entry is a lazy catch handler
+static bool is_lazy_catch_entry(SCM *entry, SCM *tag) {
+  // Check if entry is a pair and matches the tag
+  if (!is_pair(entry)) {
+    return false;
+  }
+  
+  SCM_List *pair = cast<SCM_List>(entry);
+  if (!pair->data || !is_sym(pair->data)) {
+    return false;
+  }
+  
+  // Check if tag matches
+  return tags_match(pair->data, tag);
+}
+
+// With throw handler (for lazy catch) - does not unwind stack
+SCM *scm_c_with_throw_handler(SCM *tag,
+                              scm_t_catch_body body, void *body_data,
+                              scm_t_catch_handler handler, void *handler_data,
+                              int lazy_catch_p) {
+  // Create lazy catch data structure
+  struct lazy_catch_data lcd;
+  lcd.tag = tag;
+  lcd.handler = handler;
+  lcd.handler_data = handler_data;
+  lcd.lazy_catch_p = lazy_catch_p;
+  
+  // Create a marker entry for the wind chain: (tag . lazy_catch_data_ptr)
+  // We'll use a special list structure to store this
+  // Format: (tag . (handler_ptr . handler_data_ptr))
+  // Actually, we need to store the lazy_catch_data pointer, but SCM_List only stores SCM*
+  // So we'll use a different approach: store it in a static array and use an index
+  // Or better: create a wrapper that we can store in the wind chain
+  
+  // For simplicity, we'll create a list entry: (tag . handler_info)
+  // where handler_info is a list containing the handler function pointer and data
+  // But we can't store function pointers directly in SCM objects.
+  
+  // Better approach: use a global array to store lazy_catch_data structures
+  // and store the index in the wind chain entry
+  static struct lazy_catch_data lazy_catch_storage[100];
+  static int lazy_catch_storage_top = 0;
+  
+  if (lazy_catch_storage_top >= 100) {
+    eval_error("scm_c_with_throw_handler: too many nested lazy catches");
+    return nullptr;
+  }
+  
+  int storage_index = lazy_catch_storage_top++;
+  lazy_catch_storage[storage_index] = lcd;
+  
+  // Create wind chain entry: (tag . storage_index)
+  // We'll use a special marker to distinguish lazy catch entries
+  // Format: (tag . (lazy_catch_marker . storage_index))
+  SCM_Symbol *lazy_catch_marker_sym = make_sym("__lazy_catch__");
+  SCM *lazy_catch_marker = wrap(lazy_catch_marker_sym);
+  SCM *index_scm = new SCM();
+  index_scm->type = SCM::NUM;
+  index_scm->value = (void*)(int64_t)storage_index;
+  index_scm->source_loc = nullptr;
+  
+  SCM_List *marker_pair = make_list(lazy_catch_marker);
+  marker_pair->next = make_list(index_scm);
+  
+  SCM_List *wind_entry = make_list(tag);
+  wind_entry->next = marker_pair;
+  SCM *wind_entry_wrapped = wrap(wind_entry);
+  
+  // Add to wind chain
+  extern SCM_List *g_wind_chain;
+  SCM_List *old_wind_chain = g_wind_chain;
+  SCM_List *new_wind_entry = make_list(wind_entry_wrapped);
+  new_wind_entry->next = g_wind_chain;
+  g_wind_chain = new_wind_entry;
+  
+  // Call body
+  SCM *result = body(body_data);
+  
+  // Remove from wind chain
+  g_wind_chain = old_wind_chain;
+  lazy_catch_storage_top--;  // Free the storage slot
+  
+  return result;
+}
+
+// Internal catch - unwinds stack using setjmp/longjmp
+SCM *scm_internal_catch(SCM *tag,
+                       scm_t_catch_body body, void *body_data,
+                       scm_t_catch_handler handler, void *handler_data) {
+  // This is just a wrapper around scm_c_catch
+  return scm_c_catch(tag, body, body_data, handler, handler_data);
+}
+
+// Internal lazy catch - does not unwind stack
+SCM *scm_internal_lazy_catch(SCM *tag,
+                            scm_t_catch_body body, void *body_data,
+                            scm_t_catch_handler handler, void *handler_data) {
+  // This is a wrapper around scm_c_with_throw_handler with lazy_catch_p = 1
+  return scm_c_with_throw_handler(tag, body, body_data, handler, handler_data, 1);
 }
 
 // Body function for Scheme catch (thunk)

@@ -22,6 +22,21 @@ SCM *scm_throw(SCM *key, SCM *args);
 // Uncaught throw handler (prints error and exits)
 [[noreturn]] void scm_uncaught_throw(SCM *key, SCM *args);
 
+// Internal catch functions (compatible with Guile 1.8 API)
+SCM *scm_internal_catch(SCM *tag,
+                       scm_t_catch_body body, void *body_data,
+                       scm_t_catch_handler handler, void *handler_data);
+
+SCM *scm_internal_lazy_catch(SCM *tag,
+                            scm_t_catch_body body, void *body_data,
+                            scm_t_catch_handler handler, void *handler_data);
+
+// With throw handler (for lazy catch)
+SCM *scm_c_with_throw_handler(SCM *tag,
+                              scm_t_catch_body body, void *body_data,
+                              scm_t_catch_handler handler, void *handler_data,
+                              int lazy_catch_p);
+
 // Scheme-callable catch function
 SCM *scm_c_catch_scheme(SCM_List *args);
 
