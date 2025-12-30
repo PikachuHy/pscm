@@ -30,6 +30,14 @@ SCM *pscm_variable_ref(SCM *var);      // Get the value of a variable object
 SCM *pscm_make_variable(SCM *init);    // Create a variable initialized to a value
 SCM *pscm_make_undefined_variable(void); // Create an unbound variable
 
+// Port operations (compatible with Guile 1.8 API)
+SCM *pscm_current_error_port(void);    // Get current error port
+SCM *pscm_set_current_error_port(SCM *port); // Set current error port
+SCM *pscm_force_output(SCM *port);     // Force output (flush) a port
+
+// Throw operations (compatible with Guile 1.8 API)
+SCM *pscm_ithrow(SCM *key, SCM *args, int noreturn); // Throw with noreturn flag
+
 // Error handling
 typedef void (*pscm_error_handler_t)(const char *message);
 void pscm_set_error_handler(pscm_error_handler_t handler);

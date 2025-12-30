@@ -307,6 +307,88 @@ void write_char_to_port_string(SCM_Port *port, char ch) {
   }
 }
 
+// Helper function to flush a port
+static void flush_port(SCM_Port *port) {
+  if (port->is_closed) {
+    return;
+  }
+  
+  if (port->port_type == PORT_FILE_OUTPUT) {
+    if (port->file) {
+      fflush(port->file);
+    }
+  }
+  // String output ports don't need flushing (they're in-memory)
+}
+
+// Global current error port (defaults to stderr)
+static SCM *g_current_error_port = nullptr;
+
+// Get current error port (defaults to stderr wrapped as a port)
+SCM *scm_current_error_port() {
+  if (!g_current_error_port) {
+    // Create a port wrapping stderr
+    SCM_Port *port = new SCM_Port();
+    port->port_type = PORT_FILE_OUTPUT;
+    port->is_input = false;
+    port->is_closed = false;
+    port->file = stderr;
+    port->string_data = nullptr;
+    port->string_pos = 0;
+    port->string_len = 0;
+    port->output_buffer = nullptr;
+    port->output_len = 0;
+    port->output_capacity = 0;
+    g_current_error_port = wrap_port(port);
+  }
+  return g_current_error_port;
+}
+
+// Set current error port
+SCM *scm_set_current_error_port(SCM *port) {
+  if (!is_port(port)) {
+    eval_error("set-current-error-port: expected port");
+    return nullptr;
+  }
+  SCM_Port *p = cast<SCM_Port>(port);
+  if (p->is_input) {
+    eval_error("set-current-error-port: expected output port");
+    return nullptr;
+  }
+  SCM *old = scm_current_error_port();
+  g_current_error_port = port;
+  return old;
+}
+
+// Force output (flush) a port
+SCM *scm_force_output(SCM_List *args) {
+  SCM *port = nullptr;
+  if (args && args->data) {
+    port = args->data;
+  }
+  
+  if (!port || is_nil(port)) {
+    // Default to current output port (stdout)
+    // For now, just flush stdout
+    fflush(stdout);
+    return scm_none();
+  }
+  
+  if (!is_port(port)) {
+    eval_error("force-output: expected port");
+    return nullptr;
+  }
+  
+  SCM_Port *p = cast<SCM_Port>(port);
+  if (p->is_input) {
+    eval_error("force-output: expected output port");
+    return nullptr;
+  }
+  
+  flush_port(p);
+  return scm_none();
+}
+
 // Helper function to read a complete expression from port
 // This reads characters until we have a complete expression
 static SCM *read_expr_from_port(SCM_Port *port) {
@@ -847,6 +929,9 @@ void init_port() {
   // Initialize EOF object
   scm_eof_object();
   
+  // Initialize current error port
+  scm_current_error_port();
+  
   // File ports
   scm_define_function("open-input-file", 1, 0, 0, scm_c_open_input_file);
   scm_define_function("open-output-file", 1, 0, 0, scm_c_open_output_file);
@@ -871,6 +956,11 @@ void init_port() {
   
   // Port write operations
   scm_define_vararg_function("write-char", scm_c_write_char);
+  
+  // Current ports
+  scm_define_function("current-error-port", 0, 0, 0, scm_current_error_port);
+  scm_define_function("set-current-error-port", 1, 0, 0, scm_set_current_error_port);
+  scm_define_vararg_function("force-output", scm_force_output);
   
   // Port wrappers
   scm_define_vararg_function("call-with-input-file", scm_c_call_with_input_file);

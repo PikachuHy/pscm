@@ -34,3 +34,9 @@ void init_throw();
 // Standard error key (initialized in init_throw)
 extern SCM *g_error_key;
 
+// Handle by message without exiting (unless quit tag)
+SCM *scm_handle_by_message_noexit(void *handler_data, SCM *tag, SCM *args);
+
+// Throw with noreturn flag (for lazy-catch compatibility)
+SCM *scm_ithrow(SCM *key, SCM *args, int noreturn);
+

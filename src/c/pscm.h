@@ -1063,6 +1063,14 @@ void init_alist();
 void init_char();
 void init_string();
 void init_port();
+
+// Port operations (compatible with Guile 1.8 API)
+SCM *scm_current_error_port(void);
+SCM *scm_set_current_error_port(SCM *port);
+SCM *scm_force_output(SCM_List *args);  // Vararg function: (force-output [port])
+
+// Throw operations (compatible with Guile 1.8 API)
+// Note: scm_handle_by_message_noexit and scm_ithrow are declared in throw.h
 void init_exit();
 void init_load();
 void init_delay();

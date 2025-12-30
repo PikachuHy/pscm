@@ -142,36 +142,137 @@ SCM *scm_throw(SCM *key, SCM *args) {
   return nullptr;  // Never reached
 }
 
-// Uncaught throw handler
-[[noreturn]] void scm_uncaught_throw(SCM *key, SCM *args) {
-  fprintf(stderr, "uncaught throw to ");
-  
-  if (is_sym(key)) {
-    SCM_Symbol *sym = cast<SCM_Symbol>(key);
-    fprintf(stderr, "'%s", sym->data);
-  } else {
-    print_ast_to_stderr(key);
+// Helper function to write to a port (for error messages)
+static void write_to_port(SCM_Port *port, const char *str) {
+  if (!port || port->is_closed) {
+    fputs(str, stderr);
+    return;
   }
   
-  fprintf(stderr, ": ");
+  if (port->port_type == PORT_FILE_OUTPUT && port->file) {
+    fputs(str, port->file);
+  } else if (port->port_type == PORT_STRING_OUTPUT) {
+    // Append to string output buffer
+    int len = strlen(str);
+    if (port->output_len + len + 1 >= port->output_capacity) {
+      while (port->output_len + len + 1 >= port->output_capacity) {
+        port->output_capacity *= 2;
+      }
+      port->output_buffer = (char*)realloc(port->output_buffer, port->output_capacity);
+    }
+    memcpy(port->output_buffer + port->output_len, str, len);
+    port->output_len += len;
+    port->output_buffer[port->output_len] = '\0';
+  } else {
+    fputs(str, stderr);
+  }
+}
+
+// Helper function to print error message to error port
+static void handler_message(void *handler_data, SCM *tag, SCM *args) {
+  extern SCM *scm_current_error_port();
+  SCM *error_port = scm_current_error_port();
+  SCM_Port *port = cast<SCM_Port>(error_port);
   
+  const char *prog_name = handler_data ? (const char *)handler_data : "pscm";
+  
+  // Build message string
+  char msg[1024];
+  int pos = 0;
+  pos += snprintf(msg + pos, sizeof(msg) - pos, "%s: uncaught throw to ", prog_name);
+  
+  if (is_sym(tag)) {
+    SCM_Symbol *sym = cast<SCM_Symbol>(tag);
+    pos += snprintf(msg + pos, sizeof(msg) - pos, "'%s", sym->data);
+  } else {
+    // For non-symbol tags, use a simple representation
+    pos += snprintf(msg + pos, sizeof(msg) - pos, "<non-symbol>");
+  }
+  
+  pos += snprintf(msg + pos, sizeof(msg) - pos, ": ");
+  
+  // For args, we'll print a simplified version
   if (args) {
-    print_ast_to_stderr(args);
+    if (is_pair(args)) {
+      SCM_List *args_list = cast<SCM_List>(args);
+      if (args_list->data && is_str(args_list->data)) {
+        SCM_String *s = cast<SCM_String>(args_list->data);
+        pos += snprintf(msg + pos, sizeof(msg) - pos, "%s", s->data);
+      } else {
+        pos += snprintf(msg + pos, sizeof(msg) - pos, "<args>");
+      }
+    } else {
+      pos += snprintf(msg + pos, sizeof(msg) - pos, "<args>");
+    }
   } else {
-    fprintf(stderr, "()");
+    pos += snprintf(msg + pos, sizeof(msg) - pos, "()");
   }
   
-  fprintf(stderr, "\n");
-  fflush(stderr);
+  pos += snprintf(msg + pos, sizeof(msg) - pos, "\n");
+  
+  write_to_port(port, msg);
+  
+  // Flush the port
+  if (port->port_type == PORT_FILE_OUTPUT && port->file) {
+    fflush(port->file);
+  }
   
   // Print call stack if available
   if (g_eval_stack) {
-    fprintf(stderr, "\n=== Evaluation Call Stack ===\n");
+    write_to_port(port, "\n=== Evaluation Call Stack ===\n");
+    // For call stack, we'll use stderr for now (can be improved later)
     print_eval_stack();
-    fprintf(stderr, "=== End of Call Stack ===\n");
+    write_to_port(port, "=== End of Call Stack ===\n");
+    if (port->port_type == PORT_FILE_OUTPUT && port->file) {
+      fflush(port->file);
+    }
+  }
+}
+
+// Handle by message without exiting (unless quit tag)
+SCM *scm_handle_by_message_noexit(void *handler_data, SCM *tag, SCM *args) {
+  // Check if tag is "quit"
+  if (is_sym(tag)) {
+    SCM_Symbol *tag_sym = cast<SCM_Symbol>(tag);
+    if (strcmp(tag_sym->data, "quit") == 0) {
+      // Extract exit status from args (first element if present)
+      int exit_status = 0;
+      if (args && is_pair(args)) {
+        SCM_List *args_list = cast<SCM_List>(args);
+        if (args_list->data && is_num(args_list->data)) {
+          exit_status = (int)(int64_t)args_list->data->value;
+        }
+      }
+      exit(exit_status);
+    }
   }
   
+  // Print message but don't exit
+  handler_message(handler_data, tag, args);
+  
+  return scm_bool_false();
+}
+
+// Uncaught throw handler
+[[noreturn]] void scm_uncaught_throw(SCM *key, SCM *args) {
+  handler_message(nullptr, key, args);
+  // Force output before exiting
+  extern SCM *scm_current_error_port();
+  extern SCM *scm_force_output(SCM_List *args);
+  SCM *error_port = scm_current_error_port();
+  SCM_List force_args;
+  force_args.data = error_port;
+  force_args.next = nullptr;
+  force_args.is_dotted = false;
+  scm_force_output(&force_args);
   exit(1);
+}
+
+// Throw with noreturn flag (similar to scm_throw but for lazy-catch)
+// The noreturn flag is currently unused but kept for API compatibility
+SCM *scm_ithrow(SCM *key, SCM *args, int noreturn) {
+  (void)noreturn;  // Unused for now
+  return scm_throw(key, args);
 }
 
 // Body function for Scheme catch (thunk)

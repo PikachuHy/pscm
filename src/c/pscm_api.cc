@@ -1,5 +1,6 @@
 #include "pscm_api.h"
 #include "eval.h"
+#include "throw.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -135,5 +136,28 @@ SCM *pscm_make_variable(SCM *init) {
 
 SCM *pscm_make_undefined_variable(void) {
   return scm_make_undefined_variable();
+}
+
+// Port operations (compatible with Guile 1.8 API)
+SCM *pscm_current_error_port(void) {
+  return scm_current_error_port();
+}
+
+SCM *pscm_set_current_error_port(SCM *port) {
+  return scm_set_current_error_port(port);
+}
+
+SCM *pscm_force_output(SCM *port) {
+  // Create a list wrapper for the port argument
+  SCM_List args;
+  args.data = port;
+  args.next = nullptr;
+  args.is_dotted = false;
+  return scm_force_output(&args);
+}
+
+// Throw operations (compatible with Guile 1.8 API)
+SCM *pscm_ithrow(SCM *key, SCM *args, int noreturn) {
+  return scm_ithrow(key, args, noreturn);
 }
 
