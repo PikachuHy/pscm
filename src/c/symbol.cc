@@ -68,19 +68,7 @@ SCM *scm_c_gensym() {
   return wrap(make_sym(buffer));
 }
 
-// Helper function to create a string from C string
-static SCM *scm_from_c_string(const char *data, int len) {
-  SCM_String *s = new SCM_String();
-  s->data = new char[len + 1];
-  memcpy(s->data, data, len);
-  s->data[len] = '\0';
-  s->len = len;
-  SCM *scm = new SCM();
-  scm->type = SCM::STR;
-  scm->value = s;
-  scm->source_loc = nullptr;
-  return scm;
-}
+// Note: scm_from_c_string is now defined in string.cc
 
 // symbol->string: Convert symbol to string
 SCM *scm_c_symbol_to_string(SCM *sym) {
@@ -90,6 +78,35 @@ SCM *scm_c_symbol_to_string(SCM *sym) {
   }
   auto s = cast<SCM_Symbol>(sym);
   return scm_from_c_string(s->data, s->len);
+}
+
+// scm_symbol_to_string: C API version (same as scm_c_symbol_to_string)
+SCM *scm_symbol_to_string(SCM *sym) {
+  return scm_c_symbol_to_string(sym);
+}
+
+// scm_from_locale_symbol: Create symbol from C locale string
+SCM *scm_from_locale_symbol(const char *sym) {
+  if (!sym) {
+    eval_error("scm_from_locale_symbol: sym is null");
+    return nullptr;
+  }
+  return create_sym(sym, (int)strlen(sym));
+}
+
+// scm_from_locale_symboln: Create symbol from C locale string with specified length
+SCM *scm_from_locale_symboln(const char *sym, size_t len) {
+  if (!sym) {
+    eval_error("scm_from_locale_symboln: sym is null");
+    return nullptr;
+  }
+  
+  // If len is (size_t)-1, use strlen
+  if (len == (size_t)-1) {
+    len = strlen(sym);
+  }
+  
+  return create_sym(sym, (int)len);
 }
 
 // string->symbol: Convert string to symbol

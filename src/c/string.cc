@@ -1005,6 +1005,80 @@ SCM *scm_c_string_ci_ge(SCM *str1, SCM *str2) {
   return (s1->len >= s2->len) ? scm_bool_true() : scm_bool_false();
 }
 
+// Helper function to create a string from C string
+SCM *scm_from_c_string(const char *data, int len) {
+  if (!data) {
+    eval_error("scm_from_c_string: data is null");
+    return nullptr;
+  }
+  SCM_String *s = new SCM_String();
+  s->data = new char[len + 1];
+  memcpy(s->data, data, len);
+  s->data[len] = '\0';
+  s->len = len;
+  SCM *scm = new SCM();
+  scm->type = SCM::STR;
+  scm->value = s;
+  scm->source_loc = nullptr;
+  return scm;
+}
+
+// scm_from_locale_stringn: Create string from C locale string with specified length
+SCM *scm_from_locale_stringn(const char *str, size_t len) {
+  if (!str) {
+    eval_error("scm_from_locale_stringn: str is null");
+    return nullptr;
+  }
+  
+  // If len is (size_t)-1, use strlen
+  if (len == (size_t)-1) {
+    len = strlen(str);
+  }
+  
+  return scm_from_c_string(str, (int)len);
+}
+
+// scm_to_locale_stringn: Convert Scheme string to C locale string
+char *scm_to_locale_stringn(SCM *str, size_t *lenp) {
+  if (!str) {
+    eval_error("scm_to_locale_stringn: str is null");
+    return nullptr;
+  }
+  
+  if (!is_str(str)) {
+    eval_error("scm_to_locale_stringn: expected string");
+    return nullptr;
+  }
+  
+  SCM_String *s = cast<SCM_String>(str);
+  size_t len = (size_t)s->len;
+  
+  // Allocate memory for the result
+  // If lenp is NULL, we need to add null terminator
+  size_t alloc_len = len + ((lenp == nullptr) ? 1 : 0);
+  char *res = (char *)malloc(alloc_len);
+  if (!res) {
+    eval_error("scm_to_locale_stringn: out of memory");
+    return nullptr;
+  }
+  
+  memcpy(res, s->data, len);
+  
+  if (lenp == nullptr) {
+    // Add null terminator and check for embedded nulls
+    res[len] = '\0';
+    if (strlen(res) != len) {
+      free(res);
+      eval_error("scm_to_locale_stringn: string contains null character");
+      return nullptr;
+    }
+  } else {
+    *lenp = len;
+  }
+  
+  return res;
+}
+
 void init_string() {
   scm_define_function("string-length", 1, 0, 0, scm_c_string_length);
   scm_define_vararg_function("make-string", scm_c_make_string);
@@ -1031,4 +1105,3 @@ void init_string() {
   scm_define_vararg_function("string->number", scm_c_string_to_number);
   scm_define_vararg_function("number->string", scm_c_number_to_string);
 }
-

@@ -866,6 +866,13 @@ void print_ast(SCM *ast, bool write_mode = false);
 void print_list(SCM_List *l);
 
 /*
+ * Functions in string.cc
+ */
+SCM *scm_from_c_string(const char *data, int len);  // Helper: create string from C string
+SCM *scm_from_locale_stringn(const char *str, size_t len);  // C API: create string from C locale string with length
+char *scm_to_locale_stringn(SCM *str, size_t *lenp);  // C API: convert string to C locale string
+
+/*
  * Functions in parse.cc
  */
 SCM *parse(const char *s);
@@ -940,6 +947,9 @@ SCM *scm_c_is_pair(SCM *arg);
  */
 SCM_Symbol *make_sym(const char *data);
 SCM *scm_c_gensym();
+SCM *scm_symbol_to_string(SCM *sym);  // C API: convert symbol to string
+SCM *scm_from_locale_symbol(const char *sym);  // C API: create symbol from C string
+SCM *scm_from_locale_symboln(const char *sym, size_t len);  // C API: create symbol from C string with length
 
 /*
  * Functions in predicate.cc
