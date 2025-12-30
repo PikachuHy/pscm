@@ -871,6 +871,7 @@ void print_list(SCM_List *l);
 SCM *scm_from_c_string(const char *data, int len);  // Helper: create string from C string
 SCM *scm_from_locale_stringn(const char *str, size_t len);  // C API: create string from C locale string with length
 char *scm_to_locale_stringn(SCM *str, size_t *lenp);  // C API: convert string to C locale string
+SCM *scm_c_display(SCM_List *args);
 
 /*
  * Functions in parse.cc
