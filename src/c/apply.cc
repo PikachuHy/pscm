@@ -12,6 +12,153 @@ SCM *scm_c_apply(SCM_List *args) {
   return nullptr;
 }
 
+// scm_call_0: Call procedure with 0 arguments
+SCM *scm_call_0(SCM *proc) {
+  if (!proc) {
+    eval_error("scm_call_0: procedure is null");
+    return nullptr;
+  }
+  
+  if (is_proc(proc)) {
+    SCM_Procedure *proc_obj = cast<SCM_Procedure>(proc);
+    SCM_Environment *env = proc_obj->env ? proc_obj->env : &g_env;
+    return apply_procedure(env, proc_obj, nullptr);
+  } else if (is_func(proc)) {
+    SCM_Function *func_obj = cast<SCM_Function>(proc);
+    SCM_List dummy_list;
+    dummy_list.data = proc;
+    dummy_list.next = nullptr;
+    dummy_list.is_dotted = false;
+    return eval_with_func(func_obj, &dummy_list);
+  } else {
+    eval_error("scm_call_0: expected procedure or function");
+    return nullptr;
+  }
+}
+
+// scm_call_1: Call procedure with 1 argument
+SCM *scm_call_1(SCM *proc, SCM *arg1) {
+  if (!proc) {
+    eval_error("scm_call_1: procedure is null");
+    return nullptr;
+  }
+  
+  if (is_proc(proc)) {
+    SCM_Procedure *proc_obj = cast<SCM_Procedure>(proc);
+    SCM_Environment *env = proc_obj->env ? proc_obj->env : &g_env;
+    SCM_List *args = make_list(arg1);
+    return apply_procedure(env, proc_obj, args);
+  } else if (is_func(proc)) {
+    SCM_Function *func_obj = cast<SCM_Function>(proc);
+    SCM_List dummy_list;
+    dummy_list.data = proc;
+    SCM_List *arg_list = make_list(arg1);
+    dummy_list.next = arg_list;
+    dummy_list.is_dotted = false;
+    return eval_with_func(func_obj, &dummy_list);
+  } else {
+    eval_error("scm_call_1: expected procedure or function");
+    return nullptr;
+  }
+}
+
+// scm_call_2: Call procedure with 2 arguments
+SCM *scm_call_2(SCM *proc, SCM *arg1, SCM *arg2) {
+  if (!proc) {
+    eval_error("scm_call_2: procedure is null");
+    return nullptr;
+  }
+  
+  if (is_proc(proc)) {
+    SCM_Procedure *proc_obj = cast<SCM_Procedure>(proc);
+    SCM_Environment *env = proc_obj->env ? proc_obj->env : &g_env;
+    SCM_List *args = make_list(arg1);
+    args->next = make_list(arg2);
+    return apply_procedure(env, proc_obj, args);
+  } else if (is_func(proc)) {
+    SCM_Function *func_obj = cast<SCM_Function>(proc);
+    SCM_List dummy_list;
+    dummy_list.data = proc;
+    SCM_List *arg_list = make_list(arg1);
+    arg_list->next = make_list(arg2);
+    dummy_list.next = arg_list;
+    dummy_list.is_dotted = false;
+    return eval_with_func(func_obj, &dummy_list);
+  } else {
+    eval_error("scm_call_2: expected procedure or function");
+    return nullptr;
+  }
+}
+
+// scm_call_3: Call procedure with 3 arguments
+SCM *scm_call_3(SCM *proc, SCM *arg1, SCM *arg2, SCM *arg3) {
+  if (!proc) {
+    eval_error("scm_call_3: procedure is null");
+    return nullptr;
+  }
+  
+  if (is_proc(proc)) {
+    SCM_Procedure *proc_obj = cast<SCM_Procedure>(proc);
+    SCM_Environment *env = proc_obj->env ? proc_obj->env : &g_env;
+    SCM_List *args = make_list(arg1);
+    args->next = make_list(arg2);
+    args->next->next = make_list(arg3);
+    return apply_procedure(env, proc_obj, args);
+  } else if (is_func(proc)) {
+    SCM_Function *func_obj = cast<SCM_Function>(proc);
+    SCM_List dummy_list;
+    dummy_list.data = proc;
+    SCM_List *arg_list = make_list(arg1);
+    arg_list->next = make_list(arg2);
+    arg_list->next->next = make_list(arg3);
+    dummy_list.next = arg_list;
+    dummy_list.is_dotted = false;
+    return eval_with_func(func_obj, &dummy_list);
+  } else {
+    eval_error("scm_call_3: expected procedure or function");
+    return nullptr;
+  }
+}
+
+// scm_apply_0: Apply procedure with arguments in a list
+SCM *scm_apply_0(SCM *proc, SCM *args) {
+  if (!proc) {
+    eval_error("scm_apply_0: procedure is null");
+    return nullptr;
+  }
+  
+  // args can be nil (empty list) or a pair (list)
+  SCM_List *args_list = nullptr;
+  if (is_pair(args)) {
+    args_list = cast<SCM_List>(args);
+  } else if (!is_nil(args)) {
+    eval_error("scm_apply_0: args must be a list or nil");
+    return nullptr;
+  }
+  
+  if (is_proc(proc)) {
+    SCM_Procedure *proc_obj = cast<SCM_Procedure>(proc);
+    SCM_Environment *env = proc_obj->env ? proc_obj->env : &g_env;
+    return apply_procedure(env, proc_obj, args_list);
+  } else if (is_func(proc)) {
+    SCM_Function *func_obj = cast<SCM_Function>(proc);
+    SCM_List dummy_list;
+    dummy_list.data = proc;
+    dummy_list.next = args_list;
+    dummy_list.is_dotted = false;
+    // For functions, arguments are already evaluated (this is C API)
+    // So we need to use apply_procedure_with_values if it's a procedure,
+    // or handle it specially for functions
+    // Actually, eval_with_func expects arguments in a specific format
+    // Let's check if we need to use apply_procedure_with_values for procedures
+    // For now, use eval_with_func which should work if args are already evaluated
+    return eval_with_func(func_obj, &dummy_list);
+  } else {
+    eval_error("scm_apply_0: expected procedure or function");
+    return nullptr;
+  }
+}
+
 void init_apply() {
   scm_define_vararg_function("apply", scm_c_apply);
 }

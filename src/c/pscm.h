@@ -908,6 +908,11 @@ SCM_List *eval_list_with_env(SCM_Environment *env, SCM_List *l);
  * Functions in apply.cc
  */
 SCM *scm_c_apply(SCM_List *args);
+SCM *scm_call_0(SCM *proc);
+SCM *scm_call_1(SCM *proc, SCM *arg1);
+SCM *scm_call_2(SCM *proc, SCM *arg1, SCM *arg2);
+SCM *scm_call_3(SCM *proc, SCM *arg1, SCM *arg2, SCM *arg3);
+SCM *scm_apply_0(SCM *proc, SCM *args);
 void init_apply();
 
 /*
@@ -1068,6 +1073,11 @@ void init_port();
 SCM *scm_current_error_port(void);
 SCM *scm_set_current_error_port(SCM *port);
 SCM *scm_force_output(SCM_List *args);  // Vararg function: (force-output [port])
+
+/*
+ * Functions in load.cc
+ */
+ SCM *scm_c_primitive_load(SCM *filename);  // Core file loading implementation
 
 // Throw operations (compatible with Guile 1.8 API)
 // Note: scm_handle_by_message_noexit and scm_ithrow are declared in throw.h
