@@ -7,8 +7,7 @@
 #include <string.h>
 #include <stdarg.h>
 
-// Standard error key
-SCM *g_error_key = nullptr;
+// Standard error key is now in throw.h as inline variable
 
 // Global catch stack (shared between scm_c_catch and scm_throw)
 static struct catch_info *g_catch_stack[100];

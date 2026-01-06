@@ -3,7 +3,7 @@
 
 // Current module (using simple global variable, can be changed to fluid in the future)
 static SCM *g_current_module = nullptr;
-SCM *g_root_module = nullptr;  // Root module (pscm-user), exported for use in other files
+// g_root_module is now in pscm.h as inline variable
 
 // Module registry: module name -> module object
 static SCM_HashTable *g_module_registry = nullptr;

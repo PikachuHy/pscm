@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-
 // Forward declarations for functions used by continuation.cc
 SCM_List *copy_wind_chain(SCM_List *chain);
 SCM_List *unwind_wind_chain(SCM_List *target);

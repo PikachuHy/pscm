@@ -1,7 +1,6 @@
 #include "pscm.h"
 #include "eval.h"
 
-
 void init_scm() {
   g_env.parent = nullptr;
   g_env.dummy.data = nullptr;

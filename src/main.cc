@@ -1,12 +1,5 @@
 #include "pscm_api.h"
 
-// Global state (defined here for the executable)
-bool debug_enabled = false;
-bool ast_debug_enabled = false;
-long *cont_base = nullptr;
-SCM_Environment g_env;
-SCM_List *g_wind_chain = nullptr;
-
 // Wrapper for backward compatibility (used by repl.cc)
 SCM *eval(SCM *ast) {
   return pscm_eval(ast);

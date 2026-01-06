@@ -34,11 +34,7 @@ SCM_List *eval_list_with_env(SCM_Environment *env, SCM_List *l) {
 }
 
 
-// Error handling helper with context
-SCM *g_current_eval_context = nullptr;
-
-// Call stack for tracking evaluation path (EvalStackFrame defined in eval.h)
-EvalStackFrame *g_eval_stack = nullptr;
+// Error handling helper with context and call stack are now in eval.h as inline variables
 static const int MAX_STACK_DEPTH = 100;  // Prevent infinite recursion
 static int g_stack_depth = 0;
 

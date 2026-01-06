@@ -4,13 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// Global state - these are defined in main.cc when building the executable
-// For library use, they should be defined elsewhere or made thread-local
-extern bool debug_enabled;
-extern bool ast_debug_enabled;
-extern long *cont_base;
-extern SCM_Environment g_env;
-extern SCM_List *g_wind_chain;
+// Global state definitions are now in pscm.h as inline variables
 
 // Error handler callback
 static pscm_error_handler_t g_error_handler = nullptr;

@@ -47,8 +47,8 @@ struct EvalStackFrame {
 void print_eval_stack();
 
 // External variables for error reporting context
-extern SCM *g_current_eval_context;
-extern EvalStackFrame *g_eval_stack;
+inline SCM *g_current_eval_context = nullptr;
+inline EvalStackFrame *g_eval_stack = nullptr;
 
 // Helper function to print AST to stderr
 inline void print_ast_to_stderr(SCM *ast) {

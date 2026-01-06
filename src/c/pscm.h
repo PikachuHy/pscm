@@ -1076,7 +1076,8 @@ SCM *scm_c_set_cdr(SCM *pair, SCM *value);
   while (0)                                                                                                            \
     ;
 
-extern bool debug_enabled;
+inline bool debug_enabled = false;
+inline bool ast_debug_enabled = false;
 void print_basename(const char *path);
 
 /*
@@ -1132,10 +1133,10 @@ SCM *scm_variable_p(SCM *obj);        // Check if an object is a variable
 SCM *scm_variable_set_x(SCM *var, SCM *val); // Set the value of a variable
 SCM *scm_variable_bound_p(SCM *var);  // Check if a variable is bound
 
-extern SCM_Environment g_env;
-extern SCM_List *g_wind_chain; // Global wind chain for dynamic-wind
-extern SCM *g_root_module;     // Root module (pscm-user)
-extern long *cont_base;        // Stack base pointer for continuations
+inline SCM_Environment g_env{};
+inline SCM_List *g_wind_chain = nullptr; // Global wind chain for dynamic-wind
+inline SCM *g_root_module = nullptr;     // Root module (pscm-user)
+inline long *cont_base = nullptr;        // Stack base pointer for continuations
 
 /*
  * Hash table functions

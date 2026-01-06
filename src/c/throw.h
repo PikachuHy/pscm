@@ -47,7 +47,7 @@ SCM *scm_c_throw_scheme(SCM_List *args);
 void init_throw();
 
 // Standard error key (initialized in init_throw)
-extern SCM *g_error_key;
+inline SCM *g_error_key = nullptr;
 
 // Handle by message without exiting (unless quit tag)
 SCM *scm_handle_by_message_noexit(void *handler_data, SCM *tag, SCM *args);
