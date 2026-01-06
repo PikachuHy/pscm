@@ -29,10 +29,18 @@ static size_t default_smob_free(SCM *smob) {
 }
 
 // Default print function (exported for use in print.cc)
-void default_smob_print(SCM *smob, bool write_mode) {
+// Compatible with Guile 1.8 signature: (SCM obj, SCM port, scm_print_state *pstate)
+void default_smob_print(SCM *smob, SCM *port, scm_print_state *pstate) {
   SCM_Smob *s = cast<SCM_Smob>(smob);
   long num = get_smob_num(s->tag);
   const char *name = g_smobs[num].name ? g_smobs[num].name : "smob";
+  
+  // Determine write mode from pstate if available, otherwise default to true
+  bool write_mode = (pstate && pstate->writingp) ? true : true;
+  
+  // For now, we always print to stdout (port is ignored)
+  // TODO: Support printing to different ports
+  (void)port;  // Unused for now
   
   printf("#<%s", name);
   if (g_smobs[num].size > 0) {
@@ -104,7 +112,7 @@ void scm_set_smob_free(long tag, size_t (*free)(SCM *)) {
   g_smobs[num].free = free;
 }
 
-void scm_set_smob_print(long tag, void (*print)(SCM *, bool)) {
+void scm_set_smob_print(long tag, void (*print)(SCM *, SCM *, scm_print_state *)) {
   long num = get_smob_num(tag);
   if (num < 0 || num >= g_numsmob) {
     eval_error("scm-set-smob-print: invalid smob tag");

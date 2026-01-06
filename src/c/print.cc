@@ -10,6 +10,22 @@ struct PrintContext {
   PrintContext(bool in_qq, bool in_unq = false) : in_quasiquote(in_qq), in_unquote(in_unq) {}
 };
 
+// Helper function to initialize a print state (compatible with Guile 1.8)
+static void init_print_state(scm_print_state *pstate, bool write_mode) {
+  pstate->handle = nullptr;
+  pstate->revealed = 0;
+  pstate->writingp = write_mode ? 1 : 0;
+  pstate->fancyp = 0;
+  pstate->level = 0;
+  pstate->length = 0;
+  pstate->hot_ref = nullptr;
+  pstate->list_offset = 0;
+  pstate->top = 0;
+  pstate->ceiling = 0;
+  pstate->ref_vect = nullptr;
+  pstate->highlight_objects = nullptr;
+}
+
 // Forward declarations
 static void _print_list(SCM_List *l, bool nested, bool write_mode, const PrintContext &ctx);
 static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContext &ctx);
@@ -193,12 +209,19 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
     SCM_Smob *s = cast<SCM_Smob>(ast);
     SCM_SmobDescriptor *desc = scm_get_smob_descriptor(s->tag);
     
+    // Create and initialize a print state for this print operation
+    scm_print_state pstate;
+    init_print_state(&pstate, write_mode);
+    
+    // Use nullptr for port (stdout is used by default)
+    SCM *port = nullptr;
+    
     if (desc && desc->print) {
-      desc->print(ast, write_mode);
+      desc->print(ast, port, &pstate);
     } else {
       // Use default print function from smob.cc
-      extern void default_smob_print(SCM *, bool);
-      default_smob_print(ast, write_mode);
+      extern void default_smob_print(SCM *, SCM *, scm_print_state *);
+      default_smob_print(ast, port, &pstate);
     }
     return;
   }

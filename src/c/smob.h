@@ -5,16 +5,17 @@
 // Forward declarations
 struct SCM_Smob;
 struct SCM_SmobDescriptor;
+struct scm_print_state;
 
 // Smob descriptor structure
 struct SCM_SmobDescriptor {
-  const char *name;              // 类型名称
-  size_t size;                   // 实例大小（0 表示直接存储值）
-  SCM *(*mark)(SCM *);           // GC 标记函数（未来使用）
-  size_t (*free)(SCM *);         // GC 释放函数（未来使用）
-  void (*print)(SCM *, bool);    // 打印函数（write_mode）
-  SCM *(*equalp)(SCM *, SCM *);  // 相等性比较函数
-  // 可调用对象的应用函数（可选）
+  const char *name;              // Type name
+  size_t size;                   // Instance size (0 means direct value storage)
+  SCM *(*mark)(SCM *);           // GC mark function (for future use)
+  size_t (*free)(SCM *);         // GC free function (for future use)
+  void (*print)(SCM *, SCM *, scm_print_state *);  // Print function (obj, port, pstate)
+  SCM *(*equalp)(SCM *, SCM *);  // Equality comparison function
+  // Applicable object functions (optional)
   SCM *(*apply_0)(SCM *);
   SCM *(*apply_1)(SCM *, SCM *);
   SCM *(*apply_2)(SCM *, SCM *, SCM *);
@@ -23,11 +24,11 @@ struct SCM_SmobDescriptor {
 
 // Smob object structure
 struct SCM_Smob {
-  long tag;                      // 类型标签（用于查找描述符）
-  void *data;                    // 数据指针（当 size > 0 时）
-  int64_t data2;                 // 第二个数据字段（可选）
-  int64_t data3;                 // 第三个数据字段（可选）
-  int64_t flags;                 // 标志位（可选）
+  long tag;                      // Type tag (used to find descriptor)
+  void *data;                    // Data pointer (when size > 0)
+  int64_t data2;                 // Second data field (optional)
+  int64_t data3;                 // Third data field (optional)
+  int64_t flags;                 // Flags field (optional)
 };
 
 // Type tag constants
@@ -56,7 +57,7 @@ static inline bool is_smob_type(SCM *scm, long tag) {
 long scm_make_smob_type(const char *name, size_t size);
 void scm_set_smob_mark(long tag, SCM *(*mark)(SCM *));
 void scm_set_smob_free(long tag, size_t (*free)(SCM *));
-void scm_set_smob_print(long tag, void (*print)(SCM *, bool));
+void scm_set_smob_print(long tag, void (*print)(SCM *, SCM *, scm_print_state *));
 void scm_set_smob_equalp(long tag, SCM *(*equalp)(SCM *, SCM *));
 void scm_set_smob_apply(long tag, 
                         SCM *(*apply_0)(SCM *),

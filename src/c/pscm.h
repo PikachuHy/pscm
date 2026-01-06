@@ -171,6 +171,23 @@ struct SCM_Environment {
   SCM_Environment *parent;
 };
 
+// Print state structure (compatible with Guile 1.8)
+// Used to track state during printing, including circular reference detection
+struct scm_print_state {
+  SCM *handle;                    // Handle to the print state object (can be nullptr)
+  int revealed;                   // Has the state escaped to Scheme? (0 = false, 1 = true)
+  unsigned long writingp;         // Writing mode? (0 = display, 1 = write)
+  unsigned long fancyp;           // Fancy printing? (for pretty-printing)
+  unsigned long level;            // Max level (for truncation)
+  unsigned long length;           // Max number of objects per level
+  SCM *hot_ref;                   // Hot reference (for circular reference detection)
+  unsigned long list_offset;      // List offset
+  unsigned long top;              // Top of reference stack
+  unsigned long ceiling;          // Max size of reference stack
+  SCM_Vector *ref_vect;           // Stack of references used during circular reference detection
+  SCM_List *highlight_objects;   // List of objects to be highlighted
+};
+
 inline bool is_str(SCM *scm) {
   return scm->type == SCM::STR;
 }
