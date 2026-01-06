@@ -133,7 +133,6 @@ SCM *scm_c_catch(SCM *tag,
 // Throw exception
 SCM *scm_throw(SCM *key, SCM *args) {
   // First, check for lazy catch handlers in the wind chain
-  extern SCM_List *g_wind_chain;
   SCM_List *wind_current = g_wind_chain;
   
   // Static storage for lazy catch data (same as in scm_c_with_throw_handler)
@@ -219,7 +218,6 @@ static void write_to_port(SCM_Port *port, const char *str) {
 
 // Helper function to print error message to error port
 static void handler_message(void *handler_data, SCM *tag, SCM *args) {
-  extern SCM *scm_current_error_port();
   SCM *error_port = scm_current_error_port();
   SCM_Port *port = cast<SCM_Port>(error_port);
   
@@ -306,8 +304,6 @@ SCM *scm_handle_by_message_noexit(void *handler_data, SCM *tag, SCM *args) {
 [[noreturn]] void scm_uncaught_throw(SCM *key, SCM *args) {
   handler_message(nullptr, key, args);
   // Force output before exiting
-  extern SCM *scm_current_error_port();
-  extern SCM *scm_force_output(SCM_List *args);
   SCM *error_port = scm_current_error_port();
   SCM_List force_args;
   force_args.data = error_port;
@@ -394,7 +390,6 @@ SCM *scm_c_with_throw_handler(SCM *tag,
   SCM *wind_entry_wrapped = wrap(wind_entry);
   
   // Add to wind chain
-  extern SCM_List *g_wind_chain;
   SCM_List *old_wind_chain = g_wind_chain;
   SCM_List *new_wind_entry = make_list(wind_entry_wrapped);
   new_wind_entry->next = g_wind_chain;

@@ -90,3 +90,6 @@ void init_smob();
 // Helper to get smob descriptor
 SCM_SmobDescriptor *scm_get_smob_descriptor(long tag);
 
+// Default print function (exported for use in print.cc)
+void default_smob_print(SCM *smob, SCM *port, scm_print_state *pstate);
+

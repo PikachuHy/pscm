@@ -220,7 +220,6 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
       desc->print(ast, port, &pstate);
     } else {
       // Use default print function from smob.cc
-      extern void default_smob_print(SCM *, SCM *, scm_print_state *);
       default_smob_print(ast, port, &pstate);
     }
     return;
