@@ -1394,3 +1394,60 @@ SCM_List *parse_file(const char *filename) {
   delete[] content;
   return dummy.next;
 }
+
+// Parse string and return list of expressions (similar to parse_file but for strings)
+// Forward declaration removed - function is now non-static
+SCM_List *parse_string(const char *str) {
+  if (!str) {
+    return nullptr;
+  }
+  
+  Parser p;
+  p.input = str;
+  p.pos = str;
+  p.filename = nullptr;  // No filename for string input
+  p.line = 1;
+  p.column = 1;
+  
+  SCM_List dummy = make_list_dummy();
+  SCM_List *tail = &dummy;
+  
+  int expr_count = 0;
+  while (!is_eof(&p)) {
+    // Save position before parsing
+    const char *before_pos = p.pos;
+    int before_line = p.line;
+    int before_column = p.column;
+    
+    SCM *expr = parse_expr(&p);
+    if (!expr) {
+      // If we didn't make progress, break to avoid infinite loop
+      if (p.pos == before_pos && p.line == before_line && p.column == before_column) {
+        // We're stuck - provide helpful error message
+        fprintf(stderr, "\nParse failed at expression #%d\n", expr_count + 1);
+        fprintf(stderr, "Successfully parsed %d expressions before failure\n", expr_count);
+        parse_error(&p, "failed to parse expression (parser made no progress)");
+      }
+      break;
+    }
+    
+    expr_count++;
+    SCM_List *node = make_list(expr);
+    tail->next = node;
+    tail = node;
+    
+    // Clear parse stack after successful parse of each expression
+    while (g_parse_stack) {
+      pop_parse_stack();
+    }
+    
+    skip_whitespace(&p);
+  }
+  
+  // Clear any remaining stack frames
+  while (g_parse_stack) {
+    pop_parse_stack();
+  }
+  
+  return dummy.next;
+}

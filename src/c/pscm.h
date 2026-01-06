@@ -895,6 +895,7 @@ SCM *scm_c_display(SCM_List *args);
  */
 SCM *parse(const char *s);
 SCM_List *parse_file(const char *filename);
+SCM_List *parse_string(const char *str);  // Parse string and return list of expressions
 
 /*
  * Functions in repl.cc
@@ -1102,6 +1103,9 @@ void init_port();
 SCM *scm_current_error_port(void);
 SCM *scm_set_current_error_port(SCM *port);
 SCM *scm_force_output(SCM_List *args);  // Vararg function: (force-output [port])
+
+// Evaluation operations (compatible with Guile 1.8 API)
+SCM *scm_c_eval_string(const char *expr);  // Evaluate C string containing Scheme code
 
 /*
  * Functions in load.cc

@@ -38,6 +38,36 @@ SCM_List *eval_list_with_env(SCM_Environment *env, SCM_List *l) {
 static const int MAX_STACK_DEPTH = 100;  // Prevent infinite recursion
 static int g_stack_depth = 0;
 
+// scm_c_eval_string: Evaluate a C string containing Scheme code (compatible with Guile 1.8)
+// Parses and evaluates all expressions in the string, returns the result of the last expression
+SCM *scm_c_eval_string(const char *expr) {
+  if (!expr) {
+    return nullptr;
+  }
+  
+  // Parse all expressions from the string
+  SCM_List *exprs = parse_string(expr);
+  if (!exprs) {
+    return nullptr;
+  }
+  
+  // Evaluate all expressions, return the last result
+  SCM *last_result = nullptr;
+  SCM_List *current = exprs;
+  while (current) {
+    if (current->data) {
+      // Set stack base for continuation support
+      long stack_base;
+      cont_base = &stack_base;
+      last_result = eval_with_env(&g_env, current->data);
+    }
+    current = current->next;
+  }
+  
+  // Return last result, or unspecified if no expressions
+  return last_result ? last_result : scm_none();
+}
+
 // Helper function to convert expression to string (with length limit)
 static char *expr_to_string(SCM *expr, size_t max_len = 200) {
   if (!expr) {
