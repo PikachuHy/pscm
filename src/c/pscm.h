@@ -1127,6 +1127,7 @@ void init_modules();
 void init_smob();
 void init_variable();
 void init_read_options();
+void init_debug_options();
 
 // Variable operations (compatible with Guile 1.8 API)
 SCM *scm_c_lookup(const char *name);  // Look up a variable by name, returns variable object

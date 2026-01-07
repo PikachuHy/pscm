@@ -30,6 +30,7 @@ void init_scm() {
   init_smob();     // Initialize smob system
   init_variable(); // Initialize variable system (scm_variable_ref, scm_c_lookup)
   init_read_options(); // Initialize read options system (read-set!, read-enable, read-disable)
+  init_debug_options(); // Initialize debug options system (debug-set!, debug-enable, debug-disable)
   init_exit();
 }
 
