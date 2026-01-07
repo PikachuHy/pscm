@@ -341,7 +341,7 @@ static const char *get_type_name(SCM::Type type) {
     }
     fprintf(stderr, "=== End of Call Stack ===\n");
     fflush(stderr);
-    exit(1);
+    abort();
   }
 }
 
@@ -1157,7 +1157,6 @@ entry:
     
     // Use exit instead of abort to ensure output is flushed
     exit(1);
-    return nullptr;  // Never reached, but satisfies compiler
   }
 }
 
