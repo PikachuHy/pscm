@@ -29,6 +29,7 @@ void init_scm() {
   init_load();     // Initialize load after modules, so %load-path can be defined in current module
   init_smob();     // Initialize smob system
   init_variable(); // Initialize variable system (scm_variable_ref, scm_c_lookup)
+  init_read_options(); // Initialize read options system (read-set!, read-enable, read-disable)
   init_exit();
 }
 
