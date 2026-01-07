@@ -1110,7 +1110,7 @@ SCM *scm_c_eval_string(const char *expr);  // Evaluate C string containing Schem
 /*
  * Functions in load.cc
  */
- SCM *scm_c_primitive_load(SCM *filename);  // Core file loading implementation
+SCM *scm_c_primitive_load(const char *filename);  // Core file loading implementation (accepts const char *)
 
 // Throw operations (compatible with Guile 1.8 API)
 // Note: scm_handle_by_message_noexit and scm_ithrow are declared in throw.h
