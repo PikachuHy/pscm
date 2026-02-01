@@ -1,4 +1,5 @@
 #include "pscm.h"
+#include "eval.h"  // For g_current_eval_context and get_source_location_str
 
 SCM_Environment::Entry *scm_env_search_entry(SCM_Environment *env, SCM_Symbol *sym, bool search_parent) {
   SCM_DEBUG_SYMTBL("search %p\n", env);
@@ -93,6 +94,16 @@ SCM *scm_env_search(SCM_Environment *env, SCM_Symbol *sym) {
     }
   }
   
-  SCM_ERROR_SYMTBL("find %s, not found\n", sym->data);
+  // Try to get source location from current eval context for debugging
+  const char *loc_str = nullptr;
+  if (g_current_eval_context) {
+    loc_str = get_source_location_str(g_current_eval_context);
+  }
+  
+  if (loc_str) {
+    SCM_ERROR_SYMTBL("find %s, not found (at %s)\n", sym->data, loc_str);
+  } else {
+    SCM_ERROR_SYMTBL("find %s, not found\n", sym->data);
+  }
   return nullptr;
 }
