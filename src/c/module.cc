@@ -247,18 +247,17 @@ SCM *scm_resolve_module(SCM_List *name) {
   SCM *name_key = wrap(name);
   // Use equal? comparison for module names (lists), not eq?
   SCM *module = scm_c_hash_ref_equal(wrap(g_module_registry), name_key);
-  // scm_c_hash_ref_equal returns #f if not found, so check for #f explicitly
-  if (module && !is_falsy(module) && is_module(module)) {
-    return module;
-  }
+  bool module_exists = (module && !is_falsy(module) && is_module(module));
   
   // 2. Try to load from file system
   // Convert module name to file path
   char *module_path = module_name_to_path(name);
   if (!module_path) {
-    // If path conversion failed, create empty module
-    module = scm_make_module(name, 31);
-    scm_c_hash_set_equal(wrap(g_module_registry), wrap(name), module);
+    // If path conversion failed and module doesn't exist, create empty module
+    if (!module_exists) {
+      module = scm_make_module(name, 31);
+      scm_c_hash_set_equal(wrap(g_module_registry), wrap(name), module);
+    }
     return module;
   }
   
@@ -326,36 +325,51 @@ SCM *scm_resolve_module(SCM_List *name) {
   // Free module_path (no longer needed)
   free(module_path);
   
-  // Create module (before loading, so define-module can find it)
-  module = scm_make_module(name, 31);
+  // Create module if it doesn't exist (before loading, so define-module can find it)
+  if (!module_exists) {
+    module = scm_make_module(name, 31);
+    // Register module (before loading, so define-module can register it)
+    scm_c_hash_set_equal(wrap(g_module_registry), wrap(name), module);
+  }
   
-  // Register module (before loading, so define-module can register it)
-  scm_c_hash_set_equal(wrap(g_module_registry), wrap(name), module);
-  
-  // If file found, load it
+  // If file found, load it (even if module already exists, to ensure code is loaded)
+  // This matches Guile 1.8's behavior: use-modules ensures the module is loaded
   if (found_path) {
     // Save current module
     SCM *old_module = scm_current_module();
     
-    // Set current module to the new module
+    // Set current module to the target module
     scm_set_current_module(module);
     
-    // Load and evaluate file
-    SCM_List *expr_list = parse_file(found_path);
-    if (expr_list) {
-      SCM_Environment *top_env = g_env.parent ? g_env.parent : &g_env;
-      SCM_List *it = expr_list;
-      while (it) {
-        eval_with_env(top_env, it->data);
-        it = it->next;
-      }
-    }
+    // Load and evaluate file (reuse scm_c_primitive_load)
+    scm_c_primitive_load(found_path);
     
     // Restore current module
     scm_set_current_module(old_module);
     
     if (full_path) {
       free(full_path);
+    }
+  } else {
+    // File not found: warn if module was just created (no code for module)
+    // This matches Guile 1.8's behavior: use-modules warns/errors when no code found
+    if (!module_exists) {
+      fprintf(stderr, "[module] Warning: no code for module (");
+      // Print module name manually
+      SCM_List *name_it = name;
+      bool first = true;
+      while (name_it && name_it->data) {
+        if (!first) {
+          fprintf(stderr, " ");
+        }
+        first = false;
+        if (is_sym(name_it->data)) {
+          SCM_Symbol *sym = cast<SCM_Symbol>(name_it->data);
+          fprintf(stderr, "%s", sym->data);
+        }
+        name_it = name_it->next;
+      }
+      fprintf(stderr, ")\n");
     }
   }
   
@@ -544,6 +558,7 @@ SCM *eval_use_modules(SCM_Environment *env, SCM_List *l) {
     if (is_pair(spec_scm)) {
       SCM_List *name = cast<SCM_List>(spec_scm);
       SCM *module_scm = scm_resolve_module(name);
+      print_list(name); printf("\n");
       SCM_Module *module = cast<SCM_Module>(module_scm);
       
       // Get module's public interface

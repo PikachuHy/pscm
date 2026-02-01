@@ -1,13 +1,11 @@
 #include "pscm.h"
 #include "eval.h"
 
-
-// primitive-load: core file loading implementation (accepts const char *)
-SCM *scm_c_primitive_load(const char *filename) {
-  // Use existing parse_file helper to get list of expressions
-  SCM_List *expr_list = parse_file(filename);
+// Common function to evaluate a parsed expression list
+// Returns the result of the last expression evaluated, or scm_none() if no expressions
+SCM *scm_eval_expression_list(SCM_List *expr_list) {
   if (!expr_list) {
-    eval_error("primitive-load: failed to load file: %s", filename);
+    return scm_none();
   }
 
   // Evaluate each expression in the top-level environment
@@ -20,6 +18,20 @@ SCM *scm_c_primitive_load(const char *filename) {
   }
 
   return result;
+}
+
+// primitive-load: core file loading implementation (accepts const char *)
+SCM *scm_c_primitive_load(const char *filename) {
+  // Debug log: print the file path being loaded
+  fprintf(stderr, "[load] Loading file: %s\n", filename);
+  
+  // Use existing parse_file helper to get list of expressions
+  SCM_List *expr_list = parse_file(filename);
+  if (!expr_list) {
+    eval_error("primitive-load: failed to load file: %s", filename);
+  }
+
+  return scm_eval_expression_list(expr_list);
 }
 
 // Helper function: load from SCM string (used by Scheme-level load/primitive-load)
