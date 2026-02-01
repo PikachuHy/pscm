@@ -55,3 +55,11 @@ SCM *scm_handle_by_message_noexit(void *handler_data, SCM *tag, SCM *args);
 // Throw with noreturn flag (for lazy-catch compatibility)
 SCM *scm_ithrow(SCM *key, SCM *args, int noreturn);
 
+
+// Forward declaration for SCM_Function
+struct SCM_Function;
+struct SCM_List;
+
+// Throw wrong-number-of-args error (compatible with Guile 1.8)
+[[noreturn]] void throw_wrong_number_of_args(SCM_Function *func, SCM_List *got_args, SCM *original_call);
+

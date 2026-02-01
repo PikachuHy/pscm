@@ -1,5 +1,6 @@
 #include "pscm.h"
 #include "eval.h"
+#include "throw.h"
 
 SCM *eval_with_func_0(SCM_Function *func) {
   typedef SCM *(*func_0)();
@@ -33,18 +34,43 @@ SCM *eval_with_func(SCM_Function *func, SCM_List *l) {
     printf("\n");
   }
   if (func->n_args == 0) {
+    // Check if arguments were provided when none expected
+    if (l->next) {
+      throw_wrong_number_of_args(func, l->next, nullptr);
+    }
     return eval_with_func_0(func);
   }
   if (func->n_args == 1) {
-    assert(l->next);
+    // Check if argument is missing
+    if (!l->next) {
+      throw_wrong_number_of_args(func, nullptr, nullptr);
+    }
+    // Check if too many arguments provided
+    if (l->next->next) {
+      throw_wrong_number_of_args(func, l->next, nullptr);
+    }
     return eval_with_func_1(func, l->next->data);
   }
   if (func->n_args == 2) {
-    assert(l->next && l->next->next);
+    // Check if arguments are missing
+    if (!l->next || !l->next->next) {
+      throw_wrong_number_of_args(func, l->next, nullptr);
+    }
+    // Check if too many arguments provided
+    if (l->next->next->next) {
+      throw_wrong_number_of_args(func, l->next, nullptr);
+    }
     return eval_with_func_2(func, l->next->data, l->next->next->data);
   }
   if (func->n_args == 3) {
-    assert(l->next && l->next->next && l->next->next->next);
+    // Check if arguments are missing
+    if (!l->next || !l->next->next || !l->next->next->next) {
+      throw_wrong_number_of_args(func, l->next, nullptr);
+    }
+    // Check if too many arguments provided
+    if (l->next->next->next->next) {
+      throw_wrong_number_of_args(func, l->next, nullptr);
+    }
     return eval_with_func_3(func, l->next->data, l->next->next->data, l->next->next->next->data);
   }
   if (func->n_args == -1 && func->generic) {

@@ -11,6 +11,7 @@
 #include <mach-o/dyld.h> // macOS
 #endif
 #include <unistd.h>
+#include "eval.h"  // For print_eval_stack()
 
 std::string get_executable_path() {
 #if defined(__APPLE__)
@@ -62,6 +63,10 @@ void print_stacktrace(int signal) {
     idx++;
   }
   printf("\n");
+  
+  // If pscm is currently evaluating, also print the eval call stack
+  print_eval_stack();
+  
   exit(1);
 }
 

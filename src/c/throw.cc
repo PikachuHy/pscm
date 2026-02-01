@@ -526,6 +526,36 @@ SCM *scm_c_throw_scheme(SCM_List *args) {
   return scm_throw(key, throw_args_wrapped);
 }
 
+// Throw wrong-number-of-args error (compatible with Guile 1.8)
+// Format: (throw 'wrong-number-of-args #f "Wrong number of arguments to ~A" proc #f)
+// where proc is the procedure that was called with wrong number of args
+[[noreturn]] void throw_wrong_number_of_args(SCM_Function *func, SCM_List *got_args, SCM *original_call) {
+  // Create wrong-number-of-args key
+  SCM *wrong_key = wrap(make_sym("wrong-number-of-args"));
+  
+  // Build error message: "Wrong number of arguments to ~A"
+  // In Guile 1.8, this uses format string with ~A placeholder
+  const char *msg = "Wrong number of arguments to ~A";
+  
+  // Build args list: (#f "Wrong number of arguments to ~A" proc #f)
+  // Format matches Guile 1.8: (caller message proc extra)
+  SCM_List *args_list = make_list(scm_bool_false());  // caller (#f)
+  
+  // Add message string
+  SCM *msg_str = scm_from_c_string(msg, (int)strlen(msg));
+  args_list->next = make_list(msg_str);
+  
+  // Add procedure (the function that was called)
+  SCM *proc_wrapped = func ? wrap(func) : scm_bool_false();
+  args_list->next->next = make_list(proc_wrapped);
+  
+  // Add extra (#f)
+  args_list->next->next->next = make_list(scm_bool_false());
+  
+  // Throw the error
+  scm_throw(wrong_key, wrap(args_list));
+}
+
 // Initialize throw system
 void init_throw() {
   // Create standard error key
