@@ -162,6 +162,39 @@ int main() {
 
 - `void pscm_set_error_handler(pscm_error_handler_t handler)` - 设置错误处理器
 
+### 字符串和符号转换
+
+- `SCM *scm_from_c_string(const char *data, int len)` - 从 C 字符串创建 Scheme 字符串
+- `SCM *scm_from_locale_stringn(const char *str, size_t len)` - 从 C locale 字符串创建 Scheme 字符串
+- `char *scm_to_locale_stringn(SCM *str, size_t *lenp)` - 将 Scheme 字符串转换为 C locale 字符串
+
+### 过程调用
+
+- `SCM *apply_procedure(SCM_Environment *env, SCM_Procedure *proc, SCM_List *args)` - 应用 Scheme 过程
+- `SCM *apply_procedure_with_values(SCM_Environment *env, SCM_Procedure *proc, SCM_List *args)` - 应用过程（参数已求值）
+- `SCM *eval_with_func(SCM_Function *func, SCM_List *l)` - 求值 C/C++ 函数
+
+### 文件加载
+
+- `SCM *scm_c_primitive_load(const char *filename)` - 加载并执行文件（C API，接受 `const char *`）
+- `SCM *scm_c_primitive_load_from_scm(SCM *filename)` - 加载并执行文件（Scheme API，接受 `SCM *`）
+- `SCM *scm_eval_expression_list(SCM_List *expr_list)` - 求值表达式列表
+
+### 选项系统
+
+- `SCM *scm_c_read_options_interface()` - 获取读取选项接口
+- `SCM *scm_c_read_set(SCM *key, SCM *val)` - 设置读取选项
+- `SCM *scm_c_read_enable(SCM *key)` - 启用读取选项
+- `SCM *scm_c_read_disable(SCM *key)` - 禁用读取选项
+- `SCM *scm_c_debug_options_interface()` - 获取调试选项接口
+- `SCM *scm_c_debug_set(SCM *key, SCM *val)` - 设置调试选项
+- `SCM *scm_c_debug_enable(SCM *key)` - 启用调试选项
+- `SCM *scm_c_debug_disable(SCM *key)` - 禁用调试选项
+
+### 端口操作
+
+- `SCM *scm_c_make_soft_port(SCM_List *args)` - 创建软端口
+
 ## 注意事项
 
 1. **线程安全**：当前实现不是线程安全的。如果需要在多线程环境中使用，需要添加适当的同步机制。

@@ -120,6 +120,26 @@ function sidebarGuideZh() {
         {
           text: 'pscm-cc module 实现方案',
           link: '/cn/module_implementation'
+        },
+        {
+          text: 'pscm-cc read options 实现方案',
+          link: '/cn/read_options'
+        },
+        {
+          text: 'pscm-cc debug options 实现方案',
+          link: '/cn/debug_options'
+        },
+        {
+          text: 'pscm-cc soft port 实现方案',
+          link: '/cn/soft_port'
+        },
+        {
+          text: 'pscm-cc 错误处理改进',
+          link: '/cn/error_handling_improvements'
+        },
+        {
+          text: 'pscm-cc wrong-number-of-args 错误处理',
+          link: '/cn/wrong_number_of_args'
         }
       ]
     },

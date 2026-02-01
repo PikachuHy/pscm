@@ -48,6 +48,7 @@ pscm 依然处于非常简陋的状态
 
 - **实现**：从零实现的递归下降解析器
 - **语法支持**：完整的 Scheme 语法（数字、符号、字符串、布尔值、列表、引号、准引用、点对、注释）
+- **Read Options**：支持 `read-options-interface`、`read-set!`、`read-enable`、`read-disable` 配置读取选项
 - **特殊处理**：支持 `1+` 和 `1-` 作为符号（避免被解析为数字和运算符）
 - **错误报告**：包含文件名、行号、列号的清晰错误信息
 
@@ -71,9 +72,11 @@ pscm 依然处于非常简陋的状态
 - **向量操作**：`make-vector`, `vector-length`, `vector-ref`, `vector-set!`, `vector->list`, `list->vector` 等
 - **哈希表**：完整的哈希表操作集（创建、设置、获取、删除、遍历）
 - **端口操作**：`open-input-file`, `open-output-file`, `open-input-string`, `open-output-string`, `read`, `read-char`, `peek-char`, `write-char`, `eof-object?`, `char-ready?`, `call-with-input-file`, `call-with-output-file` 等
+- **软端口**：`make-soft-port`（支持自定义 I/O 过程）
 - **系统操作**：`exit` 等
+- **选项系统**：`read-options-interface`, `read-set!`, `read-enable`, `read-disable`（读取选项）；`debug-options-interface`, `debug-set!`, `debug-enable`, `debug-disable`（调试选项）
 - **延迟求值**：`delay`, `force`（Promise 支持）
-- **异常处理**：`catch`, `throw`（异常捕获和抛出）
+- **异常处理**：`catch`, `throw`（异常捕获和抛出），支持 `wrong-number-of-args` 错误捕获
 - **模块操作**：`current-module`, `set-current-module`, `resolve-module`, `module-ref`, `module-bound?` 等
 - **文件加载**：`load`, `primitive-load`（支持 `%load-path` 路径搜索）
 - **宏调试工具**：`macroexpand-1`, `macroexpand`（用于调试宏展开）
@@ -101,6 +104,11 @@ pscm 依然处于非常简陋的状态
   - `catch #t thunk handler`：捕获所有异常
   - `throw key args ...`：抛出异常
   - `eval_error` 和 `type_error` 使用 `throw` 机制，可被 `catch` 捕获
+  - 支持 `wrong-number-of-args` 错误捕获和处理
+- **错误处理改进**：
+  - 从 `exit` 改为 `abort` 以改善堆栈跟踪可见性
+  - 崩溃时打印 C++ 堆栈跟踪和 Scheme eval 调用栈
+  - 环境搜索错误包含源位置上下文信息
 
 ## 已知限制
 
