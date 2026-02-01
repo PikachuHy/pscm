@@ -141,7 +141,7 @@ struct SCM_Variable {
 };
 
 // Port types
-enum PortType { PORT_FILE_INPUT, PORT_FILE_OUTPUT, PORT_STRING_INPUT, PORT_STRING_OUTPUT };
+enum PortType { PORT_FILE_INPUT, PORT_FILE_OUTPUT, PORT_STRING_INPUT, PORT_STRING_OUTPUT, PORT_SOFT };
 
 struct SCM_Port {
   PortType port_type;
@@ -154,6 +154,15 @@ struct SCM_Port {
   char *output_buffer; // For string output ports (growing buffer)
   int output_len;      // Current length of output buffer
   int output_capacity; // Capacity of output buffer
+  // For soft ports: vector of procedures
+  // [0] = procedure accepting one character for output
+  // [1] = procedure accepting a string for output
+  // [2] = thunk for flushing output
+  // [3] = thunk for getting one character
+  // [4] = thunk for closing port
+  // [5] = (optional) thunk for computing number of characters available
+  SCM_Vector *soft_procedures;  // Vector of procedures for soft port
+  char *soft_modes;              // Modes string for soft port ("r", "w", "rw")
 };
 
 struct SCM_Environment {

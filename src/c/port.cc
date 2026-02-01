@@ -17,6 +17,28 @@ static SCM *wrap_port(SCM_Port *port) {
   return scm;
 }
 
+// Helper function to call a soft port thunk (procedure with no arguments)
+// Returns the result, or nullptr if the procedure is invalid
+static SCM *call_soft_port_thunk(SCM *proc) {
+  if (!proc || is_falsy(proc)) {
+    return nullptr;
+  }
+  
+  if (is_proc(proc)) {
+    SCM_Procedure *proc_obj = cast<SCM_Procedure>(proc);
+    return apply_procedure(g_env.parent ? g_env.parent : &g_env, proc_obj, nullptr);
+  } else if (is_func(proc)) {
+    SCM_Function *func = cast<SCM_Function>(proc);
+    SCM_List func_call;
+    func_call.data = proc;
+    func_call.next = nullptr;
+    func_call.is_dotted = false;
+    return eval_with_func(func, &func_call);
+  }
+  
+  return nullptr;
+}
+
 // EOF object singleton
 static SCM *g_eof_object = nullptr;
 
@@ -110,7 +132,13 @@ SCM *scm_c_close_input_port(SCM *port) {
     return scm_none();
   }
   
-  if (p->file) {
+  if (p->port_type == PORT_SOFT) {
+    // Call procedure at index 4 (close port thunk)
+    if (p->soft_procedures && p->soft_procedures->length >= 5) {
+      SCM *close_proc = p->soft_procedures->elements[4];
+      call_soft_port_thunk(close_proc);
+    }
+  } else if (p->file) {
     fclose(p->file);
     p->file = nullptr;
   }
@@ -136,7 +164,13 @@ SCM *scm_c_close_output_port(SCM *port) {
     return scm_none();
   }
   
-  if (p->file) {
+  if (p->port_type == PORT_SOFT) {
+    // Call procedure at index 4 (close port thunk)
+    if (p->soft_procedures && p->soft_procedures->length >= 5) {
+      SCM *close_proc = p->soft_procedures->elements[4];
+      call_soft_port_thunk(close_proc);
+    }
+  } else if (p->file) {
     fclose(p->file);
     p->file = nullptr;
   } else if (p->output_buffer) {
@@ -240,6 +274,29 @@ static int read_char_from_port(SCM_Port *port) {
       return EOF;
     }
     return (unsigned char)port->string_data[port->string_pos++];
+  } else if (port->port_type == PORT_SOFT && port->is_input) {
+    // Call procedure at index 3 (get one character)
+    if (!port->soft_procedures || port->soft_procedures->length < 4) {
+      return EOF;
+    }
+    SCM *get_char_proc = port->soft_procedures->elements[3];
+    if (!get_char_proc || is_falsy(get_char_proc)) {
+      return EOF;
+    }
+    // Call the procedure (thunk, no arguments)
+    SCM *result = call_soft_port_thunk(get_char_proc);
+    if (!result) {
+      return EOF;
+    }
+    // Check if result is EOF or #f
+    if (is_eof_object(result) || is_falsy(result)) {
+      return EOF;
+    }
+    // Result should be a character
+    if (is_char(result)) {
+      return (unsigned char)ptr_to_char(result->value);
+    }
+    return EOF;
   }
   
   return EOF;
@@ -304,6 +361,31 @@ void write_char_to_port_string(SCM_Port *port, char ch) {
     }
     port->output_buffer[port->output_len++] = ch;
     port->output_buffer[port->output_len] = '\0';
+  } else if (port->port_type == PORT_SOFT && !port->is_input) {
+    // Call procedure at index 0 (accept one character for output)
+    if (!port->soft_procedures || port->soft_procedures->length < 1) {
+      return;
+    }
+    SCM *write_char_proc = port->soft_procedures->elements[0];
+    if (!write_char_proc || is_falsy(write_char_proc)) {
+      return;
+    }
+    // Call the procedure with the character
+    SCM *char_obj = scm_from_char(ch);
+    SCM_List proc_args;
+    proc_args.data = char_obj;
+    proc_args.next = nullptr;
+    proc_args.is_dotted = false;
+    if (is_proc(write_char_proc)) {
+      SCM_Procedure *proc = cast<SCM_Procedure>(write_char_proc);
+      apply_procedure(g_env.parent ? g_env.parent : &g_env, proc, &proc_args);
+    } else if (is_func(write_char_proc)) {
+      SCM_Function *func = cast<SCM_Function>(write_char_proc);
+      SCM_List func_call;
+      func_call.data = write_char_proc;
+      func_call.next = &proc_args;
+      eval_with_func(func, &func_call);
+    }
   }
 }
 
@@ -317,6 +399,17 @@ static void flush_port(SCM_Port *port) {
     if (port->file) {
       fflush(port->file);
     }
+  } else if (port->port_type == PORT_SOFT && !port->is_input) {
+    // Call procedure at index 2 (flush output thunk)
+    if (!port->soft_procedures || port->soft_procedures->length < 3) {
+      return;
+    }
+    SCM *flush_proc = port->soft_procedures->elements[2];
+    if (!flush_proc || is_falsy(flush_proc)) {
+      return;
+    }
+    // Call the thunk (no arguments)
+    call_soft_port_thunk(flush_proc);
   }
   // String output ports don't need flushing (they're in-memory)
 }
@@ -550,7 +643,13 @@ SCM *scm_c_read_char(SCM_List *args) {
   }
   
   port = cast<SCM_Port>(port_arg);
-  if (!port->is_input) {
+  // For soft ports, check modes string instead of is_input
+  if (port->port_type == PORT_SOFT) {
+    if (!port->soft_modes || strchr(port->soft_modes, 'r') == nullptr) {
+      eval_error("read-char: expected input port");
+      return nullptr;
+    }
+  } else if (!port->is_input) {
     eval_error("read-char: expected input port");
     return nullptr;
   }
@@ -676,7 +775,13 @@ SCM *scm_c_write_char(SCM_List *args) {
       return nullptr;
     }
     SCM_Port *port = cast<SCM_Port>(port_arg);
-    if (port->is_input) {
+    // For soft ports, check modes string instead of is_input
+    if (port->port_type == PORT_SOFT) {
+      if (!port->soft_modes || strchr(port->soft_modes, 'w') == nullptr) {
+        eval_error("write-char: expected output port");
+        return nullptr;
+      }
+    } else if (port->is_input) {
       eval_error("write-char: expected output port");
       return nullptr;
     }
@@ -925,6 +1030,74 @@ SCM *scm_c_call_with_output_string(SCM_List *args) {
   return output_str;
 }
 
+// make-soft-port: Create a soft port (port with custom procedures)
+SCM *scm_c_make_soft_port(SCM_List *args) {
+  if (!args || !args->data || !args->next || !args->next->data) {
+    eval_error("make-soft-port: requires 2 arguments (pv modes)");
+    return nullptr;
+  }
+  
+  SCM *pv_arg = args->data;
+  SCM *modes_arg = args->next->data;
+  
+  // Check pv is a vector
+  if (!is_vector(pv_arg)) {
+    eval_error("make-soft-port: first argument must be a vector");
+    return nullptr;
+  }
+  
+  // Check modes is a string
+  if (!is_str(modes_arg)) {
+    eval_error("make-soft-port: second argument must be a string");
+    return nullptr;
+  }
+  
+  SCM_Vector *pv = cast<SCM_Vector>(pv_arg);
+  SCM_String *modes = cast<SCM_String>(modes_arg);
+  
+  // Vector must be length 5 or 6
+  if (pv->length < 5 || pv->length > 6) {
+    eval_error("make-soft-port: vector must have length 5 or 6");
+    return nullptr;
+  }
+  
+  // Parse modes string to determine if input, output, or both
+  bool is_input = false;
+  bool is_output = false;
+  for (int i = 0; i < modes->len; i++) {
+    if (modes->data[i] == 'r') {
+      is_input = true;
+    } else if (modes->data[i] == 'w') {
+      is_output = true;
+    }
+  }
+  
+  if (!is_input && !is_output) {
+    eval_error("make-soft-port: modes string must contain 'r' or 'w'");
+    return nullptr;
+  }
+  
+  // Create soft port
+  SCM_Port *port = new SCM_Port();
+  port->port_type = PORT_SOFT;
+  port->is_input = is_input;  // Set to true if 'r' in modes, but we also check modes for 'w'
+  port->is_closed = false;
+  port->file = nullptr;
+  port->string_data = nullptr;
+  port->string_pos = 0;
+  port->string_len = 0;
+  port->output_buffer = nullptr;
+  port->output_len = 0;
+  port->output_capacity = 0;
+  port->soft_procedures = pv;  // Store reference to the vector
+  // Store modes string for checking read/write capabilities
+  port->soft_modes = (char*)malloc(modes->len + 1);
+  memcpy(port->soft_modes, modes->data, modes->len);
+  port->soft_modes[modes->len] = '\0';
+  
+  return wrap_port(port);
+}
+
 void init_port() {
   // Initialize EOF object
   scm_eof_object();
@@ -967,5 +1140,8 @@ void init_port() {
   scm_define_vararg_function("call-with-output-file", scm_c_call_with_output_file);
   scm_define_vararg_function("call-with-input-string", scm_c_call_with_input_string);
   scm_define_vararg_function("call-with-output-string", scm_c_call_with_output_string);
+  
+  // Soft ports
+  scm_define_vararg_function("make-soft-port", scm_c_make_soft_port);
 }
 
