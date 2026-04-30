@@ -1,5 +1,6 @@
 #include "pscm.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 // Helper function to set source location
@@ -7,8 +8,14 @@ void set_source_location(SCM *scm, const char *filename, int line, int column) {
   if (!scm) return;
   if (!scm->source_loc) {
     scm->source_loc = new SCM_SourceLocation();
+    scm->source_loc->filename = nullptr;
   }
-  scm->source_loc->filename = filename;
+  // strdup: the caller may free the filename later (e.g. module.cc scm_resolve_module
+  // frees the path after scm_c_primitive_load), so we must hold our own copy
+  if (filename && scm->source_loc->filename != filename) {
+    free((void *)scm->source_loc->filename);
+    scm->source_loc->filename = strdup(filename);
+  }
   scm->source_loc->line = line;
   scm->source_loc->column = column;
 }
