@@ -16,6 +16,17 @@ SCM_List *copy_wind_chain(SCM_List *chain);
 SCM_List *unwind_wind_chain(SCM_List *target);
 void rewind_wind_chain(SCM_List *common, SCM_List *target);
 
+// no_sanitize("address"): this function reads the entire C stack (from
+// cont_base to the current stack top), crossing multiple independent stack
+// frames. This is UB per the C standard and ASan detects it as
+// stack-buffer-underflow. We suppress ASan here and use a manual byte loop
+// instead of memcpy because ASan intercepts memcpy at link time and
+// function-level no_sanitize cannot suppress the interceptor.
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+__attribute__((no_sanitize("address")))
+#endif
+#endif
 SCM *scm_make_continuation(int *first) {
   long stack_size = scm_stack_size(cont_base);
   long *src;
@@ -24,7 +35,15 @@ SCM *scm_make_continuation(int *first) {
   SCM_DEBUG_CONT("stack_len: %ld\n", stack_size);
   src = cont_base;
   src -= stack_size;
-  memcpy((void *)cont->stack_data, src, sizeof(long) * cont->stack_len);
+  // Manual byte copy to avoid ASan's memcpy interceptor
+  {
+    volatile char *dst_bytes = (volatile char *)cont->stack_data;
+    volatile char *src_bytes = (volatile char *)src;
+    size_t n = sizeof(long) * cont->stack_len;
+    for (size_t i = 0; i < n; i++) {
+      dst_bytes[i] = src_bytes[i];
+    }
+  }
   
   // Save current wind chain
   cont->wind_chain = copy_wind_chain(g_wind_chain);
@@ -48,9 +67,24 @@ SCM *scm_make_continuation(int *first) {
 
 void grow_stack(SCM *cont, SCM *args);
 
+// no_sanitize("address"): counterpart to scm_make_continuation — writes
+// saved stack data back to the C stack. Manual byte copy to avoid ASan's
+// memcpy interceptor.
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+__attribute__((no_sanitize("address")))
+#endif
+#endif
 void copy_stack_and_call(SCM_Continuation *cont, SCM *args, long *dst) {
   cont->arg = args;
-  memcpy(dst, cont->stack_data, sizeof(long) * cont->stack_len);
+  {
+    volatile char *dst_bytes = (volatile char *)dst;
+    volatile char *src_bytes = (volatile char *)cont->stack_data;
+    size_t n = sizeof(long) * cont->stack_len;
+    for (size_t i = 0; i < n; i++) {
+      dst_bytes[i] = src_bytes[i];
+    }
+  }
   long __cur__;
   SCM_DEBUG_CONT("jump from %p to %p use %p with %lu\n", &__cur__, dst, cont, cont->stack_len);
   longjmp(cont->cont_jump_buffer, 1);
@@ -72,8 +106,17 @@ void scm_dynthrow(SCM *cont, SCM *args) {
   copy_stack_and_call(continuation, args, dst);
 }
 
+// no_sanitize("address"): forces stack growth by allocating a stack array
+// so there is room to restore the continuation's saved stack. Suppress
+// ASan to prevent it from treating the growth array as a stack overflow.
+#if defined(__has_feature)
+#if __has_feature(address_sanitizer)
+__attribute__((no_sanitize("address")))
+#endif
+#endif
 void grow_stack(SCM *cont, SCM *args) {
   long growth[100];
+  (void)growth; // prevent compiler from optimizing away the array
   scm_dynthrow(cont, args);
 }
 
