@@ -5,7 +5,7 @@ add_subdirectory(core)
 add_subdirectory(base)
 add_subdirectory(sicp)
 add_subdirectory(macro)
-
+add_subdirectory(gc)
 
 add_test(
     NAME load_path_tests.scm
