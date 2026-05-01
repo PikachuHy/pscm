@@ -419,6 +419,39 @@ SCM *scm_c_define(const char *name, SCM *val) {
   return scm_make_variable(val);
 }
 
+// Register a C function as a Scheme procedure in the current module
+// (Guile 1.8 compatible).
+// req/opt/rst: number of required, optional, and rest arguments.
+// If rst > 0, the function receives a list of remaining arguments.
+SCM *scm_c_define_gsubr(const char *name, int req, int opt, int rst,
+                        SCM *(*fcn)(void)) {
+  auto func = (SCM_Function *)gc_alloc(GC_FUNC, sizeof(SCM_Function));
+  auto func_name = (SCM_Symbol *)gc_alloc(GC_SYMBOL, sizeof(SCM_Symbol));
+  func_name->len = strlen(name);
+  func_name->data = (char *)malloc(func_name->len + 1);
+  memcpy(func_name->data, name, func_name->len);
+  func_name->data[func_name->len] = '\0';
+  func->name = func_name;
+  func->func_ptr = (void *)fcn;
+
+  if (rst) {
+    func->n_args = -2;   // vararg
+    func->generic = nullptr;
+  } else if (opt > 0) {
+    func->n_args = -2;   // treat optional-arg functions as vararg for now
+    func->generic = nullptr;
+  } else {
+    func->n_args = req;  // 0, 1, 2, or 3
+  }
+
+  SCM *proc = wrap(func);
+
+  // Register in current module (not g_env)
+  scm_c_define(name, proc);
+
+  return proc;
+}
+
 SCM *scm_c_resolve_module(SCM *name_arg) {
   if (!name_arg) {
     eval_error("resolve-module: expected module name");
