@@ -453,6 +453,80 @@ SCM *scm_set_current_error_port(SCM *port) {
   return old;
 }
 
+// Global current input/output ports
+static SCM *g_current_input_port = nullptr;
+static SCM *g_current_output_port = nullptr;
+
+SCM *scm_current_input_port() {
+  if (!g_current_input_port) {
+    SCM_Port *port = (SCM_Port *)gc_alloc(GC_PORT, sizeof(SCM_Port));
+    port->port_type = PORT_FILE_INPUT;
+    port->is_input = true;
+    port->is_closed = false;
+    port->file = stdin;
+    port->string_data = nullptr;
+    port->string_pos = 0;
+    port->string_len = 0;
+    port->output_buffer = nullptr;
+    port->output_len = 0;
+    port->output_capacity = 0;
+    port->soft_procedures = nullptr;
+    port->soft_modes = nullptr;
+    g_current_input_port = wrap_port(port);
+  }
+  return g_current_input_port;
+}
+
+SCM *scm_set_current_input_port(SCM *port) {
+  if (!is_port(port)) {
+    eval_error("set-current-input-port: expected port");
+    return nullptr;
+  }
+  SCM_Port *p = cast<SCM_Port>(port);
+  if (!p->is_input) {
+    eval_error("set-current-input-port: expected input port");
+    return nullptr;
+  }
+  SCM *old = scm_current_input_port();
+  g_current_input_port = port;
+  return old;
+}
+
+SCM *scm_current_output_port() {
+  if (!g_current_output_port) {
+    SCM_Port *port = (SCM_Port *)gc_alloc(GC_PORT, sizeof(SCM_Port));
+    port->port_type = PORT_FILE_OUTPUT;
+    port->is_input = false;
+    port->is_closed = false;
+    port->file = stdout;
+    port->string_data = nullptr;
+    port->string_pos = 0;
+    port->string_len = 0;
+    port->output_buffer = nullptr;
+    port->output_len = 0;
+    port->output_capacity = 0;
+    port->soft_procedures = nullptr;
+    port->soft_modes = nullptr;
+    g_current_output_port = wrap_port(port);
+  }
+  return g_current_output_port;
+}
+
+SCM *scm_set_current_output_port(SCM *port) {
+  if (!is_port(port)) {
+    eval_error("set-current-output-port: expected port");
+    return nullptr;
+  }
+  SCM_Port *p = cast<SCM_Port>(port);
+  if (p->is_input) {
+    eval_error("set-current-output-port: expected output port");
+    return nullptr;
+  }
+  SCM *old = scm_current_output_port();
+  g_current_output_port = port;
+  return old;
+}
+
 // Force output (flush) a port
 SCM *scm_force_output(SCM_List *args) {
   SCM *port = nullptr;
@@ -1104,7 +1178,11 @@ void init_port() {
   
   // Initialize current error port
   scm_current_error_port();
-  
+
+  // Initialize current input/output ports
+  scm_current_input_port();
+  scm_current_output_port();
+
   // File ports
   scm_define_function("open-input-file", 1, 0, 0, scm_c_open_input_file);
   scm_define_function("open-output-file", 1, 0, 0, scm_c_open_output_file);
@@ -1133,6 +1211,10 @@ void init_port() {
   // Current ports
   scm_define_function("current-error-port", 0, 0, 0, scm_current_error_port);
   scm_define_function("set-current-error-port", 1, 0, 0, scm_set_current_error_port);
+  scm_define_function("current-input-port", 0, 0, 0, scm_current_input_port);
+  scm_define_function("set-current-input-port", 1, 0, 0, scm_set_current_input_port);
+  scm_define_function("current-output-port", 0, 0, 0, scm_current_output_port);
+  scm_define_function("set-current-output-port", 1, 0, 0, scm_set_current_output_port);
   scm_define_vararg_function("force-output", scm_force_output);
   
   // Port wrappers

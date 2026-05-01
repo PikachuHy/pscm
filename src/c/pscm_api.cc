@@ -151,6 +151,19 @@ SCM *pscm_set_current_error_port(SCM *port) {
   return scm_set_current_error_port(port);
 }
 
+SCM *pscm_current_input_port(void) {
+  return scm_current_input_port();
+}
+SCM *pscm_set_current_input_port(SCM *port) {
+  return scm_set_current_input_port(port);
+}
+SCM *pscm_current_output_port(void) {
+  return scm_current_output_port();
+}
+SCM *pscm_set_current_output_port(SCM *port) {
+  return scm_set_current_output_port(port);
+}
+
 SCM *pscm_force_output(SCM *port) {
   // Create a list wrapper for the port argument
   SCM_List args;

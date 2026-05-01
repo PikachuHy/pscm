@@ -1115,6 +1115,10 @@ void init_port();
 // Port operations (compatible with Guile 1.8 API)
 SCM *scm_current_error_port(void);
 SCM *scm_set_current_error_port(SCM *port);
+SCM *scm_current_input_port(void);
+SCM *scm_set_current_input_port(SCM *port);
+SCM *scm_current_output_port(void);
+SCM *scm_set_current_output_port(SCM *port);
 SCM *scm_force_output(SCM_List *args);  // Vararg function: (force-output [port])
 
 // Evaluation operations (compatible with Guile 1.8 API)

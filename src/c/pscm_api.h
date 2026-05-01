@@ -40,6 +40,10 @@ SCM *pscm_c_define_gsubr(const char *name, int req, int opt, int rst,
 // Port operations (compatible with Guile 1.8 API)
 SCM *pscm_current_error_port(void);    // Get current error port
 SCM *pscm_set_current_error_port(SCM *port); // Set current error port
+SCM *pscm_current_input_port(void);    // Get current input port
+SCM *pscm_set_current_input_port(SCM *port); // Set current input port
+SCM *pscm_current_output_port(void);   // Get current output port
+SCM *pscm_set_current_output_port(SCM *port); // Set current output port
 SCM *pscm_force_output(SCM *port);     // Force output (flush) a port
 
 // Throw operations (compatible with Guile 1.8 API)
