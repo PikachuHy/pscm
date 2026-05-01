@@ -11,6 +11,7 @@
       value = (SCM *)gc_alloc(GC_SCM, sizeof(SCM)); \
       value->type = SCM::type_val; \
       value->value = value_val; \
+      gc_register_root(&value, "scm_" #func_name); \
     } \
     return value; \
   }
@@ -35,6 +36,7 @@ SCM_Symbol *make_sym(const char *data) {
     static SCM *value = nullptr; \
     if (!value) { \
       value = wrap(make_sym(symbol_name)); \
+      gc_register_root(&value, "scm_sym_" #func_name); \
     } \
     return value; \
   }
