@@ -30,6 +30,13 @@ SCM *pscm_variable_ref(SCM *var);      // Get the value of a variable object
 SCM *pscm_make_variable(SCM *init);    // Create a variable initialized to a value
 SCM *pscm_make_undefined_variable(void); // Create an unbound variable
 
+// Define a variable from C (Guile 1.8 compatible)
+SCM *pscm_c_define(const char *name, SCM *val);
+
+// Register a C function as a Scheme procedure (Guile 1.8 compatible)
+SCM *pscm_c_define_gsubr(const char *name, int req, int opt, int rst,
+                         SCM *(*fcn)(void));
+
 // Port operations (compatible with Guile 1.8 API)
 SCM *pscm_current_error_port(void);    // Get current error port
 SCM *pscm_set_current_error_port(SCM *port); // Set current error port

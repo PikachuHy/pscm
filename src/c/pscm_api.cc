@@ -133,6 +133,15 @@ SCM *pscm_make_undefined_variable(void) {
   return scm_make_undefined_variable();
 }
 
+SCM *pscm_c_define(const char *name, SCM *val) {
+  return scm_c_define(name, val);
+}
+
+SCM *pscm_c_define_gsubr(const char *name, int req, int opt, int rst,
+                         SCM *(*fcn)(void)) {
+  return scm_c_define_gsubr(name, req, opt, rst, fcn);
+}
+
 // Port operations (compatible with Guile 1.8 API)
 SCM *pscm_current_error_port(void) {
   return scm_current_error_port();
