@@ -406,6 +406,19 @@ SCM *scm_c_set_current_module(SCM *module) {
   return scm_set_current_module(module);
 }
 
+// Define a variable in the current module (Guile 1.8 compatible).
+// Inserts or overwrites the binding in the module's obarray.
+// Returns a variable object wrapping the value.
+SCM *scm_c_define(const char *name, SCM *val) {
+  SCM_Symbol *sym = make_sym(name);
+  SCM *module = scm_current_module();
+  SCM_Module *mod = cast<SCM_Module>(module);
+
+  scm_c_hash_set_eq(wrap(mod->obarray), wrap(sym), val);
+
+  return scm_make_variable(val);
+}
+
 SCM *scm_c_resolve_module(SCM *name_arg) {
   if (!name_arg) {
     eval_error("resolve-module: expected module name");

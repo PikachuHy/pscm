@@ -1145,6 +1145,7 @@ void init_debug_options();
 
 // Variable operations (compatible with Guile 1.8 API)
 SCM *scm_c_lookup(const char *name);  // Look up a variable by name, returns variable object
+SCM *scm_c_define(const char *name, SCM *val);  // Define variable in current module (Guile 1.8 compatible)
 SCM *scm_lookup(SCM *sym);            // Look up a variable by symbol, returns variable object
 SCM *scm_variable_ref(SCM *var);      // Get the value of a variable object
 SCM *scm_make_variable(SCM *init);    // Create a variable initialized to a value
