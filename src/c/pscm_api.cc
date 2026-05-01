@@ -24,7 +24,6 @@ SCM *pscm_eval(SCM *ast) {
   if (!ast) {
     return nullptr;
   }
-  // Set stack base for continuation support
   long stack_base;
   cont_base = &stack_base;
   return eval_with_env(&g_env, ast);

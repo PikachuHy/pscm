@@ -30,12 +30,12 @@ __attribute__((no_sanitize("address")))
 SCM *scm_make_continuation(int *first) {
   long stack_size = scm_stack_size(cont_base);
   long *src;
-  auto cont = make_cont(stack_size, (long *)malloc(sizeof(long) * stack_size));
-  auto data = wrap(cont);
   SCM_DEBUG_CONT("stack_len: %ld\n", stack_size);
   src = cont_base;
   src -= stack_size;
-  // Manual byte copy to avoid ASan's memcpy interceptor
+  auto cont = make_cont(stack_size, (long *)malloc(sizeof(long) * stack_size), src);
+  auto data = wrap(cont);
+#if defined(__has_feature) && __has_feature(address_sanitizer)
   {
     volatile char *dst_bytes = (volatile char *)cont->stack_data;
     volatile char *src_bytes = (volatile char *)src;
@@ -44,6 +44,9 @@ SCM *scm_make_continuation(int *first) {
       dst_bytes[i] = src_bytes[i];
     }
   }
+#else
+  memcpy(cont->stack_data, src, sizeof(long) * cont->stack_len);
+#endif
   
   // Save current wind chain
   cont->wind_chain = copy_wind_chain(g_wind_chain);
@@ -77,6 +80,7 @@ __attribute__((no_sanitize("address")))
 #endif
 void copy_stack_and_call(SCM_Continuation *cont, SCM *args, long *dst) {
   cont->arg = args;
+#if defined(__has_feature) && __has_feature(address_sanitizer)
   {
     volatile char *dst_bytes = (volatile char *)dst;
     volatile char *src_bytes = (volatile char *)cont->stack_data;
@@ -85,6 +89,9 @@ void copy_stack_and_call(SCM_Continuation *cont, SCM *args, long *dst) {
       dst_bytes[i] = src_bytes[i];
     }
   }
+#else
+  memcpy(dst, cont->stack_data, sizeof(long) * cont->stack_len);
+#endif
   long __cur__;
   SCM_DEBUG_CONT("jump from %p to %p use %p with %lu\n", &__cur__, dst, cont, cont->stack_len);
   longjmp(cont->cont_jump_buffer, 1);
@@ -92,14 +99,13 @@ void copy_stack_and_call(SCM_Continuation *cont, SCM *args, long *dst) {
 
 void scm_dynthrow(SCM *cont, SCM *args) {
   auto continuation = cast<SCM_Continuation>(cont);
-  
+
   // Handle wind chain: unwind current to common prefix, then rewind to continuation's wind chain
   SCM_List *common = unwind_wind_chain(continuation->wind_chain);
   rewind_wind_chain(common, continuation->wind_chain);
-  
-  long *dst = cont_base;
+
+  long *dst = continuation->stack_src;
   long stack_top_element;
-  dst -= continuation->stack_len;
   if (dst <= &stack_top_element) {
     grow_stack(cont, args);
   }

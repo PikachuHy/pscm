@@ -98,6 +98,7 @@ struct SCM_Continuation {
   SCM *arg;
   SCM_List *wind_chain; // Saved wind chain when continuation was created
   SCM *saved_module;    // Saved current module when continuation was created
+  long *stack_src;      // Saved stack source address at capture time (cont_base - stack_size)
 };
 
 struct SCM_Macro {
@@ -371,12 +372,13 @@ inline SCM_Procedure *make_proc(SCM_Symbol *name, SCM_List *args, SCM_List *body
   return proc;
 }
 
-inline SCM_Continuation *make_cont(size_t stack_len, void *stack_data) {
+inline SCM_Continuation *make_cont(size_t stack_len, void *stack_data, long *src_addr) {
   auto cont = new SCM_Continuation();
   cont->stack_len = stack_len;
   cont->stack_data = stack_data;
   cont->wind_chain = nullptr;
   cont->saved_module = nullptr;
+  cont->stack_src = src_addr;
   return cont;
 }
 
