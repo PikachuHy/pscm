@@ -39,6 +39,7 @@ char            *g_heap_start = nullptr;
 char            *g_heap_end   = nullptr;
 static char     *g_gc_stack_top = nullptr;  // set from main() for full-stack scan
 TraceFn          trace_fns[GC_TYPE_COUNT] = { nullptr };
+SweepFn          sweep_fns[GC_TYPE_COUNT] = { nullptr };
 RootRegistration g_root_registry[MAX_ROOTS];
 int              g_num_roots = 0;
 
@@ -89,7 +90,6 @@ static void trace_port(GCBlock *, MarkStack *);
 static void trace_vector(GCBlock *, MarkStack *);
 static void trace_hash(GCBlock *, MarkStack *);
 static void trace_env(GCBlock *, MarkStack *);
-static void trace_eval_frame(GCBlock *, MarkStack *);
 static void trace_string(GCBlock *, MarkStack *);
 static void trace_symbol(GCBlock *, MarkStack *);
 static void trace_number(GCBlock *, MarkStack *);
@@ -442,6 +442,11 @@ static void sweep_phase() {
         block->mark = 0; // clear for the next cycle
         total_live_bytes += block_total;
       } else {
+        // Free external resources before reclaiming the block.
+        TypeTag tag = (TypeTag)block->type_tag;
+        if (tag < GC_TYPE_COUNT && sweep_fns[tag]) {
+          sweep_fns[tag](block);
+        }
         free_to_list(block);
       }
 
@@ -608,12 +613,6 @@ static void trace_string(GCBlock *, MarkStack *) {
   // SCM_String contains char* and int -- no SCM* fields to trace.
 }
 
-// --- GC_EVAL_FRAME ----------------------------------------------------
-static void trace_eval_frame(GCBlock *, MarkStack *) {
-  // EvalStackFrame uses new/delete, not GC-managed yet.
-  // Reserved for future GC integration.
-}
-
 // --- GC_SYMBOL --------------------------------------------------------
 static void trace_symbol(GCBlock *, MarkStack *) {
   // SCM_Symbol contains char* and int -- no SCM* fields to trace.
@@ -643,6 +642,82 @@ static void trace_macro(GCBlock *block, MarkStack *stack) {
 static void trace_variable(GCBlock *block, MarkStack *stack) {
   SCM_Variable *var = (SCM_Variable *)block_to_obj(block);
   trace_ptr(var->value, stack); // SCM*
+}
+
+// =========================================================================
+// Sweep function implementations — free external resources before reclaim
+// =========================================================================
+
+// --- GC_SCM -----------------------------------------------------------
+static void sweep_scm(GCBlock *block) {
+  SCM *scm = (SCM *)block_to_obj(block);
+  // source_loc is allocated on the C++ heap; free it.
+  if (scm->source_loc) {
+    delete scm->source_loc;
+    scm->source_loc = nullptr;
+  }
+}
+
+// --- GC_VECTOR --------------------------------------------------------
+static void sweep_vector(GCBlock *block) {
+  SCM_Vector *vec = (SCM_Vector *)block_to_obj(block);
+  if (vec->elements) {
+    delete[] vec->elements;
+    vec->elements = nullptr;
+  }
+}
+
+// --- GC_HASH ----------------------------------------------------------
+static void sweep_hash(GCBlock *block) {
+  SCM_HashTable *ht = (SCM_HashTable *)block_to_obj(block);
+  if (ht->buckets) {
+    free(ht->buckets);
+    ht->buckets = nullptr;
+  }
+}
+
+// --- GC_STRING --------------------------------------------------------
+static void sweep_string(GCBlock *block) {
+  SCM_String *s = (SCM_String *)block_to_obj(block);
+  if (s->data) {
+    delete[] s->data;
+    s->data = nullptr;
+  }
+}
+
+// --- GC_SYMBOL --------------------------------------------------------
+static void sweep_symbol(GCBlock *block) {
+  SCM_Symbol *sym = (SCM_Symbol *)block_to_obj(block);
+  if (sym->data) {
+    delete[] sym->data;
+    sym->data = nullptr;
+  }
+}
+
+// --- GC_PORT ----------------------------------------------------------
+static void sweep_port(GCBlock *block) {
+  SCM_Port *port = (SCM_Port *)block_to_obj(block);
+  if (port->file) {
+    fclose((FILE *)port->file);
+    port->file = nullptr;
+  }
+  if (port->string_data) {
+    free(port->string_data);
+    port->string_data = nullptr;
+  }
+  if (port->output_buffer) {
+    free(port->output_buffer);
+    port->output_buffer = nullptr;
+  }
+}
+
+// --- GC_CONT ----------------------------------------------------------
+static void sweep_cont(GCBlock *block) {
+  SCM_Continuation *cont = (SCM_Continuation *)block_to_obj(block);
+  if (cont->stack_data) {
+    free(cont->stack_data);
+    cont->stack_data = nullptr;
+  }
 }
 
 // --- GC_SMOB ----------------------------------------------------------
@@ -695,16 +770,24 @@ void gc_init() {
   trace_fns[GC_VECTOR]    = trace_vector;
   trace_fns[GC_HASH]      = trace_hash;
   trace_fns[GC_ENV]       = trace_env;
-  trace_fns[GC_STRING]      = trace_string;
-  trace_fns[GC_EVAL_FRAME]  = trace_eval_frame;
-  trace_fns[GC_SYMBOL]      = trace_symbol;
+  trace_fns[GC_STRING]    = trace_string;
+  trace_fns[GC_SYMBOL]    = trace_symbol;
   trace_fns[GC_NUMBER]    = trace_number;
   trace_fns[GC_PROMISE]   = trace_promise;
   trace_fns[GC_MACRO]     = trace_macro;
   trace_fns[GC_VARIABLE]  = trace_variable;
   trace_fns[GC_SMOB]      = trace_smob;
 
-  // 4. Set initial GC threshold.
+  // 4. Register sweep functions (free external resources).
+  sweep_fns[GC_SCM]       = sweep_scm;
+  sweep_fns[GC_VECTOR]    = sweep_vector;
+  sweep_fns[GC_HASH]      = sweep_hash;
+  sweep_fns[GC_STRING]    = sweep_string;
+  sweep_fns[GC_SYMBOL]    = sweep_symbol;
+  sweep_fns[GC_PORT]      = sweep_port;
+  sweep_fns[GC_CONT]      = sweep_cont;
+
+  // 5. Set initial GC threshold.
   g_gc_threshold = INITIAL_HEAP_SIZE / 2;
   g_allocated_since_gc = 0;
   g_last_live_bytes    = 0;

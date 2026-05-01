@@ -4,7 +4,6 @@
 // GC root helpers from other translation units
 void register_module_roots();
 void register_port_roots();
-void register_env_roots();
 
 void init_scm() {
   gc_init();
@@ -53,6 +52,5 @@ void init_scm() {
   // Register roots from other translation units
   register_module_roots();
   register_port_roots();
-  register_env_roots();
 }
 

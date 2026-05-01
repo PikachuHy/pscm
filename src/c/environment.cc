@@ -107,14 +107,3 @@ SCM *scm_env_search(SCM_Environment *env, SCM_Symbol *sym) {
   }
   return nullptr;
 }
-
-// Register all SCM* values in the global environment as GC roots
-void register_env_roots() {
-  SCM_Environment::List *l = g_env.dummy.next;
-  while (l) {
-    if (l->data && l->data->value) {
-      gc_register_root(&l->data->value, "g_env");
-    }
-    l = l->next;
-  }
-}

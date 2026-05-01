@@ -42,7 +42,6 @@ enum TypeTag : uint8_t {
   GC_MACRO,    // struct SCM_Macro
   GC_VARIABLE, // struct SCM_Variable
   GC_SMOB,     // struct SCM_Smob
-  GC_EVAL_FRAME, // struct EvalStackFrame
   GC_TYPE_COUNT
 };
 
@@ -55,8 +54,14 @@ using MarkStack = std::vector<GCBlock *>;
 // points to another GC-managed block.
 using TraceFn = void (*)(GCBlock *, MarkStack *);
 
-// Array of trace functions indexed by TypeTag.
+// Sweep function pointer type.
+// Called when a block is about to be freed.  Frees any external resources
+// (C++ heap allocations, mmap'd data, etc.) that the block owns.
+using SweepFn = void (*)(GCBlock *);
+
+// Array of trace/sweep functions indexed by TypeTag.
 extern TraceFn trace_fns[GC_TYPE_COUNT];
+extern SweepFn sweep_fns[GC_TYPE_COUNT];
 
 // Magic constant written into every GCBlock header for conservative
 // scan validation.  21 bits wide.
