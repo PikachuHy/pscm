@@ -40,6 +40,8 @@ void show_usage() {
 }
 
 int do_eval(const char *filename) {
+  long stack_marker;
+  gc_set_stack_top(&stack_marker);
   pscm_init();
   auto l = pscm_parse_file(filename);
   if (!l) {
@@ -60,6 +62,8 @@ int main(int argc, char **argv) {
   setup_abort_handler();
   if (argc < 2) {
     // No arguments: enter REPL mode
+    long stack_marker;
+    gc_set_stack_top(&stack_marker);
     pscm_init();
     repl();
     return 0;

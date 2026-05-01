@@ -37,6 +37,7 @@ static const size_t MIN_THRESHOLD = 2 * 1024 * 1024; // 2 MB
 
 char            *g_heap_start = nullptr;
 char            *g_heap_end   = nullptr;
+static char     *g_gc_stack_top = nullptr;  // set from main() for full-stack scan
 TraceFn          trace_fns[GC_TYPE_COUNT] = { nullptr };
 RootRegistration g_root_registry[MAX_ROOTS];
 int              g_num_roots = 0;
@@ -291,6 +292,10 @@ void *gc_alloc(TypeTag tag, size_t size) {
 // Root registration
 // =========================================================================
 
+void gc_set_stack_top(void *marker) {
+  g_gc_stack_top = (char *)marker;
+}
+
 void gc_register_root(SCM **ptr, const char *name) {
   if (g_num_roots >= MAX_ROOTS) {
     fprintf(stderr, "FATAL: too many GC roots (max %d)\n", MAX_ROOTS);
@@ -332,6 +337,17 @@ static void scan_conservative_roots(MarkStack *stack) {
     }
   }
 
+  // 1a. Explicitly trace the global environment's linked list.
+  // g_env is an inline global in the data segment, not a GC-managed
+  // block, so its entries (including user defines) must be traced here.
+  SCM_Environment::List *elist = g_env.dummy.next;
+  while (elist) {
+    if (elist->data && elist->data->value) {
+      mark_if_valid_block(elist->data->value, stack);
+    }
+    elist = elist->next;
+  }
+
   // 2. Capture register values via setjmp.
   jmp_buf env;
   memset(&env, 0, sizeof(env));
@@ -346,12 +362,14 @@ static void scan_conservative_roots(MarkStack *stack) {
   }
 
   // 3. Conservative scan of the C stack from the current frame
-  //    up to cont_base (which marks the "base" of the active stack region).
+  //    up to the stack top marker set from main().  This covers ALL
+  //    active frames (main → do_eval → eval → ...), not just frames
+  //    below cont_base.
   char  stack_top; // address of a local variable = near the stack pointer
   char *scan_start = &stack_top;
-  char *scan_end   = (char *)cont_base;
+  char *scan_end   = g_gc_stack_top;
 
-  if (!scan_end) return; // no cont_base yet -- nothing to scan
+  if (!scan_end) return; // no stack marker yet -- nothing to scan
 
   // Stack grows downward: scan_start < scan_end on most platforms.
   if (scan_start > scan_end) {
@@ -447,6 +465,11 @@ void run_gc() {
   mark_phase();
   sweep_phase();
   g_allocated_since_gc = 0;
+}
+
+SCM *scm_gc() {
+  run_gc();
+  return scm_nil();
 }
 
 // =========================================================================

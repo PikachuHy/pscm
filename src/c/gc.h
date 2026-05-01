@@ -106,6 +106,10 @@ void gc_register_root(SCM **ptr, const char *name);
 // Public API
 // ---------------------------------------------------------------------------
 
+// Set the high-water mark for conservative C stack scanning.
+// Call this from main() with the address of a local variable.
+void gc_set_stack_top(void *marker);
+
 // Initialise the GC subsystem (mmap initial heap, set threshold).
 void gc_init();
 
@@ -115,6 +119,9 @@ void *gc_alloc(TypeTag tag, size_t size);
 
 // Run a full mark-sweep cycle.
 void run_gc();
+
+// Scheme-callable (gc) function.  Returns scm_nil().
+SCM *scm_gc();
 
 // Push BLOCK onto STACK if it is not yet marked (also sets the mark bit).
 // Called from trace functions and root scanning.

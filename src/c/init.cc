@@ -40,6 +40,9 @@ void init_scm() {
   init_debug_options(); // Initialize debug options system (debug-set!, debug-enable, debug-disable)
   init_exit();
 
+  // Register (gc) built-in to trigger garbage collection from Scheme.
+  scm_define_function("gc", 0, 0, 0, scm_gc);
+
   // Register explicit GC roots after all builtins are registered
   gc_register_root(&g_root_module, "g_root_module");
   gc_register_root((SCM **)&g_wind_chain, "g_wind_chain");
