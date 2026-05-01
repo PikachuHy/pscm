@@ -72,3 +72,6 @@ cov/
 .aswb
 
 __pycache__
+
+# Worktrees
+.worktrees/
