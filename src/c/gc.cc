@@ -24,7 +24,7 @@ static const size_t GROWTH_SIZE       = 4 * 1024 * 1024; // 4 MB
 // Size classes for fixed-size buckets (object data size in bytes).
 static const size_t SIZE_CLASSES[] = { 16, 32, 64, 128 };
 static const int    NUM_FIXED_BUCKETS = 4;
-static const int    BEST_FIT_BUCKET   = 4;
+static const int    LARGE_BUCKET      = 4;  // first-fit for blocks >= 129B
 static const int    NUM_BUCKETS       = 5;
 
 // Minimum GC threshold.
@@ -102,7 +102,7 @@ static void trace_variable(GCBlock *, MarkStack *);
 static void trace_ptr(void *ptr, MarkStack *stack) {
   if (!ptr) return;
   GCBlock *block = (GCBlock *)((char *)ptr - GC_HEADER_SIZE);
-  if (IS_VALID_BLOCK(block)) {
+  if (is_valid_block(block)) {
     push_if_unmarked(block, stack);
   }
 }
@@ -112,7 +112,7 @@ static void trace_ptr(void *ptr, MarkStack *stack) {
 // =========================================================================
 
 void push_if_unmarked(GCBlock *block, MarkStack *stack) {
-  if (!IS_VALID_BLOCK(block)) return;
+  if (!is_valid_block(block)) return;
   if (!block->mark) {
     block->mark = 1;
     stack->push_back(block);
@@ -128,7 +128,7 @@ static int size_to_bucket(size_t size) {
   if (size <= 32)  return 1;
   if (size <= 64)  return 2;
   if (size <= 128) return 3;
-  return BEST_FIT_BUCKET;
+  return LARGE_BUCKET;
 }
 
 // =========================================================================
@@ -172,6 +172,11 @@ static void *bump_allocate(size_t total_size) {
       abort();
     }
 
+    if (g_next_seg >= MAX_SEGMENTS) {
+      fprintf(stderr, "FATAL: gc heap segment pool exhausted (max %d)\n", MAX_SEGMENTS);
+      fflush(stderr);
+      abort();
+    }
     HeapSegment *seg = &g_seg_pool[g_next_seg++];
     seg->start = (char *)mem;
     seg->size  = grow_sz;
@@ -204,13 +209,13 @@ static void *bump_allocate(size_t total_size) {
 // =========================================================================
 
 void *gc_alloc(TypeTag tag, size_t size) {
-  size_t total_size = GC_HEADER_SIZE + size;
-  g_allocated_since_gc += total_size;
+  size_t total_size = sizeof(GCBlock) + size;
 
   // Trigger GC if threshold exceeded.
   if (g_allocated_since_gc >= g_gc_threshold) {
     run_gc();
   }
+  g_allocated_since_gc += total_size;
 
   GCBlock *block = nullptr;
 
@@ -226,23 +231,23 @@ void *gc_alloc(TypeTag tag, size_t size) {
       block->next_free = nullptr;
     } else {
       // Bump-allocate a new block of the appropriate fixed size.
-      block = (GCBlock *)bump_allocate(GC_HEADER_SIZE + class_size);
+      block = (GCBlock *)bump_allocate(sizeof(GCBlock) + class_size);
     }
 
     // Ensure the block header size field matches the class.
     block->size = class_size;
 
   } else {
-    // Best-fit bucket (>= 4).
+    // Large-object bucket (first-fit).
     GCBlock *prev = nullptr;
-    block = free_lists[BEST_FIT_BUCKET];
+    block = free_lists[LARGE_BUCKET];
     while (block) {
       if (block->size >= size) {
         // Found a suitable block.
         if (prev)
           prev->next_free = block->next_free;
         else
-          free_lists[BEST_FIT_BUCKET] = block->next_free;
+          free_lists[LARGE_BUCKET] = block->next_free;
         block->next_free = nullptr;
         break;
       }
@@ -252,7 +257,7 @@ void *gc_alloc(TypeTag tag, size_t size) {
 
     if (!block) {
       // No suitable free block -- bump-allocate fresh.
-      block = (GCBlock *)bump_allocate(GC_HEADER_SIZE + size);
+      block = (GCBlock *)bump_allocate(sizeof(GCBlock) + size);
       block->size = size;
     } else {
       // Use the block as-is with its original size.  The sequential
@@ -379,7 +384,7 @@ static void mark_phase() {
     stack.pop_back();
 
     TypeTag tag = (TypeTag)block->type_tag;
-    if (tag >= 0 && tag < GC_TYPE_COUNT && trace_fns[tag]) {
+    if (tag < GC_TYPE_COUNT && trace_fns[tag]) {
       trace_fns[tag](block, &stack);
     }
   }

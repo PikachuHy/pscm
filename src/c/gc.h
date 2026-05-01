@@ -69,17 +69,18 @@ static const uint32_t GC_MAGIC = 0x1A3F5B;
 // Convert an object data pointer back to its GCBlock.
 #define obj_to_block(p) ((GCBlock *)((char *)(p) - GC_HEADER_SIZE))
 
-// Validate that a pointer looks like a real GCBlock inside the managed
-// heap (range check, alignment check, magic check).
 // Heap bounds globals are defined in gc.cc.
 extern char *g_heap_start;
 extern char *g_heap_end;
 
-#define IS_VALID_BLOCK(p)                                                      \
-  ((char *)(p) >= g_heap_start &&                                             \
-   (char *)(p) + sizeof(GCBlock) <= g_heap_end &&                             \
-   (((uintptr_t)(p) & (sizeof(GCBlock) - 1)) == 0) &&                         \
-   ((GCBlock *)(p))->gc_magic == GC_MAGIC)
+// Validate that a pointer looks like a real GCBlock inside the managed
+// heap (range check, alignment check, magic check).
+inline bool is_valid_block(const void *p) {
+  return (const char *)p >= g_heap_start &&
+         (const char *)p + sizeof(GCBlock) <= g_heap_end &&
+         ((uintptr_t)p & (sizeof(GCBlock) - 1)) == 0 &&
+         ((const GCBlock *)p)->gc_magic == GC_MAGIC;
+}
 
 // ---------------------------------------------------------------------------
 // Root registration
