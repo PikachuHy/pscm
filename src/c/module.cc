@@ -918,6 +918,68 @@ SCM *scm_c_module_use(SCM_List *args) {
   return scm_none();
 }
 
+// Temporarily set current module, call func, restore on exit (Guile 1.8 compatible).
+SCM *scm_c_call_with_current_module(SCM *module,
+                                    SCM *(*func)(void *), void *data) {
+  if (!is_module(module)) {
+    eval_error("scm_c_call_with_current_module: expected module");
+    return nullptr;
+  }
+  SCM *old = scm_current_module();
+  g_current_module = module;
+
+  SCM *result = func(data);
+
+  g_current_module = old;
+  return result;
+}
+
+// Create (or resolve) a module and optionally run an init function (Guile 1.8 compatible).
+SCM *scm_c_define_module(const char *name,
+                         void (*init)(void *), void *data) {
+  SCM *parsed = parse(name);
+  if (!parsed || !is_pair(parsed)) {
+    eval_error("scm_c_define_module: invalid module name: %s", name);
+    return nullptr;
+  }
+  SCM_List *name_list = cast<SCM_List>(parsed);
+
+  SCM *module = scm_resolve_module(name_list);
+  if (!module || !is_module(module)) {
+    eval_error("scm_c_define_module: failed to resolve module: %s", name);
+    return nullptr;
+  }
+
+  if (init) {
+    scm_c_call_with_current_module(module,
+                                   (SCM *(*)(void *))init, data);
+  }
+
+  return module;
+}
+
+// Use (import) a module from C (Guile 1.8 compatible).
+void scm_c_use_module(const char *name) {
+  SCM *parsed = parse(name);
+  if (!parsed || !is_pair(parsed)) {
+    eval_error("scm_c_use_module: invalid module name: %s", name);
+    return;
+  }
+  SCM *module = scm_resolve_module(cast<SCM_List>(parsed));
+  if (!module || !is_module(module)) {
+    eval_error("scm_c_use_module: module not found: %s", name);
+    return;
+  }
+
+  SCM *current = scm_current_module();
+  SCM_Module *mod = cast<SCM_Module>(current);
+
+  // Add to uses list (prepend)
+  SCM_List *node = make_list(module);
+  node->next = mod->uses;
+  mod->uses = node;
+}
+
 // Register file-static module variables as GC roots
 void register_module_roots() {
   gc_register_root(&g_current_module, "g_current_module");

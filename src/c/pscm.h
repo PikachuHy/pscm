@@ -1155,6 +1155,11 @@ SCM *scm_c_module_lookup(SCM *module, const char *name);        // Lookup in mod
 SCM *scm_c_module_define(SCM *module, const char *name, SCM *val); // Define in module by C string
 SCM *scm_module_lookup(SCM *module, SCM *sym);                  // Scheme-level module lookup
 SCM *scm_module_define(SCM *module, SCM *sym, SCM *val);        // Scheme-level module define
+SCM *scm_c_define_module(const char *name,
+                         void (*init)(void *), void *data);       // Create module with optional init
+SCM *scm_c_call_with_current_module(SCM *module,
+                                    SCM *(*func)(void *), void *data); // Temporary module switch
+void scm_c_use_module(const char *name);                         // Import module from C
 
 SCM *scm_lookup(SCM *sym);            // Look up a variable by symbol, returns variable object
 SCM *scm_variable_ref(SCM *var);      // Get the value of a variable object
