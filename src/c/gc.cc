@@ -648,6 +648,24 @@ static void trace_variable(GCBlock *block, MarkStack *stack) {
 // Sweep function implementations — free external resources before reclaim
 // =========================================================================
 
+// --- GC_ENV -----------------------------------------------------------
+static void sweep_env(GCBlock *block) {
+  SCM_Environment *env = (SCM_Environment *)block_to_obj(block);
+  SCM_Environment::List *list = env->dummy.next;
+  while (list) {
+    SCM_Environment::List *next = list->next;
+    if (list->data) {
+      if (list->data->key) {
+        delete[] list->data->key;
+      }
+      delete list->data;
+    }
+    delete list;
+    list = next;
+  }
+  env->dummy.next = nullptr;
+}
+
 // --- GC_SCM -----------------------------------------------------------
 static void sweep_scm(GCBlock *block) {
   SCM *scm = (SCM *)block_to_obj(block);
@@ -782,6 +800,7 @@ void gc_init() {
 
   // 4. Register sweep functions (free external resources).
   sweep_fns[GC_SCM]       = sweep_scm;
+  sweep_fns[GC_ENV]       = sweep_env;
   sweep_fns[GC_VECTOR]    = sweep_vector;
   sweep_fns[GC_HASH]      = sweep_hash;
   sweep_fns[GC_STRING]    = sweep_string;
