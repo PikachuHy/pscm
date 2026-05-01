@@ -1148,6 +1148,14 @@ SCM *scm_c_lookup(const char *name);  // Look up a variable by name, returns var
 SCM *scm_c_define(const char *name, SCM *val);  // Define variable in current module (Guile 1.8 compatible)
 SCM *scm_c_define_gsubr(const char *name, int req, int opt, int rst,
                         SCM *(*fcn)(void));  // Register C function as Scheme procedure (Guile 1.8 compatible)
+
+// Module C API (Guile 1.8 compatible)
+SCM *scm_c_resolve_module(const char *name);                    // Resolve module by C string name
+SCM *scm_c_module_lookup(SCM *module, const char *name);        // Lookup in module by C string
+SCM *scm_c_module_define(SCM *module, const char *name, SCM *val); // Define in module by C string
+SCM *scm_module_lookup(SCM *module, SCM *sym);                  // Scheme-level module lookup
+SCM *scm_module_define(SCM *module, SCM *sym, SCM *val);        // Scheme-level module define
+
 SCM *scm_lookup(SCM *sym);            // Look up a variable by symbol, returns variable object
 SCM *scm_variable_ref(SCM *var);      // Get the value of a variable object
 SCM *scm_make_variable(SCM *init);    // Create a variable initialized to a value

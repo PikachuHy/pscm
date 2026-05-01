@@ -462,6 +462,77 @@ SCM *scm_c_resolve_module(SCM *name_arg) {
   return scm_resolve_module(cast<SCM_List>(name_arg));
 }
 
+// Resolve a module by C string name (Guile 1.8 compatible).
+// Parses "(foo bar)" string into a symbol list, then delegates.
+SCM *scm_c_resolve_module(const char *name) {
+  SCM *parsed = parse(name);
+  if (!parsed || !is_pair(parsed)) {
+    eval_error("scm_c_resolve_module: invalid module name: %s", name);
+    return nullptr;
+  }
+  return scm_resolve_module(cast<SCM_List>(parsed));
+}
+
+SCM *scm_c_module_lookup(SCM *module, const char *name) {
+  if (!is_module(module)) {
+    eval_error("scm_c_module_lookup: expected module");
+    return nullptr;
+  }
+  SCM_Symbol *sym = make_sym(name);
+  SCM_Module *mod = cast<SCM_Module>(module);
+  SCM *val = module_search_variable(mod, sym);
+  if (!val) {
+    eval_error("scm_c_module_lookup: unbound variable: %s", name);
+    return nullptr;
+  }
+  return scm_make_variable(val);
+}
+
+SCM *scm_c_module_define(SCM *module, const char *name, SCM *val) {
+  if (!is_module(module)) {
+    eval_error("scm_c_module_define: expected module");
+    return nullptr;
+  }
+  SCM_Symbol *sym = make_sym(name);
+  SCM_Module *mod = cast<SCM_Module>(module);
+  scm_c_hash_set_eq(wrap(mod->obarray), wrap(sym), val);
+  return scm_make_variable(val);
+}
+
+SCM *scm_module_lookup(SCM *module, SCM *sym) {
+  if (!is_module(module)) {
+    eval_error("module-lookup: expected module");
+    return nullptr;
+  }
+  if (!is_sym(sym)) {
+    eval_error("module-lookup: expected symbol");
+    return nullptr;
+  }
+  SCM_Module *mod = cast<SCM_Module>(module);
+  SCM_Symbol *s = cast<SCM_Symbol>(sym);
+  SCM *val = module_search_variable(mod, s);
+  if (!val) {
+    eval_error("module-lookup: unbound variable");
+    return nullptr;
+  }
+  return scm_make_variable(val);
+}
+
+SCM *scm_module_define(SCM *module, SCM *sym, SCM *val) {
+  if (!is_module(module)) {
+    eval_error("module-define: expected module");
+    return nullptr;
+  }
+  if (!is_sym(sym)) {
+    eval_error("module-define: expected symbol");
+    return nullptr;
+  }
+  SCM_Module *mod = cast<SCM_Module>(module);
+  SCM_Symbol *s = cast<SCM_Symbol>(sym);
+  scm_c_hash_set_eq(wrap(mod->obarray), wrap(s), val);
+  return scm_make_variable(val);
+}
+
 SCM *scm_c_module_ref(SCM_List *args) {
   if (!args || !args->data) {
     eval_error("module-ref: requires at least 2 arguments");
@@ -875,7 +946,7 @@ void init_modules() {
   // Register built-in functions
   scm_define_function("current-module", 0, 0, 0, scm_c_current_module);
   scm_define_function("set-current-module", 1, 0, 0, scm_c_set_current_module);
-  scm_define_function("resolve-module", 1, 0, 0, scm_c_resolve_module);
+  scm_define_function("resolve-module", 1, 0, 0, +[](SCM *name_arg) -> SCM * { return scm_c_resolve_module(name_arg); });
   scm_define_vararg_function("module-ref", scm_c_module_ref);
   scm_define_function("module-bound?", 2, 0, 0, scm_c_module_bound_p);
   scm_define_function("module?", 1, 0, 0, scm_c_module_p);
