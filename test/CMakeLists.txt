@@ -1,4 +1,5 @@
 enable_testing()
+add_subdirectory(unit)
 add_subdirectory(cont)
 add_subdirectory(core)
 add_subdirectory(base)

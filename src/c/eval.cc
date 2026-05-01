@@ -52,8 +52,10 @@ SCM *scm_c_eval_string(const char *expr) {
   }
   
   // Evaluate all expressions, return the last result
-  long stack_base;
-  cont_base = &stack_base;
+  if (!cont_base) {
+    long stack_base;
+    cont_base = &stack_base;
+  }
   SCM *last_result = nullptr;
   SCM_List *current = exprs;
   while (current) {
