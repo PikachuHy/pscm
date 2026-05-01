@@ -217,17 +217,17 @@ SCM *expand_let(SCM *expr) {
   }
   return ast;
 #if 0
-    SCM_Procedure *proc = new SCM_Procedure();
+    SCM_Procedure *proc = (SCM_Procedure *)gc_alloc(GC_PROC, sizeof(SCM_Procedure));
     proc->name = NULL;
     proc->args = dummy_params.next;
     proc->body = l->next->next;
     proc->env = env;
 
-    auto new_list = new SCM_List();
+    auto new_list = (SCM_List *)gc_alloc(GC_LIST, sizeof(SCM_List));
     new_list->data = wrap(proc);
     new_list->next = dummy_args.next;
     new_list->is_dotted = false;
-    auto new_l = new SCM();
+    auto new_l = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
     new_l->type = SCM::LIST;
     new_l->value = new_list;
     ast = new_l;

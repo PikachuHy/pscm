@@ -413,7 +413,7 @@ static SCM *parse_number(Parser *p) {
   }
   
   // Create SCM object
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   if (is_float) {
     scm->type = SCM::FLOAT;
     scm->value = double_to_ptr(float_value);
@@ -598,7 +598,7 @@ static SCM *parse_vector(Parser *p) {
     
     pop_parse_stack();  // Successfully parsed empty vector
     
-    auto vec = new SCM_Vector();
+    auto vec = (SCM_Vector *)gc_alloc(GC_VECTOR, sizeof(SCM_Vector));
     vec->elements = nullptr;
     vec->length = 0;
     
@@ -643,7 +643,7 @@ static SCM *parse_vector(Parser *p) {
     current = current->next;
   }
   
-  auto vec = new SCM_Vector();
+  auto vec = (SCM_Vector *)gc_alloc(GC_VECTOR, sizeof(SCM_Vector));
   vec->length = count;
   if (count > 0) {
     vec->elements = new SCM*[count];
@@ -760,13 +760,13 @@ static SCM *parse_string(Parser *p) {
   *dst = '\0';
   
   // Create string object directly
-  SCM_String *s = new SCM_String();
+  SCM_String *s = (SCM_String *)gc_alloc(GC_STRING, sizeof(SCM_String));
   s->data = str_data;  // Use the allocated buffer directly
   s->len = actual_len;
   
   pop_parse_stack();  // Successfully parsed string
   
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::STR;
   scm->value = s;
   scm->source_loc = nullptr;
@@ -856,7 +856,7 @@ static SCM *parse_quote(Parser *p) {
     SCM *quote_sym = scm_sym_quote();
     SCM_List *list = make_list(quote_sym, quoted);
     
-    SCM *scm = new SCM();
+    SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
     scm->type = SCM::LIST;
     scm->value = list;
     return scm;
@@ -882,7 +882,7 @@ static SCM *parse_quote(Parser *p) {
     
     pop_parse_stack();  // Successfully parsed quote
     
-    SCM *scm = new SCM();
+    SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
     scm->type = SCM::LIST;
     scm->value = list;
     return scm;
@@ -916,7 +916,7 @@ static SCM *parse_quasiquote(Parser *p) {
   
   pop_parse_stack();  // Successfully parsed quasiquote
   
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::LIST;
   scm->value = list;
   return scm;
@@ -944,7 +944,7 @@ static SCM *parse_unquote_in_list(Parser *p) {
     SCM *unquote_splicing_sym = scm_sym_unquote_splicing();
     SCM_List *list = make_list(unquote_splicing_sym, expr);
     
-    SCM *scm = new SCM();
+    SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
     scm->type = SCM::LIST;
     scm->value = list;
     return scm;
@@ -970,7 +970,7 @@ static SCM *parse_unquote_in_list(Parser *p) {
     SCM *unquote_sym = scm_sym_unquote();
     SCM_List *list = make_list(unquote_sym, quoted);
     
-    SCM *scm = new SCM();
+    SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
     scm->type = SCM::LIST;
     scm->value = list;
     return scm;
@@ -989,7 +989,7 @@ static SCM *parse_unquote_in_list(Parser *p) {
     SCM *unquote_sym = scm_sym_unquote();
     SCM_List *list = make_list(unquote_sym, inner_unquote);
     
-    SCM *scm = new SCM();
+    SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
     scm->type = SCM::LIST;
     scm->value = list;
     return scm;
@@ -1004,7 +1004,7 @@ static SCM *parse_unquote_in_list(Parser *p) {
   SCM *unquote_sym = scm_sym_unquote();
   SCM_List *list = make_list(unquote_sym, expr);
   
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::LIST;
   scm->value = list;
   return scm;
@@ -1155,7 +1155,7 @@ static SCM *parse_list(Parser *p) {
   pop_parse_stack();  // Successfully parsed list
   
   if (dummy.next) {
-    SCM *scm = new SCM();
+    SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
     scm->type = SCM::LIST;
     scm->value = dummy.next;
     scm->source_loc = nullptr;  // Initialize to nullptr

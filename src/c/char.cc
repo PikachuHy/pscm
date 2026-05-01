@@ -12,7 +12,7 @@ SCM *scm_c_char_to_integer(SCM *arg) {
     return nullptr;
   }
   char ch = scm_to_char(arg);
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::NUM;
   scm->value = (void*)(int64_t)(unsigned char)ch;
   scm->source_loc = nullptr;

@@ -10,7 +10,7 @@ SCM *parse(const char *s);
 
 // Helper function to create a port SCM object
 static SCM *wrap_port(SCM_Port *port) {
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::PORT;
   scm->value = port;
   scm->source_loc = nullptr;
@@ -44,7 +44,7 @@ static SCM *g_eof_object = nullptr;
 
 SCM *scm_eof_object() {
   if (!g_eof_object) {
-    g_eof_object = new SCM();
+    g_eof_object = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
     g_eof_object->type = SCM::NONE;  // Use NONE as EOF marker
     g_eof_object->value = (void*)0xDEADBEEF;  // Special marker value
     g_eof_object->source_loc = nullptr;
@@ -71,7 +71,7 @@ SCM *scm_c_open_input_file(SCM *filename) {
     return nullptr;
   }
   
-  SCM_Port *port = new SCM_Port();
+  SCM_Port *port = (SCM_Port *)gc_alloc(GC_PORT, sizeof(SCM_Port));
   port->port_type = PORT_FILE_INPUT;
   port->is_input = true;
   port->is_closed = false;
@@ -100,7 +100,7 @@ SCM *scm_c_open_output_file(SCM *filename) {
     return nullptr;
   }
   
-  SCM_Port *port = new SCM_Port();
+  SCM_Port *port = (SCM_Port *)gc_alloc(GC_PORT, sizeof(SCM_Port));
   port->port_type = PORT_FILE_OUTPUT;
   port->is_input = false;
   port->is_closed = false;
@@ -189,7 +189,7 @@ SCM *scm_c_open_input_string(SCM *str) {
   }
   
   SCM_String *s = cast<SCM_String>(str);
-  SCM_Port *port = new SCM_Port();
+  SCM_Port *port = (SCM_Port *)gc_alloc(GC_PORT, sizeof(SCM_Port));
   port->port_type = PORT_STRING_INPUT;
   port->is_input = true;
   port->is_closed = false;
@@ -208,7 +208,7 @@ SCM *scm_c_open_input_string(SCM *str) {
 
 // open-output-string: Create an output port that writes to a string
 SCM *scm_c_open_output_string() {
-  SCM_Port *port = new SCM_Port();
+  SCM_Port *port = (SCM_Port *)gc_alloc(GC_PORT, sizeof(SCM_Port));
   port->port_type = PORT_STRING_OUTPUT;
   port->is_input = false;
   port->is_closed = false;
@@ -226,12 +226,12 @@ SCM *scm_c_open_output_string() {
 
 // Helper function to create string from C string (needed by get-output-string)
 static SCM *scm_from_c_string_port(const char *data, int len) {
-  SCM_String *s = new SCM_String();
+  SCM_String *s = (SCM_String *)gc_alloc(GC_STRING, sizeof(SCM_String));
   s->data = new char[len + 1];
   memcpy(s->data, data, len);
   s->data[len] = '\0';
   s->len = len;
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::STR;
   scm->value = s;
   scm->source_loc = nullptr;
@@ -421,7 +421,7 @@ static SCM *g_current_error_port = nullptr;
 SCM *scm_current_error_port() {
   if (!g_current_error_port) {
     // Create a port wrapping stderr
-    SCM_Port *port = new SCM_Port();
+    SCM_Port *port = (SCM_Port *)gc_alloc(GC_PORT, sizeof(SCM_Port));
     port->port_type = PORT_FILE_OUTPUT;
     port->is_input = false;
     port->is_closed = false;
@@ -1078,7 +1078,7 @@ SCM *scm_c_make_soft_port(SCM_List *args) {
   }
   
   // Create soft port
-  SCM_Port *port = new SCM_Port();
+  SCM_Port *port = (SCM_Port *)gc_alloc(GC_PORT, sizeof(SCM_Port));
   port->port_type = PORT_SOFT;
   port->is_input = is_input;  // Set to true if 'r' in modes, but we also check modes for 'w'
   port->is_closed = false;
@@ -1143,5 +1143,10 @@ void init_port() {
   
   // Soft ports
   scm_define_vararg_function("make-soft-port", scm_c_make_soft_port);
+}
+
+// Register file-static port variables as GC roots
+void register_port_roots() {
+  gc_register_root(&g_eof_object, "g_eof_object");
 }
 

@@ -313,13 +313,13 @@ static const char *get_type_name(SCM::Type type) {
   
   // Create error arguments: (message)
   // Helper function to create string from C string
-  SCM_String *s = new SCM_String();
+  SCM_String *s = (SCM_String *)gc_alloc(GC_STRING, sizeof(SCM_String));
   int len = (int)strlen(full_message);
   s->data = new char[len + 1];
   memcpy(s->data, full_message, len);
   s->data[len] = '\0';
   s->len = len;
-  SCM *error_message = new SCM();
+  SCM *error_message = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   error_message->type = SCM::STR;
   error_message->value = s;
   error_message->source_loc = nullptr;

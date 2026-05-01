@@ -99,11 +99,22 @@ SCM *scm_env_search(SCM_Environment *env, SCM_Symbol *sym) {
   if (g_current_eval_context) {
     loc_str = get_source_location_str(g_current_eval_context);
   }
-  
+
   if (loc_str) {
     SCM_ERROR_SYMTBL("find %s, not found (at %s)\n", sym->data, loc_str);
   } else {
     SCM_ERROR_SYMTBL("find %s, not found\n", sym->data);
   }
   return nullptr;
+}
+
+// Register all SCM* values in the global environment as GC roots
+void register_env_roots() {
+  SCM_Environment::List *l = g_env.dummy.next;
+  while (l) {
+    if (l->data && l->data->value) {
+      gc_register_root(&l->data->value, "g_env");
+    }
+    l = l->next;
+  }
 }

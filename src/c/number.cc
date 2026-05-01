@@ -111,7 +111,7 @@ struct BinaryOperator {
       if constexpr (std::is_same_v<decltype(ret), bool>) {
         return ret ? scm_bool_true() : scm_bool_false();
       } else {
-        SCM *data = new SCM();
+        SCM *data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
         data->type = SCM::NUM;
         data->value = (void *)ret;
         return data;
@@ -235,7 +235,7 @@ SCM *scm_c_negate_number(SCM *arg) {
     return scm_from_double(-val);
   } else if (is_num(arg)) {
     int64_t val = (int64_t)arg->value;
-    SCM *data = new SCM();
+    SCM *data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
     data->type = SCM::NUM;
     data->value = (void *)(-val);
     return data;
@@ -475,7 +475,7 @@ SCM *scm_c_abs(SCM *arg) {
   assert(is_num(arg));
   int64_t val = (int64_t)arg->value;
   int64_t abs_val = val < 0 ? -val : val;
-  SCM *data = new SCM();
+  SCM *data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   data->type = SCM::NUM;
   data->value = (void *)abs_val;
   return data;
@@ -502,7 +502,7 @@ bool _number_eq(SCM *lhs, SCM *rhs) {
 }
 
 SCM *_create_num(int64_t val) {
-  SCM *data = new SCM();
+  SCM *data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   data->type = SCM::NUM;
   data->value = (void *)val;
   return data;
@@ -622,11 +622,11 @@ SCM *scm_make_ratio(int64_t numerator, int64_t denominator) {
   }
   
   // Create rational number
-  SCM_Rational *rat = new SCM_Rational();
+  SCM_Rational *rat = (SCM_Rational *)gc_alloc(GC_NUMBER, sizeof(SCM_Rational));
   rat->numerator = numerator;
   rat->denominator = denominator;
   
-  SCM *data = new SCM();
+  SCM *data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   data->type = SCM::RATIO;
   data->value = rat;
   data->source_loc = nullptr;

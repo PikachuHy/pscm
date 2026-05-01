@@ -10,7 +10,7 @@ SCM *scm_c_string_length(SCM *str) {
     return nullptr;
   }
   SCM_String *s = cast<SCM_String>(str);
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::NUM;
   scm->value = (void*)(int64_t)s->len;
   scm->source_loc = nullptr;
@@ -41,7 +41,7 @@ static SCM *scm_c_make_string_impl(SCM *len_scm, SCM *char_scm) {
   }
   
   // Create string
-  SCM_String *s = new SCM_String();
+  SCM_String *s = (SCM_String *)gc_alloc(GC_STRING, sizeof(SCM_String));
   s->data = new char[len + 1];
   for (int i = 0; i < len; i++) {
     s->data[i] = fill_char;
@@ -49,7 +49,7 @@ static SCM *scm_c_make_string_impl(SCM *len_scm, SCM *char_scm) {
   s->data[len] = '\0';
   s->len = len;
   
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::STR;
   scm->value = s;
   scm->source_loc = nullptr;
@@ -307,11 +307,11 @@ SCM *scm_c_string_eq(SCM *str1, SCM *str2) {
 SCM *scm_c_string(SCM_List *args) {
   if (!args) {
     // No arguments: return empty string
-    SCM_String *s = new SCM_String();
+    SCM_String *s = (SCM_String *)gc_alloc(GC_STRING, sizeof(SCM_String));
     s->data = new char[1];
     s->data[0] = '\0';
     s->len = 0;
-    SCM *scm = new SCM();
+    SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
     scm->type = SCM::STR;
     scm->value = s;
     scm->source_loc = nullptr;
@@ -334,7 +334,7 @@ SCM *scm_c_string(SCM_List *args) {
   }
   
   // Create string from characters
-  SCM_String *s = new SCM_String();
+  SCM_String *s = (SCM_String *)gc_alloc(GC_STRING, sizeof(SCM_String));
   s->data = new char[len + 1];
   s->len = len;
   current = args;
@@ -349,7 +349,7 @@ SCM *scm_c_string(SCM_List *args) {
   }
   s->data[len] = '\0';
   
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::STR;
   scm->value = s;
   scm->source_loc = nullptr;
@@ -430,7 +430,7 @@ SCM *scm_c_string_to_number(SCM_List *args) {
       result = scm_bool_false();
     } else {
       // Create number directly
-      SCM *num = new SCM();
+      SCM *num = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
       num->type = SCM::NUM;
       num->value = (void *)(int64_t)val;
       num->source_loc = nullptr;
@@ -574,11 +574,11 @@ SCM *scm_c_number_to_string(SCM_List *args) {
   }
   
   // Create SCM_String
-  SCM_String *s = new SCM_String();
+  SCM_String *s = (SCM_String *)gc_alloc(GC_STRING, sizeof(SCM_String));
   s->data = str_data;
   s->len = str_len;
   
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::STR;
   scm->value = s;
   scm->source_loc = nullptr;
@@ -614,13 +614,13 @@ SCM *scm_c_substring(SCM *str, SCM *start, SCM *end) {
   }
   
   int64_t len = end_idx - start_idx;
-  SCM_String *result = new SCM_String();
+  SCM_String *result = (SCM_String *)gc_alloc(GC_STRING, sizeof(SCM_String));
   result->data = new char[len + 1];
   memcpy(result->data, s->data + start_idx, len);
   result->data[len] = '\0';
   result->len = len;
   
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::STR;
   scm->value = result;
   scm->source_loc = nullptr;
@@ -631,11 +631,11 @@ SCM *scm_c_substring(SCM *str, SCM *start, SCM *end) {
 SCM *scm_c_string_append(SCM_List *args) {
   if (!args) {
     // No arguments: return empty string
-    SCM_String *s = new SCM_String();
+    SCM_String *s = (SCM_String *)gc_alloc(GC_STRING, sizeof(SCM_String));
     s->data = new char[1];
     s->data[0] = '\0';
     s->len = 0;
-    SCM *scm = new SCM();
+    SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
     scm->type = SCM::STR;
     scm->value = s;
     scm->source_loc = nullptr;
@@ -659,7 +659,7 @@ SCM *scm_c_string_append(SCM_List *args) {
   }
   
   // Create result string
-  SCM_String *result = new SCM_String();
+  SCM_String *result = (SCM_String *)gc_alloc(GC_STRING, sizeof(SCM_String));
   result->data = new char[total_len + 1];
   result->len = total_len;
   
@@ -677,7 +677,7 @@ SCM *scm_c_string_append(SCM_List *args) {
   }
   result->data[total_len] = '\0';
   
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::STR;
   scm->value = result;
   scm->source_loc = nullptr;
@@ -701,7 +701,7 @@ SCM *scm_c_string_to_list(SCM *str) {
   SCM_List *result = nullptr;
   for (int i = s->len - 1; i >= 0; i--) {
     SCM *ch = scm_from_char(s->data[i]);
-    SCM_List *cell = new SCM_List();
+    SCM_List *cell = (SCM_List *)gc_alloc(GC_LIST, sizeof(SCM_List));
     cell->data = ch;
     cell->next = result;
     cell->is_dotted = false;
@@ -715,11 +715,11 @@ SCM *scm_c_string_to_list(SCM *str) {
 SCM *scm_c_list_to_string(SCM *lst) {
   if (is_nil(lst)) {
     // Empty list: return empty string
-    SCM_String *s = new SCM_String();
+    SCM_String *s = (SCM_String *)gc_alloc(GC_STRING, sizeof(SCM_String));
     s->data = new char[1];
     s->data[0] = '\0';
     s->len = 0;
-    SCM *scm = new SCM();
+    SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
     scm->type = SCM::STR;
     scm->value = s;
     scm->source_loc = nullptr;
@@ -747,7 +747,7 @@ SCM *scm_c_list_to_string(SCM *lst) {
   }
   
   // Create string
-  SCM_String *s = new SCM_String();
+  SCM_String *s = (SCM_String *)gc_alloc(GC_STRING, sizeof(SCM_String));
   s->data = new char[len + 1];
   s->len = len;
   
@@ -761,7 +761,7 @@ SCM *scm_c_list_to_string(SCM *lst) {
   }
   s->data[len] = '\0';
   
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::STR;
   scm->value = s;
   scm->source_loc = nullptr;
@@ -1011,12 +1011,12 @@ SCM *scm_from_c_string(const char *data, int len) {
     eval_error("scm_from_c_string: data is null");
     return nullptr;
   }
-  SCM_String *s = new SCM_String();
+  SCM_String *s = (SCM_String *)gc_alloc(GC_STRING, sizeof(SCM_String));
   s->data = new char[len + 1];
   memcpy(s->data, data, len);
   s->data[len] = '\0';
   s->len = len;
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::STR;
   scm->value = s;
   scm->source_loc = nullptr;

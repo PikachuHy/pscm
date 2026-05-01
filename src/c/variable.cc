@@ -4,14 +4,14 @@
 
 // Make a variable initialized to a value
 SCM *scm_make_variable(SCM *init) {
-  auto var = new SCM_Variable();
+  auto var = (SCM_Variable *)gc_alloc(GC_VARIABLE, sizeof(SCM_Variable));
   var->value = init;
   return wrap(var);
 }
 
 // Make an undefined variable
 SCM *scm_make_undefined_variable(void) {
-  auto var = new SCM_Variable();
+  auto var = (SCM_Variable *)gc_alloc(GC_VARIABLE, sizeof(SCM_Variable));
   var->value = nullptr;  // nullptr means unbound
   return wrap(var);
 }

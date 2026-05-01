@@ -10,10 +10,10 @@ static SCM_HashTable *g_module_registry = nullptr;
 
 // Create a module
 SCM *scm_make_module(SCM_List *name, int obarray_size) {
-  auto module = new SCM_Module();
+  auto module = (SCM_Module *)gc_alloc(GC_MODULE, sizeof(SCM_Module));
   
   // Create obarray (hash table)
-  SCM *size_scm = new SCM();
+  SCM *size_scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   size_scm->type = SCM::NUM;
   size_scm->value = (void *)(int64_t)obarray_size;
   size_scm->source_loc = nullptr;
@@ -234,7 +234,7 @@ static bool file_exists(const char *path) {
 SCM *scm_resolve_module(SCM_List *name) {
   // Initialize registry if needed
   if (!g_module_registry) {
-    g_module_registry = new SCM_HashTable();
+    g_module_registry = (SCM_HashTable *)gc_alloc(GC_HASH, sizeof(SCM_HashTable));
     g_module_registry->capacity = 61;
     g_module_registry->size = 0;
     g_module_registry->buckets = (SCM **)calloc(61, sizeof(SCM *));
@@ -512,7 +512,7 @@ SCM *eval_define_module(SCM_Environment *env, SCM_List *l) {
   
   // Check if module already exists in registry (e.g., created by scm_resolve_module)
   if (!g_module_registry) {
-    g_module_registry = new SCM_HashTable();
+    g_module_registry = (SCM_HashTable *)gc_alloc(GC_HASH, sizeof(SCM_HashTable));
     g_module_registry->capacity = 61;
     g_module_registry->size = 0;
     g_module_registry->buckets = (SCM **)calloc(61, sizeof(SCM *));
@@ -801,6 +801,12 @@ SCM *scm_c_module_use(SCM_List *args) {
   return scm_none();
 }
 
+// Register file-static module variables as GC roots
+void register_module_roots() {
+  gc_register_root(&g_current_module, "g_current_module");
+  gc_register_root((SCM **)&g_module_registry, "g_module_registry");
+}
+
 void init_modules() {
   // Create root module
   SCM_List *name = make_list(wrap(make_sym("pscm-user")));
@@ -808,7 +814,7 @@ void init_modules() {
   g_current_module = g_root_module;
   
   // Initialize module registry
-  g_module_registry = new SCM_HashTable();
+  g_module_registry = (SCM_HashTable *)gc_alloc(GC_HASH, sizeof(SCM_HashTable));
   g_module_registry->capacity = 61;
   g_module_registry->size = 0;
   g_module_registry->buckets = (SCM **)calloc(61, sizeof(SCM *));

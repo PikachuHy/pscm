@@ -421,7 +421,7 @@ SCM *scm_c_list_ref(SCM *lst, SCM *k) {
 
 SCM *scm_c_length(SCM *lst) {
   if (is_nil(lst)) {
-    SCM *result = new SCM();
+    SCM *result = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
     result->type = SCM::NUM;
     result->value = (void *)0;
     result->source_loc = nullptr;
@@ -443,7 +443,7 @@ SCM *scm_c_length(SCM *lst) {
     current = current->next;
   }
   
-  SCM *result = new SCM();
+  SCM *result = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   result->type = SCM::NUM;
   result->value = (void *)(intptr_t)count;
   result->source_loc = nullptr;

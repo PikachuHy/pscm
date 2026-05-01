@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "gc.h"
+
 // Forward declarations
 struct SCM_Smob;
 
@@ -332,7 +334,7 @@ inline SCM_List make_list_dummy() {
 }
 
 inline SCM_List *make_list() {
-  auto l = new SCM_List();
+  auto l = (SCM_List *)gc_alloc(GC_LIST, sizeof(SCM_List));
   l->data = nullptr;
   l->next = nullptr;
   l->is_dotted = false;
@@ -364,7 +366,7 @@ inline SCM_Procedure *make_proc(SCM_Symbol *name, SCM_List *args, SCM_List *body
   // assert(args);
   assert(body);
   assert(env);
-  SCM_Procedure *proc = new SCM_Procedure();
+  SCM_Procedure *proc = (SCM_Procedure *)gc_alloc(GC_PROC, sizeof(SCM_Procedure));
   proc->name = name;
   proc->args = args;
   proc->body = body;
@@ -373,7 +375,7 @@ inline SCM_Procedure *make_proc(SCM_Symbol *name, SCM_List *args, SCM_List *body
 }
 
 inline SCM_Continuation *make_cont(size_t stack_len, void *stack_data, long *src_addr) {
-  auto cont = new SCM_Continuation();
+  auto cont = (SCM_Continuation *)gc_alloc(GC_CONT, sizeof(SCM_Continuation));
   cont->stack_len = stack_len;
   cont->stack_data = stack_data;
   cont->wind_chain = nullptr;
@@ -383,7 +385,7 @@ inline SCM_Continuation *make_cont(size_t stack_len, void *stack_data, long *src
 }
 
 inline SCM_Environment *make_env(SCM_Environment *parent) {
-  auto env = new SCM_Environment();
+  auto env = (SCM_Environment *)gc_alloc(GC_ENV, sizeof(SCM_Environment));
   env->parent = parent;
   env->dummy.data = nullptr;
   env->dummy.next = nullptr;
@@ -436,7 +438,7 @@ inline double ptr_to_double(void *ptr) {
 }
 
 inline SCM *int_to_scm(int val) {
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::NUM;
   scm->value = (void *)(int64_t)val;
   scm->source_loc = nullptr;
@@ -449,7 +451,7 @@ inline int scm_to_int(SCM *scm) {
 }
 
 inline SCM *long_to_scm(long val) {
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::NUM;
   scm->value = (void *)val;
   scm->source_loc = nullptr;
@@ -458,7 +460,7 @@ inline SCM *long_to_scm(long val) {
 
 // Create a float number
 inline SCM *scm_from_double(double val) {
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::FLOAT;
   scm->value = double_to_ptr(val);
   scm->source_loc = nullptr;
@@ -496,7 +498,7 @@ inline char ptr_to_char(void *ptr) {
 
 // Create a character
 inline SCM *scm_from_char(char val) {
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::CHAR;
   scm->value = char_to_ptr(val);
   scm->source_loc = nullptr;
@@ -526,7 +528,7 @@ SCM *wrap(T *);
 template <>
 inline SCM *wrap(SCM_Procedure *proc) {
   assert(proc);
-  auto data = new SCM();
+  auto data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   data->type = SCM::PROC;
   data->value = proc;
   data->source_loc = nullptr;
@@ -536,7 +538,7 @@ inline SCM *wrap(SCM_Procedure *proc) {
 template <>
 inline SCM *wrap(SCM_Continuation *cont) {
   assert(cont);
-  auto data = new SCM();
+  auto data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   data->type = SCM::CONT;
   data->value = cont;
   data->source_loc = nullptr;
@@ -546,7 +548,7 @@ inline SCM *wrap(SCM_Continuation *cont) {
 template <>
 inline SCM *wrap(SCM_Function *func) {
   assert(func);
-  auto data = new SCM();
+  auto data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   data->type = SCM::FUNC;
   data->value = func;
   data->source_loc = nullptr;
@@ -559,7 +561,7 @@ inline SCM *wrap(SCM_List *l) {
     return scm_nil();
   }
   assert(l);
-  auto data = new SCM();
+  auto data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   data->type = SCM::LIST;
   data->value = l;
   data->source_loc = nullptr;
@@ -569,7 +571,7 @@ inline SCM *wrap(SCM_List *l) {
 template <>
 inline SCM *wrap(SCM_Symbol *sym) {
   assert(sym);
-  auto data = new SCM();
+  auto data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   data->type = SCM::SYM;
   data->value = sym;
   data->source_loc = nullptr;
@@ -645,7 +647,7 @@ inline SCM_Promise *cast<SCM_Promise>(SCM *data) {
 template <>
 inline SCM *wrap(SCM_Macro *macro) {
   assert(macro);
-  auto data = new SCM();
+  auto data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   data->type = SCM::MACRO;
   data->value = macro;
   data->source_loc = nullptr;
@@ -664,7 +666,7 @@ inline SCM_HashTable *cast<SCM_HashTable>(SCM *data) {
 template <>
 inline SCM *wrap(SCM_HashTable *hash_table) {
   assert(hash_table);
-  auto data = new SCM();
+  auto data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   data->type = SCM::HASH_TABLE;
   data->value = hash_table;
   data->source_loc = nullptr;
@@ -730,7 +732,7 @@ inline SCM_Variable *cast<SCM_Variable>(SCM *data) {
 template <>
 inline SCM *wrap(SCM_Variable *var) {
   assert(var);
-  auto data = new SCM();
+  auto data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   data->type = SCM::VARIABLE;
   data->value = var;
   data->source_loc = nullptr;
@@ -740,7 +742,7 @@ inline SCM *wrap(SCM_Variable *var) {
 template <>
 inline SCM *wrap(SCM_Vector *vec) {
   assert(vec);
-  auto data = new SCM();
+  auto data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   data->type = SCM::VECTOR;
   data->value = vec;
   data->source_loc = nullptr;
@@ -749,7 +751,7 @@ inline SCM *wrap(SCM_Vector *vec) {
 
 inline SCM *wrap(SCM_Module *module) {
   assert(module);
-  auto data = new SCM();
+  auto data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   data->type = SCM::MODULE;
   data->value = module;
   data->source_loc = nullptr;
@@ -758,7 +760,7 @@ inline SCM *wrap(SCM_Module *module) {
 
 inline SCM *wrap(SCM_Smob *smob) {
   assert(smob);
-  auto data = new SCM();
+  auto data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   data->type = SCM::SMOB;
   data->value = smob;
   data->source_loc = nullptr;
@@ -792,7 +794,7 @@ inline SCM *cdr(SCM *data) {
     // For dotted pair (a . b), return b directly (not wrapped as a list)
     return l->next->data;
   }
-  auto new_data = new SCM();
+  auto new_data = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   new_data->type = SCM::LIST;
   new_data->value = l->next;
   new_data->source_loc = nullptr; // Initialize to nullptr
@@ -853,7 +855,7 @@ SCM_List *map(SCM_List *l, F f) {
   auto it = &dummay_list;
   it->next = NULL;
   while (l) {
-    it->next = new SCM_List();
+    it->next = (SCM_List *)gc_alloc(GC_LIST, sizeof(SCM_List));
     it->next->data = f(l->data);
     it->next->next = NULL;
     it = it->next;
@@ -1012,7 +1014,7 @@ SCM *scm_c_set_cdr(SCM *pair, SCM *value);
 
 #define SCM_INIT_CONT(cont, base)                                                                                      \
   {                                                                                                                    \
-    cont = new SCM_Continuation();                                                                                     \
+    cont = (SCM_Continuation *)gc_alloc(GC_CONT, sizeof(SCM_Continuation));                                                                                     \
     long __stack_top__;                                                                                                \
     cont->dst = &__stack_top__;                                                                                        \
     cont->stack_len = (long)base - (long)cont->dst;                                                                    \
@@ -1187,8 +1189,8 @@ SCM_Module *module_find_variable_module(SCM_Module *module, SCM_Symbol *sym);
 
 template <typename F>
 SCM_Function *_create_func(const char *name, F func_ptr) {
-  auto func = new SCM_Function();
-  auto func_name = new SCM_Symbol();
+  auto func = (SCM_Function *)gc_alloc(GC_FUNC, sizeof(SCM_Function));
+  auto func_name = (SCM_Symbol *)gc_alloc(GC_SYMBOL, sizeof(SCM_Symbol));
   func_name->len = strlen(name);
   func_name->data = (char *)malloc(sizeof(char) * (func_name->len + 1));
   memcpy(func_name->data, name, func_name->len);

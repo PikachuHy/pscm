@@ -17,7 +17,7 @@ static SCM *scm_c_make_vector_impl(SCM *len_scm, SCM *fill_scm) {
   SCM *fill = fill_scm ? fill_scm : scm_none();
   
   // Create vector
-  SCM_Vector *vec = new SCM_Vector();
+  SCM_Vector *vec = (SCM_Vector *)gc_alloc(GC_VECTOR, sizeof(SCM_Vector));
   vec->length = (size_t)len;
   if (len > 0) {
     vec->elements = new SCM*[len];
@@ -45,7 +45,7 @@ SCM *scm_c_make_vector(SCM_List *args) {
 
 // vector: Create a vector from arguments
 SCM *scm_c_vector(SCM_List *args) {
-  SCM_Vector *vec = new SCM_Vector();
+  SCM_Vector *vec = (SCM_Vector *)gc_alloc(GC_VECTOR, sizeof(SCM_Vector));
   size_t count = 0;
   SCM_List *current = args;
   
@@ -78,7 +78,7 @@ SCM *scm_c_vector_length(SCM *vec) {
     return nullptr;
   }
   SCM_Vector *v = cast<SCM_Vector>(vec);
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::NUM;
   scm->value = (void*)(int64_t)v->length;
   scm->source_loc = nullptr;
@@ -146,7 +146,7 @@ SCM *scm_c_vector_to_list(SCM *vec) {
   // Build list from end to beginning
   SCM_List *result = nullptr;
   for (int i = (int)v->length - 1; i >= 0; i--) {
-    SCM_List *cell = new SCM_List();
+    SCM_List *cell = (SCM_List *)gc_alloc(GC_LIST, sizeof(SCM_List));
     cell->data = v->elements[i];
     cell->next = result;
     cell->is_dotted = false;
@@ -160,7 +160,7 @@ SCM *scm_c_vector_to_list(SCM *vec) {
 SCM *scm_c_list_to_vector(SCM *list) {
   if (is_nil(list)) {
     // Empty list: return empty vector
-    SCM_Vector *vec = new SCM_Vector();
+    SCM_Vector *vec = (SCM_Vector *)gc_alloc(GC_VECTOR, sizeof(SCM_Vector));
     vec->length = 0;
     vec->elements = nullptr;
     return wrap(vec);
@@ -183,7 +183,7 @@ SCM *scm_c_list_to_vector(SCM *list) {
   }
   
   // Create vector
-  SCM_Vector *vec = new SCM_Vector();
+  SCM_Vector *vec = (SCM_Vector *)gc_alloc(GC_VECTOR, sizeof(SCM_Vector));
   vec->length = count;
   if (count > 0) {
     vec->elements = new SCM*[count];

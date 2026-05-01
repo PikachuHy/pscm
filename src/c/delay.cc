@@ -21,12 +21,12 @@ SCM *eval_delay(SCM_Environment *env, SCM_List *l) {
   SCM *thunk = wrap(proc);
 
   // Create the promise object
-  SCM_Promise *promise = new SCM_Promise();
+  SCM_Promise *promise = (SCM_Promise *)gc_alloc(GC_PROMISE, sizeof(SCM_Promise));
   promise->thunk = thunk;
   promise->value = nullptr;
   promise->is_forced = false;
 
-  SCM *ret = new SCM();
+  SCM *ret = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   ret->type = SCM::PROMISE;
   ret->value = promise;
   ret->source_loc = nullptr;

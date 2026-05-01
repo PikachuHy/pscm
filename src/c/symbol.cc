@@ -8,7 +8,7 @@
   SCM *scm_##func_name() { \
     static SCM *value = nullptr; \
     if (!value) { \
-      value = new SCM(); \
+      value = (SCM *)gc_alloc(GC_SCM, sizeof(SCM)); \
       value->type = SCM::type_val; \
       value->value = value_val; \
     } \
@@ -21,7 +21,7 @@ DEFINE_SCM_SINGLETON(bool_false, BOOL, 0)
 DEFINE_SCM_SINGLETON(bool_true, BOOL, (void *)1)
 
 SCM_Symbol *make_sym(const char *data) {
-  auto sym = new SCM_Symbol();
+  auto sym = (SCM_Symbol *)gc_alloc(GC_SYMBOL, sizeof(SCM_Symbol));
   int len = (int)strlen(data);
   sym->data = new char[len + 1];
   strcpy(sym->data, data);
@@ -49,12 +49,12 @@ DEFINE_SYMBOL_SINGLETON(set, "set!")
 DEFINE_SYMBOL_SINGLETON(lambda, "lambda")
 
 SCM *create_sym(const char *data, int len) {
-  SCM_Symbol *sym = new SCM_Symbol();
+  SCM_Symbol *sym = (SCM_Symbol *)gc_alloc(GC_SYMBOL, sizeof(SCM_Symbol));
   sym->data = new char[len + 1];
   memcpy(sym->data, data, len);
   sym->data[len] = '\0';  // Ensure null terminator
   sym->len = len;
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::SYM;
   scm->value = sym;
   scm->source_loc = nullptr;  // Initialize to nullptr

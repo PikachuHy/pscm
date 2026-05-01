@@ -1,3 +1,4 @@
+#include "pscm.h"
 #include "gc.h"
 
 #include <sys/mman.h>
@@ -94,6 +95,7 @@ static void trace_number(GCBlock *, MarkStack *);
 static void trace_promise(GCBlock *, MarkStack *);
 static void trace_macro(GCBlock *, MarkStack *);
 static void trace_variable(GCBlock *, MarkStack *);
+static void trace_smob(GCBlock *, MarkStack *);
 
 // =========================================================================
 // Helper: convert an arbitrary pointer to a GCBlock and push if valid
@@ -620,6 +622,11 @@ static void trace_variable(GCBlock *block, MarkStack *stack) {
   trace_ptr(var->value, stack); // SCM*
 }
 
+// --- GC_SMOB ----------------------------------------------------------
+static void trace_smob(GCBlock *, MarkStack *) {
+  // SCM_Smob contains long, void*, int64_t -- no SCM* fields to trace.
+}
+
 // =========================================================================
 // gc_init
 // =========================================================================
@@ -672,6 +679,7 @@ void gc_init() {
   trace_fns[GC_PROMISE]   = trace_promise;
   trace_fns[GC_MACRO]     = trace_macro;
   trace_fns[GC_VARIABLE]  = trace_variable;
+  trace_fns[GC_SMOB]      = trace_smob;
 
   // 4. Set initial GC threshold.
   g_gc_threshold = INITIAL_HEAP_SIZE / 2;

@@ -213,7 +213,7 @@ SCM *expand_macros(SCM_Environment *env, SCM *ast) {
   }
 
   if (dummy.next) {
-    SCM *scm = new SCM();
+    SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
     scm->type = SCM::LIST;
     scm->value = dummy.next;
     scm->source_loc = nullptr;  // Initialize to nullptr
@@ -244,7 +244,7 @@ SCM *eval_define_macro(SCM_Environment *env, SCM_List *l) {
       eval_error("define-macro: transformer must be a procedure");
     }
 
-    SCM_Macro *macro = new SCM_Macro();
+    SCM_Macro *macro = (SCM_Macro *)gc_alloc(GC_MACRO, sizeof(SCM_Macro));
     macro->name = name;
     macro->transformer = cast<SCM_Procedure>(transformer);
     macro->env = env;
@@ -281,7 +281,7 @@ SCM *eval_define_macro(SCM_Environment *env, SCM_List *l) {
 
   SCM_Procedure *transformer = make_proc(name, args_list, l->next->next, env);
 
-  SCM_Macro *macro = new SCM_Macro();
+  SCM_Macro *macro = (SCM_Macro *)gc_alloc(GC_MACRO, sizeof(SCM_Macro));
   macro->name = name;
   macro->transformer = transformer;
   macro->env = env;

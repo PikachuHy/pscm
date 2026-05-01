@@ -154,14 +154,14 @@ SCM *scm_make_smob(long tag, void *data) {
     return scm_none();
   }
   
-  auto smob = new SCM_Smob();
+  auto smob = (SCM_Smob *)gc_alloc(GC_SMOB, sizeof(SCM_Smob));
   smob->tag = tag;
   smob->data = data;
   smob->data2 = 0;
   smob->data3 = 0;
   smob->flags = 0;
   
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::SMOB;
   scm->value = smob;
   scm->source_loc = nullptr;
@@ -177,14 +177,14 @@ SCM *scm_make_smob_with_data(long tag, int64_t data) {
     return scm_none();
   }
   
-  auto smob = new SCM_Smob();
+  auto smob = (SCM_Smob *)gc_alloc(GC_SMOB, sizeof(SCM_Smob));
   smob->tag = tag;
   smob->data = (void *)(intptr_t)data;  // Store value in pointer
   smob->data2 = 0;
   smob->data3 = 0;
   smob->flags = 0;
   
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::SMOB;
   scm->value = smob;
   scm->source_loc = nullptr;
@@ -200,14 +200,14 @@ SCM *scm_make_smob_with_data2(long tag, int64_t data1, int64_t data2) {
     return scm_none();
   }
   
-  auto smob = new SCM_Smob();
+  auto smob = (SCM_Smob *)gc_alloc(GC_SMOB, sizeof(SCM_Smob));
   smob->tag = tag;
   smob->data = (void *)(intptr_t)data1;
   smob->data2 = data2;
   smob->data3 = 0;
   smob->flags = 0;
   
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::SMOB;
   scm->value = smob;
   scm->source_loc = nullptr;
@@ -223,14 +223,14 @@ SCM *scm_make_smob_with_data3(long tag, int64_t data1, int64_t data2, int64_t da
     return scm_none();
   }
   
-  auto smob = new SCM_Smob();
+  auto smob = (SCM_Smob *)gc_alloc(GC_SMOB, sizeof(SCM_Smob));
   smob->tag = tag;
   smob->data = (void *)(intptr_t)data1;
   smob->data2 = data2;
   smob->data3 = data3;
   smob->flags = 0;
   
-  SCM *scm = new SCM();
+  SCM *scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   scm->type = SCM::SMOB;
   scm->value = smob;
   scm->source_loc = nullptr;
@@ -350,7 +350,7 @@ SCM *scm_c_make_smob_type(SCM *name, SCM *size) {
   
   long tag = scm_make_smob_type(name_cstr, (size_t)size_val);
   
-  SCM *result = new SCM();
+  SCM *result = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   result->type = SCM::NUM;
   result->value = (void *)(intptr_t)tag;
   result->source_loc = nullptr;
@@ -395,7 +395,7 @@ SCM *scm_c_smob_data(SCM *smob) {
   } else {
     // For size=0 smobs, return the stored value
     int64_t val = (int64_t)(intptr_t)s->data;
-    SCM *result = new SCM();
+    SCM *result = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
     result->type = SCM::NUM;
     result->value = (void *)(intptr_t)val;
     result->source_loc = nullptr;

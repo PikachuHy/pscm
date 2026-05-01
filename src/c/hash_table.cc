@@ -250,7 +250,7 @@ SCM *scm_c_make_hash_table(SCM *size_arg) {
     }
   }
   
-  auto hash_table = new SCM_HashTable();
+  auto hash_table = (SCM_HashTable *)gc_alloc(GC_HASH, sizeof(SCM_HashTable));
   hash_table->capacity = capacity;
   hash_table->size = 0;
   hash_table->buckets = (SCM **)calloc(capacity, sizeof(SCM *));

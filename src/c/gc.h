@@ -3,7 +3,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <vector>
-#include "pscm.h"
+
+struct SCM;
 
 // GC block header - sits directly before the object data in memory.
 // In C++ bitfield order (LSB first on little-endian platforms):
@@ -40,6 +41,7 @@ enum TypeTag : uint8_t {
   GC_PROMISE,  // struct SCM_Promise
   GC_MACRO,    // struct SCM_Macro
   GC_VARIABLE, // struct SCM_Variable
+  GC_SMOB,     // struct SCM_Smob
   GC_EVAL_FRAME, // struct EvalStackFrame
   GC_TYPE_COUNT
 };
@@ -92,7 +94,7 @@ struct RootRegistration {
 };
 
 // Maximum number of registered roots (static array to avoid heap dependency).
-static const int MAX_ROOTS = 64;
+static const int MAX_ROOTS = 2048;
 
 extern RootRegistration g_root_registry[MAX_ROOTS];
 extern int g_num_roots;

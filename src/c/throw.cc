@@ -376,7 +376,7 @@ SCM *scm_c_with_throw_handler(SCM *tag,
   // Format: (tag . (lazy_catch_marker . storage_index))
   SCM_Symbol *lazy_catch_marker_sym = make_sym("__lazy_catch__");
   SCM *lazy_catch_marker = wrap(lazy_catch_marker_sym);
-  SCM *index_scm = new SCM();
+  SCM *index_scm = (SCM *)gc_alloc(GC_SCM, sizeof(SCM));
   index_scm->type = SCM::NUM;
   index_scm->value = (void*)(int64_t)storage_index;
   index_scm->source_loc = nullptr;

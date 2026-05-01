@@ -1,7 +1,14 @@
 #include "pscm.h"
 #include "eval.h"
 
+// GC root helpers from other translation units
+void register_module_roots();
+void register_port_roots();
+void register_env_roots();
+
 void init_scm() {
+  gc_init();
+
   g_env.parent = nullptr;
   g_env.dummy.data = nullptr;
   g_env.dummy.next = nullptr;
@@ -32,5 +39,17 @@ void init_scm() {
   init_read_options(); // Initialize read options system (read-set!, read-enable, read-disable)
   init_debug_options(); // Initialize debug options system (debug-set!, debug-enable, debug-disable)
   init_exit();
+
+  // Register explicit GC roots after all builtins are registered
+  gc_register_root(&g_root_module, "g_root_module");
+  gc_register_root((SCM **)&g_wind_chain, "g_wind_chain");
+  gc_register_root(&g_current_eval_context, "g_current_eval_context");
+  extern SCM *g_error_key;
+  gc_register_root(&g_error_key, "g_error_key");
+
+  // Register roots from other translation units
+  register_module_roots();
+  register_port_roots();
+  register_env_roots();
 }
 
