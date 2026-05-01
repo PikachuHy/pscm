@@ -1230,5 +1230,8 @@ void init_port() {
 // Register file-static port variables as GC roots
 void register_port_roots() {
   gc_register_root(&g_eof_object, "g_eof_object");
+  gc_register_root(&g_current_error_port, "g_current_error_port");
+  gc_register_root(&g_current_input_port, "g_current_input_port");
+  gc_register_root(&g_current_output_port, "g_current_output_port");
 }
 

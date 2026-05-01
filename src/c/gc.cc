@@ -717,7 +717,7 @@ static void sweep_symbol(GCBlock *block) {
 // --- GC_PORT ----------------------------------------------------------
 static void sweep_port(GCBlock *block) {
   SCM_Port *port = (SCM_Port *)block_to_obj(block);
-  if (port->file) {
+  if (port->file && port->file != stdin && port->file != stdout && port->file != stderr) {
     fclose((FILE *)port->file);
     port->file = nullptr;
   }
