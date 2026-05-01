@@ -25,8 +25,12 @@ void copy_source_location(SCM *dest, SCM *src) {
   if (!dest || !src || !src->source_loc) return;
   if (!dest->source_loc) {
     dest->source_loc = new SCM_SourceLocation();
+    dest->source_loc->filename = nullptr;
   }
-  dest->source_loc->filename = src->source_loc->filename;
+  if (dest->source_loc->filename) {
+    free((void *)dest->source_loc->filename);
+  }
+  dest->source_loc->filename = src->source_loc->filename ? strdup(src->source_loc->filename) : nullptr;
   dest->source_loc->line = src->source_loc->line;
   dest->source_loc->column = src->source_loc->column;
 }

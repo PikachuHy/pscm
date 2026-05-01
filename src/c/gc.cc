@@ -651,8 +651,10 @@ static void trace_variable(GCBlock *block, MarkStack *stack) {
 // --- GC_SCM -----------------------------------------------------------
 static void sweep_scm(GCBlock *block) {
   SCM *scm = (SCM *)block_to_obj(block);
-  // source_loc is allocated on the C++ heap; free it.
   if (scm->source_loc) {
+    if (scm->source_loc->filename) {
+      free((void *)scm->source_loc->filename);
+    }
     delete scm->source_loc;
     scm->source_loc = nullptr;
   }
@@ -702,7 +704,7 @@ static void sweep_port(GCBlock *block) {
     port->file = nullptr;
   }
   if (port->string_data) {
-    free(port->string_data);
+    delete[] port->string_data;
     port->string_data = nullptr;
   }
   if (port->output_buffer) {
