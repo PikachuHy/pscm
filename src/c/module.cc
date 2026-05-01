@@ -925,12 +925,11 @@ SCM *scm_c_call_with_current_module(SCM *module,
     eval_error("scm_c_call_with_current_module: expected module");
     return nullptr;
   }
-  SCM *old = scm_current_module();
-  g_current_module = module;
+  SCM *old = scm_set_current_module(module);
 
   SCM *result = func(data);
 
-  g_current_module = old;
+  scm_set_current_module(old);
   return result;
 }
 
@@ -951,8 +950,10 @@ SCM *scm_c_define_module(const char *name,
   }
 
   if (init) {
-    scm_c_call_with_current_module(module,
-                                   (SCM *(*)(void *))init, data);
+    SCM *old = scm_current_module();
+    g_current_module = module;
+    init(data);
+    g_current_module = old;
   }
 
   return module;
@@ -974,8 +975,15 @@ void scm_c_use_module(const char *name) {
   SCM *current = scm_current_module();
   SCM_Module *mod = cast<SCM_Module>(current);
 
+  // Resolve through public_interface (like eval_use_modules and scm_c_module_use do)
+  SCM_Module *use_mod = cast<SCM_Module>(module);
+  SCM_Module *interface = use_mod->public_interface;
+  if (!interface) {
+    interface = use_mod;
+  }
+
   // Add to uses list (prepend)
-  SCM_List *node = make_list(module);
+  SCM_List *node = make_list(wrap(interface));
   node->next = mod->uses;
   mod->uses = node;
 }
