@@ -1,5 +1,4 @@
 #include "gc.h"
-#include "eval.h"
 
 #include <sys/mman.h>
 #include <unistd.h>
@@ -88,6 +87,7 @@ static void trace_port(GCBlock *, MarkStack *);
 static void trace_vector(GCBlock *, MarkStack *);
 static void trace_hash(GCBlock *, MarkStack *);
 static void trace_env(GCBlock *, MarkStack *);
+static void trace_eval_frame(GCBlock *, MarkStack *);
 static void trace_string(GCBlock *, MarkStack *);
 static void trace_symbol(GCBlock *, MarkStack *);
 static void trace_number(GCBlock *, MarkStack *);
@@ -331,9 +331,10 @@ static void scan_conservative_roots(MarkStack *stack) {
   if (setjmp(env) == 0) {
     // Fall-through -- the setjmp call populates env.
   }
-  // Scan the setjmp buffer word-by-word.
-  for (size_t i = 0; i < sizeof(jmp_buf) / sizeof(void *); i++) {
-    void *val = ((void **)&env)[i];
+  // Scan the setjmp buffer word-by-word (jmp_buf may have
+  // platform-dependent layout; scan bytewise but only at aligned offsets).
+  for (size_t i = 0; i + sizeof(void *) <= sizeof(jmp_buf); i += sizeof(void *)) {
+    void *val = *(void **)((char *)&env + i);
     mark_if_valid_block(val, stack);
   }
 
@@ -577,6 +578,12 @@ static void trace_string(GCBlock *, MarkStack *) {
   // SCM_String contains char* and int -- no SCM* fields to trace.
 }
 
+// --- GC_EVAL_FRAME ----------------------------------------------------
+static void trace_eval_frame(GCBlock *, MarkStack *) {
+  // EvalStackFrame uses new/delete, not GC-managed yet.
+  // Reserved for future GC integration.
+}
+
 // --- GC_SYMBOL --------------------------------------------------------
 static void trace_symbol(GCBlock *, MarkStack *) {
   // SCM_Symbol contains char* and int -- no SCM* fields to trace.
@@ -653,8 +660,9 @@ void gc_init() {
   trace_fns[GC_VECTOR]    = trace_vector;
   trace_fns[GC_HASH]      = trace_hash;
   trace_fns[GC_ENV]       = trace_env;
-  trace_fns[GC_STRING]    = trace_string;
-  trace_fns[GC_SYMBOL]    = trace_symbol;
+  trace_fns[GC_STRING]      = trace_string;
+  trace_fns[GC_EVAL_FRAME]  = trace_eval_frame;
+  trace_fns[GC_SYMBOL]      = trace_symbol;
   trace_fns[GC_NUMBER]    = trace_number;
   trace_fns[GC_PROMISE]   = trace_promise;
   trace_fns[GC_MACRO]     = trace_macro;
