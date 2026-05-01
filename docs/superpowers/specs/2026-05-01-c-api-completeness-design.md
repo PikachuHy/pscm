@@ -20,10 +20,9 @@ The `pscm_*` wrappers in `pscm_api.cc` delegate to `scm_*` functions.
 SCM *scm_c_define(const char *name, SCM *val);
 ```
 
-- Look up `name` in current module via `scm_c_lookup`
-- If variable exists: `scm_variable_set_x(var, val)`
-- If not: `scm_make_variable(val)`, insert into current module's obarray
-- Returns the variable object
+- Creates a symbol from `name`, inserts `val` directly into current module's obarray via `scm_c_hash_set_eq`
+- pscm module obarrays store raw `SCM*` values (not variable objects), matching the internal `set!` evaluator behavior
+- Returns a variable object wrapping `val` (for API compatibility with Guile 1.8)
 
 ### `scm_c_define_gsubr`
 
