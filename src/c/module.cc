@@ -29,7 +29,8 @@ SCM *scm_make_module(SCM_List *name, int obarray_size) {
   module->kind = nullptr;  // Default to 'module, can be set later
   module->public_interface = nullptr;
   module->exports = nullptr;
-  
+  module->autoload_specs = nullptr;
+
   return wrap(module);
 }
 

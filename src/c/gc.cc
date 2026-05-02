@@ -563,6 +563,7 @@ static void trace_module(GCBlock *block, MarkStack *stack) {
   trace_ptr(mod->kind,               stack); // SCM_Symbol*
   trace_ptr(mod->public_interface,   stack); // SCM_Module*
   trace_ptr(mod->exports,            stack); // SCM_List*
+  trace_ptr(mod->autoload_specs,     stack); // SCM_List*
 }
 
 // --- GC_PORT ----------------------------------------------------------

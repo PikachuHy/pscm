@@ -131,6 +131,7 @@ struct SCM_Module {
   SCM_Symbol *kind;             // Module type: 'module, 'interface, 'directory
   SCM_Module *public_interface; // Public interface module (points to another module object)
   SCM_List *exports;            // List of exported symbols (for public interface)
+  SCM_List *autoload_specs;     // List of (mod-name . sym-list) for autoload
 };
 
 // Variable object (wraps a value, similar to Guile's variable cells)
