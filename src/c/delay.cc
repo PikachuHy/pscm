@@ -55,6 +55,7 @@ SCM *eval_delay(SCM_Environment *env, SCM_List *l) {
 SCM *scm_c_force(SCM *promise_scm) {
   if (!is_promise(promise_scm)) {
     type_error(promise_scm, "promise");
+    return nullptr;
   }
 
   SCM_Promise *promise = cast<SCM_Promise>(promise_scm);

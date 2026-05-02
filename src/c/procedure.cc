@@ -231,8 +231,9 @@ SCM *apply_procedure(SCM_Environment *env, SCM_Procedure *proc, SCM_List *args) 
       call_expr = wrap(call_list);
     }
     report_arg_mismatch(proc->args, original_args, "Procedure", call_expr, proc->name);
+    return nullptr;
   }
-  
+
   return eval_with_list(proc_env, proc->body);
 }
 

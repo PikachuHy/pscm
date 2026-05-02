@@ -179,6 +179,7 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
     auto l = cast<SCM_List>(ast);
     if (!l) {
       type_error(ast, "pair");
+      return;
     }
     // For pairs, always use write mode (with quotes) to match test expectations
     // This ensures pair elements like ("Oregon" . "Salem") are printed correctly

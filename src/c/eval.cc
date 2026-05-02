@@ -138,8 +138,9 @@ SCM *eval_lambda(SCM_Environment *env, SCM_List *l) {
     proc_sig = cast<SCM_List>(param_spec);
   } else {
     type_error(param_spec, "symbol, pair, or nil");
+    return nullptr;
   }
-  
+
   auto proc = make_proc(nullptr, proc_sig, l->next->next, env);
   auto ret = wrap(proc);
   if (debug_enabled) {

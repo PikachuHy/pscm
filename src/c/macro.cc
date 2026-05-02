@@ -115,6 +115,7 @@ SCM *expand_macro_call(SCM_Environment *env, SCM_Macro *macro, SCM_List *args, S
   // Check for argument mismatch (only if no rest parameter)
   if (!has_rest_param && (actual_args || current_param)) {
     report_arg_mismatch(macro->transformer->args, args, "Macro", original_call, macro->name);
+    return nullptr;
   }
 
   // Call the macro transformer (evaluate in macro environment)

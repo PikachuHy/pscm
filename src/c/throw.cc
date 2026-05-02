@@ -100,8 +100,9 @@ SCM *scm_c_catch(SCM *tag,
   
   if (g_catch_stack_top >= 100) {
     eval_error("catch: too many nested catches");
+    return nullptr;
   }
-  
+
   // Push catch_info onto stack
   g_catch_stack[g_catch_stack_top++] = &info;
   
