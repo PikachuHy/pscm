@@ -194,3 +194,15 @@ add_test(
     COMMAND $<TARGET_FILE:pscm_cc> --test dynwind_module.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
 )
+
+add_test(
+    NAME texmacs_macros
+    COMMAND $<TARGET_FILE:pscm_cc> --test texmacs_macros.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
+)
+
+add_test(
+    NAME define_public_macro
+    COMMAND $<TARGET_FILE:pscm_cc> --test define_public_macro.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
+)
