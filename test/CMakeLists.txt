@@ -206,3 +206,11 @@ add_test(
     COMMAND $<TARGET_FILE:pscm_cc> --test define_public_macro.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
 )
+
+# Incremental TeXmacs init loading test (expected to fail initially)
+add_test(
+    NAME texmacs_init_loading
+    COMMAND $<TARGET_FILE:pscm_cc> --test load_texmacs_init.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
+)
+# Note: No PASS_REGULAR_EXPRESSION — this test won't pass until the full init loads
