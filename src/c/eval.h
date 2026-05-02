@@ -88,7 +88,7 @@ inline void print_arg_list(SCM_List *l) {
   fprintf(stderr, ")");
 }
 
-[[noreturn]] inline void report_arg_mismatch(SCM_List *expected, SCM_List *got, 
+inline void report_arg_mismatch(SCM_List *expected, SCM_List *got,
                                                const char *call_type = nullptr, 
                                                SCM *original_call = nullptr,
                                                SCM_Symbol *name = nullptr) {
@@ -153,5 +153,5 @@ inline void print_arg_list(SCM_List *l) {
   fprintf(stderr, "=== End of Call Stack ===\n");
   fflush(stderr);
   
-  exit(1);
+  eval_error("Wrong number of arguments");
 }
