@@ -124,6 +124,30 @@ add_test(
 )
 
 add_test(
+    NAME public_interface_isolation
+    COMMAND $<TARGET_FILE:pscm_cc> --test public_interface_isolation.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
+)
+
+add_test(
+    NAME binder_custom
+    COMMAND $<TARGET_FILE:pscm_cc> --test binder_custom.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
+)
+
+add_test(
+    NAME autoload_lazy
+    COMMAND $<TARGET_FILE:pscm_cc> --test autoload_lazy.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
+)
+
+add_test(
+    NAME define_module_options
+    COMMAND $<TARGET_FILE:pscm_cc> --test define_module_options.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
+)
+
+add_test(
     NAME module_texmacs_module
     COMMAND $<TARGET_FILE:pscm_cc> --test init.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs

@@ -5,6 +5,10 @@
 static SCM *g_current_module = nullptr;
 // g_root_module is now in pscm.h as inline variable
 
+// Recursion guard for binder calls to prevent infinite recursion
+// when the binder body triggers symbol lookup in the same module
+static bool g_in_binder_call = false;
+
 // Module registry: module name -> module object
 static SCM_HashTable *g_module_registry = nullptr;
 
@@ -83,17 +87,16 @@ SCM *module_obarray_lookup(SCM_Module *module, SCM_Symbol *sym) {
   return nullptr;  // Not found
 }
 
-// Helper function to search variable in module (obarray, uses list, and root module)
+// Helper function to search variable in module (obarray, uses list, root module, binder, and autoload)
 // Returns the value if found (can be #f), or nullptr if not found
 // This allows us to distinguish between "not found" and "value is #f"
-// Does not call binder (unlike scm_module_variable)
 SCM *module_search_variable(SCM_Module *module, SCM_Symbol *sym) {
   // 1. Check module obarray
   SCM *var = module_obarray_lookup(module, sym);
   if (var) {
     return var;  // Found (value can be #f)
   }
-  
+
   // 2. Search uses list
   SCM_List *uses = module->uses;
   while (uses) {
@@ -107,7 +110,7 @@ SCM *module_search_variable(SCM_Module *module, SCM_Symbol *sym) {
     }
     uses = uses->next;
   }
-  
+
   // 3. If not found, also search root module (pscm-user) for global variables like %load-path
   if (g_root_module && module != cast<SCM_Module>(g_root_module)) {
     SCM_Module *root_module = cast<SCM_Module>(g_root_module);
@@ -116,7 +119,73 @@ SCM *module_search_variable(SCM_Module *module, SCM_Symbol *sym) {
       return var;  // Found (value can be #f)
     }
   }
-  
+
+  // 4. Call binder (if exists), with recursion guard
+  if (module->binder && !g_in_binder_call) {
+    g_in_binder_call = true;
+    // Binder signature: (binder module sym definep) -> variable | #f
+    // Arguments are already evaluated values, not AST nodes
+    // Use apply_procedure_with_values to pass them directly without re-evaluation
+    SCM *args = scm_list3(wrap(module), wrap(sym), scm_bool_true());
+    SCM *result = apply_procedure_with_values(&g_env, module->binder, cast<SCM_List>(args));
+    g_in_binder_call = false;
+    if (result && !is_falsy(result)) {
+      // Binder returns a variable object, unwrap it to get the value
+      if (is_variable(result)) {
+        return scm_variable_ref(result);
+      }
+      return result;
+    }
+  }
+
+  // 5. Check autoload specs
+  {
+    SCM_List *specs = module->autoload_specs;
+    SCM_List *prev_spec = nullptr;
+    while (specs) {
+      SCM *spec = specs->data;
+      if (is_pair(spec)) {
+        SCM_List *spec_pair = cast<SCM_List>(spec);
+        // spec is (module-name . sym-list)
+        SCM_List *mod_name = cast<SCM_List>(spec_pair->data);
+        SCM_List *sym_list = cast<SCM_List>(spec_pair->next->data);
+
+        // Check if the requested symbol is in sym_list
+        SCM_List *s = sym_list;
+        while (s) {
+          if (s->data && is_sym(s->data) &&
+              cast<SCM_Symbol>(s->data)->len == sym->len &&
+              memcmp(cast<SCM_Symbol>(s->data)->data, sym->data, sym->len) == 0) {
+            // Found: remove this autoload spec first to prevent re-triggering
+            if (prev_spec) {
+              prev_spec->next = specs->next;
+            } else {
+              module->autoload_specs = specs->next;
+            }
+            // Load the module and re-search
+            SCM *mod_scm = scm_resolve_module(mod_name);
+            if (mod_scm && is_module(mod_scm)) {
+              // Add loaded module to current module's uses
+              SCM_Module *loaded = cast<SCM_Module>(mod_scm);
+              SCM_Module *interface = loaded->public_interface ? loaded->public_interface : loaded;
+              SCM_List *new_use = make_list(wrap(interface));
+              new_use->next = module->uses;
+              module->uses = new_use;
+
+              // Now re-search with the newly added use
+              SCM *var = module_search_variable(module, sym);
+              if (var) return var;
+            }
+            return nullptr;
+          }
+          s = s->next;
+        }
+      }
+      prev_spec = specs;
+      specs = specs->next;
+    }
+  }
+
   return nullptr;  // Not found
 }
 
@@ -155,61 +224,11 @@ SCM_Module *module_find_variable_module(SCM_Module *module, SCM_Symbol *sym) {
 
 // Look up variable in module
 SCM *scm_module_variable(SCM_Module *module, SCM_Symbol *sym, bool definep) {
-  // 1. Check module obarray, uses list, and root module
+  // Delegate to module_search_variable which handles obarray, uses, root, binder, and autoload
   SCM *var = module_search_variable(module, sym);
   if (var) {
     return var;  // Found (value can be #f)
   }
-  
-  // 2. Call binder (if exists and not a define operation)
-  if (!definep && module->binder) {
-    // Binder signature: (binder module sym definep) -> variable | #f
-    SCM *args = scm_list3(wrap(module), wrap(sym),
-                          bool_to_scm(!definep));
-    SCM *result = apply_procedure(&g_env, module->binder, cast<SCM_List>(args));
-    if (result && !is_falsy(result)) {
-      return result;
-    }
-  }
-
-  // 3. Check autoload specs
-  SCM_List *specs = module->autoload_specs;
-  while (specs) {
-    SCM *spec = specs->data;
-    if (is_pair(spec)) {
-      SCM_List *spec_pair = cast<SCM_List>(spec);
-      // spec is (module-name . sym-list)
-      SCM_List *mod_name = cast<SCM_List>(spec_pair->data);
-      SCM_List *sym_list = cast<SCM_List>(spec_pair->next->data);
-
-      // Check if the requested symbol is in sym_list
-      SCM_List *s = sym_list;
-      while (s) {
-        if (s->data && is_sym(s->data) &&
-            cast<SCM_Symbol>(s->data)->len == sym->len &&
-            memcmp(cast<SCM_Symbol>(s->data)->data, sym->data, sym->len) == 0) {
-          // Found: load the module and re-search
-          SCM *mod_scm = scm_resolve_module(mod_name);
-          if (mod_scm && is_module(mod_scm)) {
-            // Add loaded module to current module's uses
-            SCM_Module *loaded = cast<SCM_Module>(mod_scm);
-            SCM_Module *interface = loaded->public_interface ? loaded->public_interface : loaded;
-            SCM_List *new_use = make_list(wrap(interface));
-            new_use->next = module->uses;
-            module->uses = new_use;
-
-            // Now re-search with the newly added use
-            SCM *var = module_search_variable(module, sym);
-            if (var) return var;
-          }
-          goto not_found;
-        }
-        s = s->next;
-      }
-    }
-    specs = specs->next;
-  }
-not_found:
   return scm_bool_false();  // #f (not found)
 }
 
@@ -769,16 +788,29 @@ SCM *eval_define_module(SCM_Environment *env, SCM_List *l) {
         cast<SCM_Module>(module_scm)->kind = make_sym("pure");
       }
       else if (strcmp(kw_name, "autoload") == 0 && opts->next) {
-        // #:autoload (mod-name sym ...)
-        SCM *spec = opts->next->data;
-        if (is_pair(spec)) {
-          SCM_List *spec_list = cast<SCM_List>(spec);
-          if (spec_list->data && is_pair(spec_list->data) && spec_list->next) {
-            SCM_List *mod_name = cast<SCM_List>(spec_list->data);
-            SCM_List *sym_list = spec_list->next;
+        // #:autoload (mod-name) sym ...
+        // opts->next->data is the module name, e.g. (autoload-target)
+        // opts->next->next... are the symbols, e.g. (lazy-func ...)
+        SCM *mod_name_spec = opts->next->data;
+        if (is_pair(mod_name_spec)) {
+          SCM_List *mod_name = cast<SCM_List>(mod_name_spec);
+          // Collect symbols from opts->next->next onward
+          SCM_List *sym_tail = opts->next->next;
+          // Build symbol list: (sym1 sym2 ...)
+          SCM_List sym_list_dummy = make_list_dummy();
+          SCM_List *sym_list_tail = &sym_list_dummy;
+          while (sym_tail) {
+            if (sym_tail->data && is_sym(sym_tail->data)) {
+              SCM_List *node = make_list(sym_tail->data);
+              sym_list_tail->next = node;
+              sym_list_tail = node;
+            }
+            sym_tail = sym_tail->next;
+          }
+          if (sym_list_dummy.next) {
             // Build autoload spec: (mod-name . sym-list)
             SCM_List *autoload_spec = make_list(wrap(mod_name));
-            autoload_spec->next = make_list(wrap(sym_list));
+            autoload_spec->next = make_list(wrap(sym_list_dummy.next));
             autoload_spec->is_dotted = false;
             // Prepend to module's autoload_specs
             SCM_List *node = make_list(wrap(autoload_spec));
