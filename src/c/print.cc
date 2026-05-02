@@ -1,5 +1,6 @@
 #include "pscm.h"
 #include "smob.h"
+#include "error.h"
 
 // Print context to track if we're inside a quasiquote expression
 struct PrintContext {
@@ -296,7 +297,7 @@ static void _print_ast_with_context(SCM *ast, bool write_mode, const PrintContex
             (int)SCM::VECTOR, (int)SCM::PORT, (int)SCM::PROMISE, (int)SCM::MODULE, (int)SCM::SMOB, (int)SCM::VARIABLE);
   }
   fflush(stderr);
-  exit(1);
+  eval_error("unsupported type value %d in print", (int)ast->type);
 }
 
 // Helper function to check if a list is a dotted pair by finding the last node
