@@ -377,6 +377,37 @@ SCM *scm_resolve_module(SCM_List *name) {
   return module;
 }
 
+// Ensure module has a public interface module, creating one if needed.
+// The public interface is a separate module whose obarray contains
+// only exported bindings.  Returns the interface module.
+static SCM_Module *scm_ensure_public_interface(SCM_Module *module) {
+  if (module->public_interface) {
+    return module->public_interface;
+  }
+
+  // Create the interface module
+  SCM_Module *iface = cast<SCM_Module>(scm_make_module(module->name, 31));
+  iface->kind = make_sym("interface");
+  iface->public_interface = module; // bidirectional
+
+  module->public_interface = iface;
+
+  // Populate interface obarray from exports list
+  SCM_List *exp = module->exports;
+  while (exp) {
+    if (exp->data && is_sym(exp->data)) {
+      SCM_Symbol *sym = cast<SCM_Symbol>(exp->data);
+      SCM *val = module_obarray_lookup(module, sym);
+      if (val) {
+        scm_c_hash_set_eq(wrap(iface->obarray), wrap(sym), val);
+      }
+    }
+    exp = exp->next;
+  }
+
+  return iface;
+}
+
 // Helper function to export symbol
 void scm_module_export(SCM_Module *module, SCM_Symbol *sym) {
   // Add to export list
@@ -385,16 +416,21 @@ void scm_module_export(SCM_Module *module, SCM_Symbol *sym) {
     new_export->next = module->exports;
   }
   module->exports = new_export;
-  
-  // Update public interface (simplified implementation, don't create separate public interface module for now)
-  // TODO: Implement complete public interface mechanism
+
+  // Update public interface
+  SCM_Module *iface = scm_ensure_public_interface(module);
+  // Sync this specific symbol into the interface
+  SCM *val = module_obarray_lookup(module, sym);
+  if (val) {
+    scm_c_hash_set_eq(wrap(iface->obarray), wrap(sym), val);
+  }
 }
 
 // Update module's public interface
 void scm_update_module_public_interface(SCM_Module *module) {
-  // Simplified implementation: don't create separate public interface module for now
-  // Future: can create a new module containing only exported bindings
-  // TODO: Implement complete public interface mechanism
+  // Force rebuild: clear and recreate
+  module->public_interface = nullptr;
+  scm_ensure_public_interface(module);
 }
 
 // C API 函数
