@@ -53,6 +53,10 @@ SCM *pscm_ithrow(SCM *key, SCM *args, int noreturn); // Throw with noreturn flag
 typedef void (*pscm_error_handler_t)(const char *message);
 void pscm_set_error_handler(pscm_error_handler_t handler);
 
+// Error retrieval (after pscm_eval/pscm_parse returns NULL)
+const char *pscm_get_last_error_key(void);
+const char *pscm_get_last_error_message(void);
+
 // Debugging
 void pscm_set_debug_enabled(bool enabled);
 void pscm_set_ast_debug_enabled(bool enabled);

@@ -9,6 +9,11 @@
 // Error handler callback
 static pscm_error_handler_t g_error_handler = nullptr;
 
+// Last error storage (for retrieval after pscm_eval returns NULL).
+// Non-static — the catch-all handler in error.cc writes to these.
+char *g_last_error_message = nullptr;
+char *g_last_error_key = nullptr;
+
 // Library initialization
 void pscm_init(void) {
   init_scm();
@@ -176,5 +181,13 @@ SCM *pscm_force_output(SCM *port) {
 // Throw operations (compatible with Guile 1.8 API)
 SCM *pscm_ithrow(SCM *key, SCM *args, int noreturn) {
   return scm_ithrow(key, args, noreturn);
+}
+
+const char *pscm_get_last_error_key(void) {
+  return g_last_error_key;
+}
+
+const char *pscm_get_last_error_message(void) {
+  return g_last_error_message;
 }
 
