@@ -171,7 +171,45 @@ SCM *scm_module_variable(SCM_Module *module, SCM_Symbol *sym, bool definep) {
       return result;
     }
   }
-  
+
+  // 3. Check autoload specs
+  SCM_List *specs = module->autoload_specs;
+  while (specs) {
+    SCM *spec = specs->data;
+    if (is_pair(spec)) {
+      SCM_List *spec_pair = cast<SCM_List>(spec);
+      // spec is (module-name . sym-list)
+      SCM_List *mod_name = cast<SCM_List>(spec_pair->data);
+      SCM_List *sym_list = cast<SCM_List>(spec_pair->next->data);
+
+      // Check if the requested symbol is in sym_list
+      SCM_List *s = sym_list;
+      while (s) {
+        if (s->data && is_sym(s->data) &&
+            cast<SCM_Symbol>(s->data)->len == sym->len &&
+            memcmp(cast<SCM_Symbol>(s->data)->data, sym->data, sym->len) == 0) {
+          // Found: load the module and re-search
+          SCM *mod_scm = scm_resolve_module(mod_name);
+          if (mod_scm && is_module(mod_scm)) {
+            // Add loaded module to current module's uses
+            SCM_Module *loaded = cast<SCM_Module>(mod_scm);
+            SCM_Module *interface = loaded->public_interface ? loaded->public_interface : loaded;
+            SCM_List *new_use = make_list(wrap(interface));
+            new_use->next = module->uses;
+            module->uses = new_use;
+
+            // Now re-search with the newly added use
+            SCM *var = module_search_variable(module, sym);
+            if (var) return var;
+          }
+          goto not_found;
+        }
+        s = s->next;
+      }
+    }
+    specs = specs->next;
+  }
+not_found:
   return scm_bool_false();  // #f (not found)
 }
 
@@ -691,13 +729,73 @@ SCM *eval_define_module(SCM_Environment *env, SCM_List *l) {
   // Create new module
   SCM *module_scm = scm_make_module(name, 31);
   
-  // Process options (simplified handling, need to parse #:use-module, #:export, etc.)
-  // TODO: Implement complete option parsing
-  
   // Register module
   // Use equal? comparison for module names (lists), not eq?
   scm_c_hash_set_equal(wrap(g_module_registry), wrap(name), module_scm);
-  
+
+  // Process options
+  SCM_List *opts = options;
+  while (opts) {
+    SCM *kw = opts->data;
+    if (is_sym(kw)) {
+      const char *kw_name = cast<SCM_Symbol>(kw)->data;
+
+      if (strcmp(kw_name, "use-module") == 0 && opts->next) {
+        // #:use-module (mod-name)
+        SCM *mod_name = opts->next->data;
+        if (is_pair(mod_name)) {
+          SCM *resolved = scm_resolve_module(cast<SCM_List>(mod_name));
+          if (resolved && is_module(resolved)) {
+            SCM_Module *use_mod = cast<SCM_Module>(resolved);
+            SCM_Module *iface = use_mod->public_interface ? use_mod->public_interface : use_mod;
+            SCM_List *node = make_list(wrap(iface));
+            node->next = cast<SCM_Module>(module_scm)->uses;
+            cast<SCM_Module>(module_scm)->uses = node;
+          }
+        }
+        opts = opts->next;
+      }
+      else if (strcmp(kw_name, "export") == 0) {
+        // #:export sym ...
+        opts = opts->next;
+        while (opts && opts->data && is_sym(opts->data)) {
+          scm_module_export(cast<SCM_Module>(module_scm),
+                            cast<SCM_Symbol>(opts->data));
+          opts = opts->next;
+        }
+        continue; // already advanced past the symbols
+      }
+      else if (strcmp(kw_name, "pure") == 0) {
+        cast<SCM_Module>(module_scm)->kind = make_sym("pure");
+      }
+      else if (strcmp(kw_name, "autoload") == 0 && opts->next) {
+        // #:autoload (mod-name sym ...)
+        SCM *spec = opts->next->data;
+        if (is_pair(spec)) {
+          SCM_List *spec_list = cast<SCM_List>(spec);
+          if (spec_list->data && is_pair(spec_list->data) && spec_list->next) {
+            SCM_List *mod_name = cast<SCM_List>(spec_list->data);
+            SCM_List *sym_list = spec_list->next;
+            // Build autoload spec: (mod-name . sym-list)
+            SCM_List *autoload_spec = make_list(wrap(mod_name));
+            autoload_spec->next = make_list(wrap(sym_list));
+            autoload_spec->is_dotted = false;
+            // Prepend to module's autoload_specs
+            SCM_List *node = make_list(wrap(autoload_spec));
+            node->next = cast<SCM_Module>(module_scm)->autoload_specs;
+            cast<SCM_Module>(module_scm)->autoload_specs = node;
+          }
+        }
+        opts = opts->next;
+      }
+      else if (strcmp(kw_name, "no-backtrace") == 0) {
+        // Flag stored for future use in error.cc
+        cast<SCM_Module>(module_scm)->kind = make_sym("no-backtrace");
+      }
+    }
+    opts = opts->next;
+  }
+
   // Set current module
   scm_set_current_module(module_scm);
   
