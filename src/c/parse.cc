@@ -1199,6 +1199,17 @@ static SCM *parse_expr(Parser *p) {
     return parse_string(p);
   }
   
+  // #:keyword syntax (Guile style keywords like #:use-module, #:export, etc.)
+  if (p->pos[0] == '#' && p->pos[1] == ':') {
+    p->pos += 2; // skip #:
+    // Read the keyword name as a symbol
+    SCM *result = parse_symbol(p);
+    if (!result) {
+      parse_error(p, "expected identifier after #:");
+    }
+    return result;
+  }
+
   // Character literal (#\A, #\., etc.)
   result = parse_char(p);
   if (result) {
