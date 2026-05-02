@@ -6,6 +6,10 @@ SCM *eval_define(SCM_Environment *env, SCM_List *l) {
     // Define variable: (define var value)
     SCM_Symbol *varname = cast<SCM_Symbol>(l->next->data);
     SCM_DEBUG_EVAL("define variable %s\n", varname->data);
+    if (!l->next->next) {
+      eval_error("define: missing value for variable %s", varname->data);
+      return nullptr;
+    }
     auto val = eval_with_env(env, l->next->next->data);
     assert(val);
     if (is_proc(val)) {

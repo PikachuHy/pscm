@@ -88,7 +88,7 @@ inline bool is_false(SCM *scm) {
 }
 
 inline bool is_none(SCM *scm) {
-  return scm->type == SCM::NONE;
+  return !scm || scm->type == SCM::NONE;
 }
 
 inline bool is_macro(SCM *scm) {

@@ -1,4 +1,5 @@
 #include "pscm_api.h"
+#include "error.h"
 #include "eval.h"
 #include "throw.h"
 #include <stdio.h>
@@ -33,7 +34,14 @@ SCM *pscm_eval(SCM *ast) {
     long stack_base;
     cont_base = &stack_base;
   }
-  return eval_with_env(&g_env, ast);
+  return scm_c_catch(
+      scm_bool_true(),
+      [](void *data) -> SCM * {
+        return eval_with_env(&g_env, (SCM *)data);
+      },
+      (void *)ast,
+      scm_api_catch_handler,
+      nullptr);
 }
 
 // Parse and evaluate a string
@@ -41,11 +49,19 @@ SCM *pscm_eval_string(const char *code) {
   if (!code) {
     return nullptr;
   }
-  SCM *ast = pscm_parse(code);
-  if (!ast) {
-    return nullptr;
-  }
-  return pscm_eval(ast);
+  return scm_c_catch(
+      scm_bool_true(),
+      [](void *data) -> SCM * {
+        const char *c = (const char *)data;
+        SCM *ast = pscm_parse(c);
+        if (!ast) {
+          return nullptr;
+        }
+        return pscm_eval(ast);
+      },
+      (void *)code,
+      scm_api_catch_handler,
+      nullptr);
 }
 
 // Parse and evaluate a file
@@ -75,7 +91,14 @@ SCM *pscm_parse(const char *code) {
   if (!code) {
     return nullptr;
   }
-  return parse(code);
+  return scm_c_catch(
+      scm_bool_true(),
+      [](void *data) -> SCM * {
+        return parse((const char *)data);
+      },
+      (void *)code,
+      scm_api_catch_handler,
+      nullptr);
 }
 
 // Parse a file into a list of AST nodes
