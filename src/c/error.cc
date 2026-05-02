@@ -268,11 +268,23 @@ SCM *scm_api_catch_handler(void *data, SCM *tag, SCM *args) {
     strcpy(g_last_error_key, name);
   }
 
-  // Extract message from args (Guile convention: args is (msg ...))
+  // Extract message from args.
+  // Two formats are supported:
+  //   1. Standard format from eval_error: (message)  -- first element is the string.
+  //   2. Guile 1.8 throw format (e.g. throw_wrong_number_of_args):
+  //      (caller message proc extra)  -- second element is the string.
   if (args && is_pair(args)) {
     SCM_List *args_list = cast<SCM_List>(args);
+    // Try first element first (standard format).
     if (args_list->data && is_str(args_list->data)) {
       SCM_String *s = cast<SCM_String>(args_list->data);
+      g_last_error_message = new char[s->len + 1];
+      memcpy(g_last_error_message, s->data, s->len);
+      g_last_error_message[s->len] = '\0';
+    }
+    // Try second element (Guile 1.8 format: (caller message ...)).
+    else if (args_list->next && args_list->next->data && is_str(args_list->next->data)) {
+      SCM_String *s = cast<SCM_String>(args_list->next->data);
       g_last_error_message = new char[s->len + 1];
       memcpy(g_last_error_message, s->data, s->len);
       g_last_error_message[s->len] = '\0';
