@@ -659,7 +659,9 @@ entry:
       RETURN_WITH_CONTEXT(l->data);
     }
     // Otherwise, this is an error - can't have a list starting with a self-evaluating value
-    // Fall through to error reporting
+    eval_error("invalid expression: self-evaluating %s in non-tail position",
+               get_type_name(l->data->type));
+    return nullptr;
   }
   else {
     // Enhanced error reporting for unsupported expression types
@@ -873,6 +875,7 @@ entry:
     fflush(stderr);
 
     eval_error("not supported expression type: %s", type_name);
+    return nullptr;
   }
 }
 

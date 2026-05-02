@@ -44,7 +44,7 @@ struct SCM {
 };
 
 // Forward declaration for type_error (implemented in eval.cc)
-[[noreturn]] void type_error(SCM *data, const char *expected_type);
+void type_error(SCM *data, const char *expected_type);
 
 struct SCM_Environment;
 

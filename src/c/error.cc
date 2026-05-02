@@ -163,7 +163,7 @@ const char *get_type_name(SCM::Type type) {
   }
 }
 
-[[noreturn]] void type_error(SCM *data, const char *expected_type) {
+void type_error(SCM *data, const char *expected_type) {
   char message[1024];
   int pos = 0;
 
@@ -198,7 +198,7 @@ const char *get_type_name(SCM::Type type) {
   eval_error("%s", message);
 }
 
-[[noreturn]] void eval_error(const char *format, ...) {
+void eval_error(const char *format, ...) {
   va_list args;
   va_start(args, format);
 
@@ -234,18 +234,19 @@ const char *get_type_name(SCM::Type type) {
 
   if (g_error_key) {
     scm_throw(g_error_key, error_args_wrapped);
-  } else {
-    fprintf(stderr, "%s\n", full_message);
-    fprintf(stderr, "\n=== Evaluation Call Stack ===\n");
-    if (g_eval_stack) {
-      print_eval_stack();
-    } else {
-      fprintf(stderr, "Call stack is empty (error occurred at top level)\n");
-    }
-    fprintf(stderr, "=== End of Call Stack ===\n");
-    fflush(stderr);
-    abort();
   }
+  // Fallthrough: if scm_throw did not longjmp (should not happen normally
+  // since g_error_key is set during init and the API boundary wraps in
+  // catch-all), print the error and return so the host stays alive.
+  fprintf(stderr, "%s\n", full_message);
+  fprintf(stderr, "\n=== Evaluation Call Stack ===\n");
+  if (g_eval_stack) {
+    print_eval_stack();
+  } else {
+    fprintf(stderr, "Call stack is empty (error occurred at top level)\n");
+  }
+  fprintf(stderr, "=== End of Call Stack ===\n");
+  fflush(stderr);
 }
 
 // Catch-all handler for public API boundary.

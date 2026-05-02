@@ -24,8 +24,8 @@ void print_eval_stack();
 const char *get_type_name(SCM::Type type);
 
 // Error handling functions
-[[noreturn]] void eval_error(const char *format, ...);
-[[noreturn]] void type_error(SCM *data, const char *expected_type);
+void eval_error(const char *format, ...);
+void type_error(SCM *data, const char *expected_type);
 
 // Helper function to print AST to stderr
 inline void print_ast_to_stderr(SCM *ast) {
