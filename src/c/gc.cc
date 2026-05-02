@@ -729,6 +729,10 @@ static void sweep_port(GCBlock *block) {
     free(port->output_buffer);
     port->output_buffer = nullptr;
   }
+  if (port->soft_modes) {
+    free(port->soft_modes);
+    port->soft_modes = nullptr;
+  }
 }
 
 // --- GC_CONT ----------------------------------------------------------

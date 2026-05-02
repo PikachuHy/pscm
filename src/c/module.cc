@@ -428,7 +428,7 @@ SCM *scm_c_define_gsubr(const char *name, int req, int opt, int rst,
   auto func = (SCM_Function *)gc_alloc(GC_FUNC, sizeof(SCM_Function));
   auto func_name = (SCM_Symbol *)gc_alloc(GC_SYMBOL, sizeof(SCM_Symbol));
   func_name->len = strlen(name);
-  func_name->data = (char *)malloc(func_name->len + 1);
+  func_name->data = new char[func_name->len + 1];
   memcpy(func_name->data, name, func_name->len);
   func_name->data[func_name->len] = '\0';
   func->name = func_name;

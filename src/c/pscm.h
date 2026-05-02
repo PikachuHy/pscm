@@ -1212,7 +1212,7 @@ SCM_Function *_create_func(const char *name, F func_ptr) {
   auto func = (SCM_Function *)gc_alloc(GC_FUNC, sizeof(SCM_Function));
   auto func_name = (SCM_Symbol *)gc_alloc(GC_SYMBOL, sizeof(SCM_Symbol));
   func_name->len = strlen(name);
-  func_name->data = (char *)malloc(sizeof(char) * (func_name->len + 1));
+  func_name->data = new char[func_name->len + 1];
   memcpy(func_name->data, name, func_name->len);
   func_name->data[func_name->len] = '\0'; // Ensure null termination
   func->name = func_name;
