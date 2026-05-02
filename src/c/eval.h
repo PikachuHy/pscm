@@ -1,6 +1,6 @@
 #pragma once
 
-#include "pscm.h"
+#include "error.h"
 
 // do special form
 SCM *eval_do(SCM_Environment *env, SCM_List *l);
@@ -31,35 +31,6 @@ SCM *apply_procedure(SCM_Environment *env, SCM_Procedure *proc, SCM_List *args);
 // Apply procedure with already-evaluated arguments (used by catch/throw handlers)
 SCM *apply_procedure_with_values(SCM_Environment *env, SCM_Procedure *proc, SCM_List *args);
 SCM *eval_with_func(SCM_Function *func, SCM_List *l);
-
-// Error handling (used by special forms)
-[[noreturn]] void eval_error(const char *format, ...);
-[[noreturn]] void type_error(SCM *data, const char *expected_type);
-
-// Call stack for tracking evaluation path
-struct EvalStackFrame {
-  char *source_location;        // Source location string (owned, must be freed)
-  char *expr_str;               // String representation of expression (owned, must be freed)
-  EvalStackFrame *next;         // Next frame in stack
-};
-
-// Print evaluation call stack (for debugging)
-void print_eval_stack();
-
-// External variables for error reporting context
-inline SCM *g_current_eval_context = nullptr;
-inline EvalStackFrame *g_eval_stack = nullptr;
-
-// Helper function to print AST to stderr
-inline void print_ast_to_stderr(SCM *ast) {
-  // Temporarily redirect stdout to stderr for print_ast
-  fflush(stdout);
-  FILE *saved_stdout = stdout;
-  stdout = stderr;
-  print_ast(ast);
-  fflush(stderr);
-  stdout = saved_stdout;
-}
 
 // Macro expansion and definition
 SCM *expand_macro_call(SCM_Environment *env, SCM_Macro *macro, SCM_List *args, SCM *original_call);
