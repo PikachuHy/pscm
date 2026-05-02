@@ -36,3 +36,7 @@ inline void print_ast_to_stderr(SCM *ast) {
   fflush(stderr);
   stdout = saved_stdout;
 }
+
+// Catch-all handler for wrapping public API entry points in scm_c_catch.
+// Stores error details for retrieval via pscm_get_last_error_*().
+SCM *scm_api_catch_handler(void *data, SCM *tag, SCM *args);

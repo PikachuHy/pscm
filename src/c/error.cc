@@ -5,6 +5,10 @@
 #include <cstdlib>
 #include <cstring>
 
+// External globals written by the catch-all handler for public API boundary
+extern char *g_last_error_message;
+extern char *g_last_error_key;
+
 static const int MAX_STACK_DEPTH = 100;
 static int g_stack_depth = 0;
 
@@ -242,4 +246,37 @@ const char *get_type_name(SCM::Type type) {
     fflush(stderr);
     abort();
   }
+}
+
+// Catch-all handler for public API boundary.
+// Stores error details in globals so the host can retrieve them after
+// pscm_eval/pscm_parse returns NULL.
+SCM *scm_api_catch_handler(void *data, SCM *tag, SCM *args) {
+  (void)data;
+
+  // Free previous error info
+  delete[] g_last_error_message;
+  delete[] g_last_error_key;
+  g_last_error_message = nullptr;
+  g_last_error_key = nullptr;
+
+  // Store error tag as a C string
+  if (tag && is_sym(tag)) {
+    const char *name = cast<SCM_Symbol>(tag)->data;
+    g_last_error_key = new char[strlen(name) + 1];
+    strcpy(g_last_error_key, name);
+  }
+
+  // Extract message from args (Guile convention: args is (msg ...))
+  if (args && is_pair(args)) {
+    SCM_List *args_list = cast<SCM_List>(args);
+    if (args_list->data && is_str(args_list->data)) {
+      SCM_String *s = cast<SCM_String>(args_list->data);
+      g_last_error_message = new char[s->len + 1];
+      memcpy(g_last_error_message, s->data, s->len);
+      g_last_error_message[s->len] = '\0';
+    }
+  }
+
+  return nullptr;
 }
