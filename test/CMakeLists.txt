@@ -182,3 +182,15 @@ add_test(
     COMMAND $<TARGET_FILE:pscm_cc> --test file_ports.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
 )
+
+add_test(
+    NAME cont_module
+    COMMAND $<TARGET_FILE:pscm_cc> --test cont_module.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
+)
+
+add_test(
+    NAME dynwind_module
+    COMMAND $<TARGET_FILE:pscm_cc> --test dynwind_module.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
+)
