@@ -163,8 +163,13 @@ SCM *scm_module_variable(SCM_Module *module, SCM_Symbol *sym, bool definep) {
   
   // 2. Call binder (if exists and not a define operation)
   if (!definep && module->binder) {
-    // TODO: Implement binder call
-    // Skip for now
+    // Binder signature: (binder module sym definep) -> variable | #f
+    SCM *args = scm_list3(wrap(module), wrap(sym),
+                          bool_to_scm(!definep));
+    SCM *result = apply_procedure(&g_env, module->binder, cast<SCM_List>(args));
+    if (result && !is_falsy(result)) {
+      return result;
+    }
   }
   
   return scm_bool_false();  // #f (not found)
