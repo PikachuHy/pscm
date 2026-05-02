@@ -298,6 +298,26 @@ entry:
 
     // Check if this is a macro call (before checking special forms)
     SCM *val = scm_env_exist(env, sym);
+    if (!val) {
+      // Search module obarray + use chain for macros imported via use-modules.
+      // Only when we're in a non-root module (root has everything in g_env already).
+      SCM *current_mod = scm_current_module();
+      if (current_mod && is_module(current_mod) && current_mod != g_root_module) {
+        SCM_Module *module = cast<SCM_Module>(current_mod);
+        SCM *var = module_obarray_lookup(module, sym);
+        if (!var) {
+          // Search uses list
+          SCM_List *uses = module->uses;
+          while (uses && !var) {
+            SCM *use_mod = uses->data;
+            if (is_module(use_mod))
+              var = module_obarray_lookup(cast<SCM_Module>(use_mod), sym);
+            uses = uses->next;
+          }
+        }
+        val = var;
+      }
+    }
     if (val && is_macro(val)) {
       // Found a macro, expand it and continue evaluation
       SCM_Macro *macro = cast<SCM_Macro>(val);
@@ -663,6 +683,20 @@ entry:
     eval_error("invalid expression: self-evaluating %s in non-tail position",
                get_type_name(l->data->type));
     return nullptr;
+  }
+  else if (is_macro(l->data)) {
+    // Macro object in expression position — expand it
+    SCM_Macro *macro = cast<SCM_Macro>(l->data);
+    SCM *expanded = expand_macro_call(env, macro, l->next, ast);
+    ast = expand_macros(env, expanded);
+    if (!is_pair(ast)) {
+      RETURN_WITH_CONTEXT(ast);
+    }
+    l = cast<SCM_List>(ast);
+    if (l && l->data && !is_sym(l->data) && !is_proc(l->data) && !is_func(l->data) && !is_cont(l->data) && !is_pair(l->data) && !l->next) {
+      RETURN_WITH_CONTEXT(l->data);
+    }
+    goto entry;
   }
   else {
     // Enhanced error reporting for unsupported expression types
