@@ -152,3 +152,33 @@ add_test(
     COMMAND $<TARGET_FILE:pscm_cc> --test init.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
 )
+
+add_test(
+    NAME nested_module
+    COMMAND $<TARGET_FILE:pscm_cc> --test nested_module.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
+)
+
+add_test(
+    NAME re_export_conflict
+    COMMAND $<TARGET_FILE:pscm_cc> --test re_export_conflict.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
+)
+
+add_test(
+    NAME module_use_binding
+    COMMAND $<TARGET_FILE:pscm_cc> --test module_use_binding.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
+)
+
+add_test(
+    NAME string_ports
+    COMMAND $<TARGET_FILE:pscm_cc> --test string_ports.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
+)
+
+add_test(
+    NAME file_ports
+    COMMAND $<TARGET_FILE:pscm_cc> --test file_ports.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
+)

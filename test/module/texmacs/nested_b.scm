@@ -1,0 +1,5 @@
+(define-module (test nested b)
+  #:use-module (test nested a)
+  #:export (value-b))
+(define value-b (string-append "b-uses-" value-a))
+(define internal-b "internal-b")
