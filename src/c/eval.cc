@@ -869,11 +869,10 @@ entry:
     }
     fprintf(stderr, "\n");
     
-    // Flush stderr to ensure all output is visible before exiting
+    // Flush stderr to ensure all output is visible
     fflush(stderr);
-    
-    // Use exit instead of abort to ensure output is flushed
-    exit(1);
+
+    eval_error("not supported expression type: %s", type_name);
   }
 }
 
