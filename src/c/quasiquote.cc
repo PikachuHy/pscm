@@ -1,3 +1,4 @@
+#include "error.h"
 #include "pscm.h"
 #include <stdarg.h>
 #include <stdio.h>
@@ -7,15 +8,16 @@
 // Forward declaration
 SCM *scm_c_list_to_vector(SCM *list);
 
-// Error handling helper for quasiquote
-[[noreturn]] static void quasiquote_error(const char *format, ...) {
+// Error handling helper for quasiquote — delegates to eval_error
+// which routes through scm_throw (longjmp to nearest catch).
+static void quasiquote_error(const char *format, ...) {
   va_list args;
   va_start(args, format);
-  fprintf(stderr, "quasiquote error: ");
-  vfprintf(stderr, format, args);
-  fprintf(stderr, "\n");
+  char msg[512];
+  int pos = snprintf(msg, sizeof(msg), "quasiquote: ");
+  vsnprintf(msg + pos, sizeof(msg) - pos, format, args);
   va_end(args);
-  exit(1);
+  eval_error("%s", msg);
 }
 
 // Helper function to check if expr is (unquote ...)
