@@ -1,5 +1,6 @@
 #include "pscm.h"
 #include "eval.h"
+#include "error.h"
 #include <ctype.h>
 #include <errno.h>
 #include <stdio.h>
@@ -253,7 +254,7 @@ static void parse_error(Parser *p, const char *msg) {
   }
   
   fflush(stderr);
-  exit(1);
+  eval_error("Parse error: %s", msg);
 }
 
 // Skip whitespace and comments
