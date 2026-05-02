@@ -1001,6 +1001,19 @@ SCM *scm_c_define_module(const char *name,
   return module;
 }
 
+// (set-module-binder! module proc)
+SCM *scm_c_set_module_binder(SCM *module, SCM *proc) {
+  if (!is_module(module)) {
+    eval_error("set-module-binder!: expected module");
+  }
+  if (!is_proc(proc)) {
+    eval_error("set-module-binder!: expected procedure");
+  }
+  SCM_Module *mod = cast<SCM_Module>(module);
+  mod->binder = cast<SCM_Procedure>(proc);
+  return scm_none();
+}
+
 // Use (import) a module from C (Guile 1.8 compatible).
 void scm_c_use_module(const char *name) {
   SCM *parsed = parse(name);
@@ -1064,5 +1077,6 @@ void init_modules() {
   scm_define_function("module?", 1, 0, 0, scm_c_module_p);
   scm_define_vararg_function("module-map", scm_c_module_map);
   scm_define_vararg_function("module-use!", scm_c_module_use);
+  scm_define_function("set-module-binder!", 2, 0, 0, scm_c_set_module_binder);
 }
 
