@@ -402,16 +402,23 @@ SCM *scm_resolve_module(SCM_List *name) {
   if (found_path && !module_exists) {
     // Save current module
     SCM *old_module = scm_current_module();
-    
-    // Set current module to the target module
+
+    // Create a module-aware environment so procedures defined in this
+    // file (including macro transformers) capture the module's obarray
+    // in their environment chain via proc->env.
+    SCM_Module *mod = cast<SCM_Module>(module);
+    SCM_Environment *module_env = make_module_environment(mod, &g_env);
+
+    // Set current module for define forms (they check scm_current_module
+    // to decide where to insert bindings).
     scm_set_current_module(module);
-    
-    // Load and evaluate file (reuse scm_c_primitive_load)
-    scm_c_primitive_load(found_path);
-    
+
+    // Load and evaluate file in module-aware environment
+    scm_c_primitive_load_with_env(found_path, module_env);
+
     // Restore current module
     scm_set_current_module(old_module);
-    
+
     if (full_path) {
       free(full_path);
     }
