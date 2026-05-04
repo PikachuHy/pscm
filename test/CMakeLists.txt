@@ -148,6 +148,12 @@ add_test(
 )
 
 add_test(
+    NAME module_private_macro
+    COMMAND $<TARGET_FILE:pscm_cc> --test module_private_macro.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
+)
+
+add_test(
     NAME module_texmacs_module
     COMMAND $<TARGET_FILE:pscm_cc> --test init.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
