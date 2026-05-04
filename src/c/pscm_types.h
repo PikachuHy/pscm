@@ -178,6 +178,7 @@ struct SCM_Environment {
 
   List dummy;
   SCM_Environment *parent;
+  SCM_Module *module;  // if non-null, search this module's obarray+uses during lookup
 };
 
 // Print state structure (compatible with Guile 1.8)

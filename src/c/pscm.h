@@ -194,8 +194,15 @@ inline SCM_Continuation *make_cont(size_t stack_len, void *stack_data, long *src
 inline SCM_Environment *make_env(SCM_Environment *parent) {
   auto env = (SCM_Environment *)gc_alloc(GC_ENV, sizeof(SCM_Environment));
   env->parent = parent;
+  env->module = parent ? parent->module : nullptr;
   env->dummy.data = nullptr;
   env->dummy.next = nullptr;
+  return env;
+}
+
+inline SCM_Environment *make_module_environment(SCM_Module *mod, SCM_Environment *parent) {
+  auto env = make_env(parent);
+  env->module = mod;
   return env;
 }
 
