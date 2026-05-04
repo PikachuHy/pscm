@@ -93,6 +93,19 @@ SCM *scm_env_search(SCM_Environment *env, SCM_Symbol *sym) {
       return global_entry->value;  // Value can be null (e.g., for #f)
     }
   }
+
+  // 5. If macro expansion is in progress, search the defining module as a final
+  // fallback.  This makes module-private variables (e.g. property-rewrite,
+  // cur-props in tm-define.scm) visible during expansion without shadowing
+  // global bindings or the expansion-site module.
+  extern SCM *g_macro_defining_module;
+  if (g_macro_defining_module && g_macro_defining_module != current_mod) {
+    SCM_Module *def_mod = cast<SCM_Module>(g_macro_defining_module);
+    SCM *var = module_search_variable(def_mod, sym);
+    if (var) {
+      return var;
+    }
+  }
   
   // Try to get source location from current eval context for debugging
   const char *loc_str = nullptr;

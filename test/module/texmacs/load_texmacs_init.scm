@@ -5,6 +5,12 @@
 (set! %load-path (cons "/Users/pikachu/pr/texmacs/TeXmacs/progs" %load-path))
 (set! %load-path (cons "/Users/pikachu/pr/texmacs/TeXmacs/fonts" %load-path))
 
+;; Save & clear current module so define stubs go into g_env, not a module obarray.
+;; The stubs must be in g_env to take priority over module-private values during
+;; macro expansion (module values are searched after global in scm_env_search).
+(define pscm-saved-module (current-module))
+(set-current-module #f)
+
 ;; TeXmacs init needs C++-side functions. Define stubs:
 (define (cpp-get-preference key default) default)
 (define (os-mingw?) #f)
@@ -58,7 +64,8 @@
 (define (ahash-ref t k) (hash-ref t k))
 (define (ahash-set! t k v) (hash-set! t k v))
 (define (ahash-remove! t k) (hash-remove! t k))
-;; tm-define module internals (not visible during macro expansion in pscm)
+;; tm-define module internals — global stubs take priority over
+;; module-scoped values (which may have been modified during loading).
 (define cur-props '())
 (define cur-props-table (make-ahash-table))
 (define cur-conds '())
@@ -144,15 +151,11 @@
             (loop (cdr in) (cons (car in) out))))))
 (define (not-define-option? x) (not (keyword? x)))
 (define (texmacs-error msg . args) (pscm-display "TEXMACS-ERROR: ") (pscm-display msg) (pscm-newline))
-;; receive macro (SRFI-8) - pscm doesn't expand it from module imports correctly
+;; receive macro (SRFI-8) - now works with module capture fix
 (define-macro (receive vars expr . body)
   `(call-with-values (lambda () ,expr) (lambda ,vars ,@body)))
-;; Override lazy-define: the real one has module-scoped issues.
-;; For bootstrap testing, make it a noop.
-(define-macro (lazy-define module . names)
-  '(noop))
-(define-macro (texmacs-modes . l)
-  '(noop))
+(define-macro (lazy-define module . names) '(noop))
+(define-macro (texmacs-modes . l) ''texmacs-modes-override)
 ;; Plugin-related C++ stubs
 (define (plugin-supports-math-input-ref) #f)
 (define (plugin-supports-latex?) #f)
@@ -167,6 +170,7 @@
 (define (plugin-format) "")
 (define (plugin-input) "")
 (define (plugin-output) "")
+(define (test-preference? key) #f)
 (define (get-preference key . default) (if (null? default) "" (car default)))
 (define (set-preference key val) (noop))
 (define (cpp-get-custom-private-style) "")
@@ -191,6 +195,9 @@
 (define pscm-display display)
 (define pscm-write write)
 (define pscm-newline newline)
+
+;; Restore module before loading TeXmacs init
+(set-current-module pscm-saved-module)
 
 ;; Try loading the init file
 (catch #t

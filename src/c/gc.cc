@@ -634,9 +634,10 @@ static void trace_promise(GCBlock *block, MarkStack *stack) {
 // --- GC_MACRO ---------------------------------------------------------
 static void trace_macro(GCBlock *block, MarkStack *stack) {
   SCM_Macro *macro = (SCM_Macro *)block_to_obj(block);
-  trace_ptr(macro->name,        stack); // SCM_Symbol*
-  trace_ptr(macro->transformer, stack); // SCM_Procedure*
-  trace_ptr(macro->env,         stack); // SCM_Environment*
+  trace_ptr(macro->name,             stack); // SCM_Symbol*
+  trace_ptr(macro->transformer,      stack); // SCM_Procedure*
+  trace_ptr(macro->env,              stack); // SCM_Environment*
+  trace_ptr(macro->defining_module,  stack); // SCM_Module*
 }
 
 // --- GC_VARIABLE ------------------------------------------------------
