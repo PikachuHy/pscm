@@ -232,3 +232,9 @@ add_test(
     COMMAND $<TARGET_FILE:pscm_cc> --test macro_expr_pos.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
 )
+
+add_test(
+    NAME load_kernel
+    COMMAND $<TARGET_FILE:pscm_cc> --test load_kernel.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
+)
