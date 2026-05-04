@@ -1,11 +1,6 @@
 #include "pscm.h"
 #include "eval.h"
 
-// During macro expansion, set to the module where the macro was defined.
-// scm_env_search checks this as a fallback after the global environment so
-// module-private variables are visible but don't shadow global bindings.
-SCM *g_macro_defining_module = nullptr;
-
 // Helper function to expand a macro call
 SCM *expand_macro_call(SCM_Environment *env, SCM_Macro *macro, SCM_List *args, SCM *original_call) {
   // Create macro environment (use macro's definition environment)
@@ -123,18 +118,11 @@ SCM *expand_macro_call(SCM_Environment *env, SCM_Macro *macro, SCM_List *args, S
     return nullptr;
   }
 
-  // Set the defining module as a fallback lookup target.  Module-private
-  // variables (e.g. property-rewrite in tm-define.scm) need to be visible
-  // during macro expansion, but should NOT shadow global stubs or the
-  // expansion-site module.  The defining module is searched last.
-  SCM *saved_defining_module = g_macro_defining_module;
-  g_macro_defining_module = macro->defining_module;
-
-  // Call the macro transformer (evaluate in macro environment)
+  // Call the macro transformer (evaluate in macro environment).
+  // The transformer's proc->env was set to a module-aware environment
+  // by make_proc, so module-private variables are found through the
+  // normal environment parent chain during eval_with_list.
   SCM *expanded = eval_with_list(macro_env, macro->transformer->body);
-
-  // Restore
-  g_macro_defining_module = saved_defining_module;
 
   // Basic safety check: expanded should not be null
   if (!expanded) {
@@ -264,7 +252,6 @@ SCM *eval_define_macro(SCM_Environment *env, SCM_List *l) {
     macro->name = name;
     macro->transformer = cast<SCM_Procedure>(transformer);
     macro->env = env;
-    macro->defining_module = scm_current_module();
 
     SCM *macro_scm = wrap(macro);
     scm_env_insert(env, name, macro_scm);

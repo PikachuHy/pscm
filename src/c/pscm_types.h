@@ -102,7 +102,6 @@ struct SCM_Macro {
   SCM_Symbol *name;
   SCM_Procedure *transformer; // Macro transformer procedure
   SCM_Environment *env;       // Environment where macro was defined
-  SCM *defining_module;       // Module where macro was defined (for module-scoped lookup)
 };
 
 struct SCM_HashTable {
