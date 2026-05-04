@@ -135,6 +135,38 @@
 (define (property var prop) #f)
 ;; More TeXmacs C++ functions needed by tm-preferences and beyond
 (define (notify-preferences-booted) (noop))
+(define (list-break lst pred)
+  ;; Stub: split list into (take-while, drop-while) based on pred
+  (if (null? lst) (values '() '())
+      (let loop ((in lst) (out '()))
+        (if (or (null? in) (not (pred (car in))))
+            (values (reverse out) in)
+            (loop (cdr in) (cons (car in) out))))))
+(define (not-define-option? x) (not (keyword? x)))
+(define (texmacs-error msg . args) (pscm-display "TEXMACS-ERROR: ") (pscm-display msg) (pscm-newline))
+;; receive macro (SRFI-8) - pscm doesn't expand it from module imports correctly
+(define-macro (receive vars expr . body)
+  `(call-with-values (lambda () ,expr) (lambda ,vars ,@body)))
+;; Override lazy-define: the real one has module-scoped issues.
+;; For bootstrap testing, make it a noop.
+(define-macro (lazy-define module . names)
+  '(noop))
+(define-macro (texmacs-modes . l)
+  '(noop))
+;; Plugin-related C++ stubs
+(define (plugin-supports-math-input-ref) #f)
+(define (plugin-supports-latex?) #f)
+(define (plugin-supports-html?) #f)
+(define (plugin-supports-pdf?) #f)
+(define (plugin-supports-image?) #f)
+(define (plugin-supports-xml?) #f)
+(define (plugin-supports-bibtex?) #f)
+(define (plugin-supports-search?) #f)
+(define (plugin-supports-replace?) #f)
+(define (plugin-name) "pscm")
+(define (plugin-format) "")
+(define (plugin-input) "")
+(define (plugin-output) "")
 (define (get-preference key . default) (if (null? default) "" (car default)))
 (define (set-preference key val) (noop))
 (define (cpp-get-custom-private-style) "")

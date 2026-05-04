@@ -395,9 +395,11 @@ SCM *scm_resolve_module(SCM_List *name) {
     scm_c_hash_set_equal(wrap(g_module_registry), wrap(name), module);
   }
   
-  // If file found, load it (even if module already exists, to ensure code is loaded)
-  // This matches Guile 1.8's behavior: use-modules ensures the module is loaded
-  if (found_path) {
+  // If file found AND module didn't already exist, load it.
+  // Only load once — re-loading on every scm_resolve_module call causes
+  // infinite loops with circular module dependencies (e.g. logic-bind ↔ logic-unify).
+  // Guile 1.8 uses the same idempotent approach.
+  if (found_path && !module_exists) {
     // Save current module
     SCM *old_module = scm_current_module();
     
