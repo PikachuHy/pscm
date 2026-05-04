@@ -318,6 +318,18 @@ entry:
         val = var;
       }
     }
+    // Fallback: search global environment for macros defined at top
+    // level (e.g., texmacs-module in boot.scm). These go into g_env
+    // but are not in any module obarray. Only check for macros here —
+    // non-macro symbols are resolved via lookup_symbol (parent chain
+    // search) in the else branch below; pulling them from g_env here
+    // would shadow local lambda bindings (e.g., exit in cont tests).
+    if (!val) {
+      SCM *g_val = scm_env_exist(&g_env, sym);
+      if (g_val && is_macro(g_val)) {
+        val = g_val;
+      }
+    }
     if (val && is_macro(val)) {
       // Found a macro, expand it and continue evaluation
       SCM_Macro *macro = cast<SCM_Macro>(val);
