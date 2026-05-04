@@ -69,7 +69,27 @@ SCM *scm_env_search(SCM_Environment *env, SCM_Symbol *sym) {
   if (entry) {
     return entry->value;  // Value can be null (e.g., for #f)
   }
-  
+
+  // 2.5. Search the module baked into the environment chain (if any).
+  // This finds module-private variables (e.g. cur-props in tm-define.scm)
+  // during evaluation of code loaded inside that module.  The module is
+  // set by make_module_environment when the module's file is loaded.
+  // We walk the parent chain to find the first non-null module pointer;
+  // child environments inherit it from make_module_environment via make_env.
+  {
+    SCM_Environment *e = env;
+    while (e) {
+      if (e->module) {
+        SCM *var = module_search_variable(e->module, sym);
+        if (var) {
+          return var;
+        }
+        break;  // found a module but symbol wasn't in it; don't check again
+      }
+      e = e->parent;
+    }
+  }
+
   // 3. If current module exists, search in module (module bindings override global)
   // This is important: when define is used in a module, it should shadow global bindings
   // But module bindings come after lexical bindings (let/lambda)
@@ -94,19 +114,6 @@ SCM *scm_env_search(SCM_Environment *env, SCM_Symbol *sym) {
     }
   }
 
-  // 5. If macro expansion is in progress, search the defining module as a final
-  // fallback.  This makes module-private variables (e.g. property-rewrite,
-  // cur-props in tm-define.scm) visible during expansion without shadowing
-  // global bindings or the expansion-site module.
-  extern SCM *g_macro_defining_module;
-  if (g_macro_defining_module && g_macro_defining_module != current_mod) {
-    SCM_Module *def_mod = cast<SCM_Module>(g_macro_defining_module);
-    SCM *var = module_search_variable(def_mod, sym);
-    if (var) {
-      return var;
-    }
-  }
-  
   // Try to get source location from current eval context for debugging
   const char *loc_str = nullptr;
   if (g_current_eval_context) {
