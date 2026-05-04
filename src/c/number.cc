@@ -198,35 +198,6 @@ struct EqOp {
   }
 };
 
-// Specializations for double to prevent truncation in comparison operators
-template <>
-struct LtEqOp<double, double> {
-  static bool run(double lhs, double rhs) {
-    return lhs <= rhs;
-  }
-};
-
-template <>
-struct GtEqOp<double, double> {
-  static bool run(double lhs, double rhs) {
-    return lhs >= rhs;
-  }
-};
-
-template <>
-struct GtOp<double, double> {
-  static bool run(double lhs, double rhs) {
-    return lhs > rhs;
-  }
-};
-
-template <>
-struct LtOp<double, double> {
-  static bool run(double lhs, double rhs) {
-    return lhs < rhs;
-  }
-};
-
 SCM *scm_c_eq_number(SCM *lhs, SCM *rhs) {
   // Use double comparison for mixed types
   if (needs_float_promotion(lhs, rhs)) {
@@ -545,7 +516,11 @@ SCM *scm_c_sqrt(SCM *arg) {
 }
 
 bool _number_eq(SCM *lhs, SCM *rhs) {
-  // BinaryOperator already handles float promotion
+  if (needs_float_promotion(lhs, rhs)) {
+    double d_lhs = scm_to_double(lhs);
+    double d_rhs = scm_to_double(rhs);
+    return d_lhs == d_rhs;
+  }
   auto ret = BinaryOperator<EqOp<bool, int64_t>>::run(lhs, rhs);
   return is_true(ret);
 }
