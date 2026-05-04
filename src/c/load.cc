@@ -34,6 +34,30 @@ SCM *scm_c_primitive_load(const char *filename) {
   return scm_eval_expression_list(expr_list);
 }
 
+// Load a file evaluating each expression in the provided environment.
+// Unlike scm_c_primitive_load (which delegates to scm_eval_expression_list
+// which always uses &g_env), this allows loading module files in a
+// module-aware environment so define forms capture the module's obarray
+// in their procedure environments.
+SCM *scm_c_primitive_load_with_env(const char *filename, SCM_Environment *env) {
+  fprintf(stderr, "[load] Loading file: %s\n", filename);
+
+  SCM_List *expr_list = parse_file(filename);
+  if (!expr_list) {
+    eval_error("primitive-load: failed to load file: %s", filename);
+    return nullptr;
+  }
+
+  SCM *result = scm_none();
+  SCM_List *it = expr_list;
+  while (it) {
+    result = eval_with_env(env, it->data);
+    it = it->next;
+  }
+
+  return result;
+}
+
 // Helper function: load from SCM string (used by Scheme-level load/primitive-load)
 SCM *scm_primitive_load(SCM *filename) {
   if (!is_str(filename)) {

@@ -942,6 +942,7 @@ SCM *scm_c_eval_string(const char *expr);  // Evaluate C string containing Schem
  * Functions in load.cc
  */
 SCM *scm_c_primitive_load(const char *filename);  // Core file loading implementation (accepts const char *)
+SCM *scm_c_primitive_load_with_env(const char *filename, SCM_Environment *env);  // Load file in a specific environment
 SCM *scm_eval_expression_list(SCM_List *expr_list);  // Evaluate a list of expressions (common helper)
 
 // Throw operations (compatible with Guile 1.8 API)
