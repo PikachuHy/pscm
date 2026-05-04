@@ -220,3 +220,9 @@ add_test(
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
 )
 # Note: No PASS_REGULAR_EXPRESSION — this test won't pass until the full init loads
+
+add_test(
+    NAME float_cmp
+    COMMAND $<TARGET_FILE:pscm_cc> --test float_cmp.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
+)
