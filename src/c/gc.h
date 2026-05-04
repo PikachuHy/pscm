@@ -99,7 +99,7 @@ struct RootRegistration {
 };
 
 // Maximum number of registered roots (static array to avoid heap dependency).
-static const int MAX_ROOTS = 2048;
+static const int MAX_ROOTS = 8192;
 
 extern RootRegistration g_root_registry[MAX_ROOTS];
 extern int g_num_roots;

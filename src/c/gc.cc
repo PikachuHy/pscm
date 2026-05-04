@@ -55,7 +55,7 @@ struct HeapSegment {
 };
 
 // Static pool so we never need malloc inside the GC.
-static const int MAX_SEGMENTS = 16;
+static const int MAX_SEGMENTS = 64;
 static HeapSegment g_seg_pool[MAX_SEGMENTS];
 static int         g_next_seg = 0; // next free slot in the pool
 
@@ -176,9 +176,9 @@ static void *bump_allocate(size_t total_size) {
     }
 
     if (g_next_seg >= MAX_SEGMENTS) {
-      fprintf(stderr, "FATAL: gc heap segment pool exhausted (max %d)\n", MAX_SEGMENTS);
+      fprintf(stderr, "WARNING: gc heap segment pool exhausted (max %d), allocation failed\n", MAX_SEGMENTS);
       fflush(stderr);
-      abort();
+      return nullptr;
     }
     HeapSegment *seg = &g_seg_pool[g_next_seg++];
     seg->start = (char *)mem;
@@ -298,9 +298,9 @@ void gc_set_stack_top(void *marker) {
 
 void gc_register_root(SCM **ptr, const char *name) {
   if (g_num_roots >= MAX_ROOTS) {
-    fprintf(stderr, "FATAL: too many GC roots (max %d)\n", MAX_ROOTS);
+    fprintf(stderr, "WARNING: too many GC roots (max %d), root registration skipped for %s\n", MAX_ROOTS, name);
     fflush(stderr);
-    abort();
+    return;
   }
   g_root_registry[g_num_roots].ptr  = ptr;
   g_root_registry[g_num_roots].name = name;
