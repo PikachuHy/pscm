@@ -108,4 +108,4 @@ Module dependency resolution FIXED (commit b0d431d):
 
 Verified: `cross_module_loading` test passes, confirming that `resolve-module` correctly resolves `#:use-module` dependencies loaded from separate files. Module loading time increased (load_utils: 30s→160s) because dependency resolution now actually works — more files are loaded through the module system.
 
-**Remaining work:** Add TeXmacs C++ function stubs for the symbols that are truly missing (not module-defined macros). These are TeXmacs C++ side functions like `tmfs-title-handler` that need real implementations for full TeXmacs integration.
+**Remaining work:** ~10 C++ function stubs added (commit 709bc94). Remaining errors are mostly parser issues (TeXmacs uses `{` for some syntax, `#` prefix) and a few module-order edge cases. The core module dependency system is fixed. Next step would be improving pscm's reader to handle TeXmacs-specific syntax extensions.
