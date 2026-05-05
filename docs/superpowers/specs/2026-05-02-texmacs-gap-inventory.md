@@ -102,9 +102,10 @@ Tracks A (stability) and B (C API) are also complete:
 
 **All 442 TeXmacs Scheme files attempted (ALL-LOADED). No crashes.**
 
-127 files pass, 251 have caught errors. C4 investigation revealed:
-- Adding global stubs for TeXmacs module-defined macros (menu-bind, define-preferences, etc.) causes infinite loops/hangs because these macros are already defined inside kernel modules and global stubs conflict with the module system's environment chain.
-- The caught errors are load-order issues — files reference macros from modules not yet loaded via sequential `(load)`. These would resolve correctly through TeXmacs's module dependency system.
-- Deep fix requires improving pscm's module resolution in `module.cc` to properly chain module environments during dependency loading. This is a separate task needing its own design spec.
+Module dependency resolution FIXED (commit b0d431d):
+1. `eval_define_module` no longer returns early when module pre-exists in registry — options like `#:use-module` are now processed, so dependency modules are loaded and their macros visible during body evaluation.
+2. `eval_define` now routes definitions to module obarray when in a module environment (env->module is set), so `define-public` correctly populates the public interface.
 
-**Next step: Fix pscm module dependency resolution to properly export macros across module boundaries during module loading.**
+Verified: `cross_module_loading` test passes, confirming that `resolve-module` correctly resolves `#:use-module` dependencies loaded from separate files. Module loading time increased (load_utils: 30s→160s) because dependency resolution now actually works — more files are loaded through the module system.
+
+**Remaining work:** Add TeXmacs C++ function stubs for the symbols that are truly missing (not module-defined macros). These are TeXmacs C++ side functions like `tmfs-title-handler` that need real implementations for full TeXmacs integration.
