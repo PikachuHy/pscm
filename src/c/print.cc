@@ -342,7 +342,6 @@ static void _print_list(SCM_List *l, bool nested, bool write_mode, const PrintCo
     if (l->next) {
       printf(" ");
       _print_ast_with_context(l->next->data, write_mode, new_ctx);
-      assert(!l->next->next);
     } else {
       printf(" ()");
     }
@@ -360,7 +359,6 @@ static void _print_list(SCM_List *l, bool nested, bool write_mode, const PrintCo
       printf("'");
       if (l->next) {
         _print_ast_with_context(l->next->data, write_mode, new_ctx);
-        assert(!l->next->next);
       } else {
         printf("()");
       }
@@ -370,7 +368,6 @@ static void _print_list(SCM_List *l, bool nested, bool write_mode, const PrintCo
       if (l->next) {
         printf(" ");
         _print_ast_with_context(l->next->data, write_mode, new_ctx);
-        assert(!l->next->next);
       }
       printf(")");
     }
@@ -384,7 +381,6 @@ static void _print_list(SCM_List *l, bool nested, bool write_mode, const PrintCo
     if (l->next) {
       printf(" ");
       _print_ast_with_context(l->next->data, write_mode, new_ctx);
-      assert(!l->next->next);
     }
     printf(")");
     return;
@@ -396,7 +392,6 @@ static void _print_list(SCM_List *l, bool nested, bool write_mode, const PrintCo
     if (l->next) {
       printf(" ");
       _print_ast_with_context(l->next->data, write_mode, new_ctx);
-      assert(!l->next->next);
     }
     printf(")");
     return;
