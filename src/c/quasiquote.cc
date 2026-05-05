@@ -197,7 +197,9 @@ static SCM *quasi(SCM_Environment *env, SCM *p, int depth) {
   if (is_unquote_form(p)) {
     SCM *arg = get_form_arg(p);
     if (!arg) {
-      quasiquote_error("unquote requires an argument");
+      // Bare (unquote) with no argument — can happen during TeXmacs
+      // macro expansion when , is used as pattern-matching syntax.
+      return scm_none();
     }
     if (depth == 1) {
       // Direct evaluation and return

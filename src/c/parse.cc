@@ -827,11 +827,20 @@ static SCM *parse_symbol(Parser *p) {
     return nullptr;
   }
   
+  // Build symbol name, filtering out backslash escape characters
   char *sym_data = new char[len + 1];
-  memcpy(sym_data, start, len);
-  sym_data[len] = '\0';
-  
-  SCM *scm = create_sym(sym_data, len);
+  int dst = 0;
+  for (int i = 0; i < len; i++) {
+    if (start[i] == '\\' && i + 1 < len) {
+      i++;  // skip backslash, next char is literal part of symbol
+      sym_data[dst++] = start[i];
+    } else if (start[i] != '\\') {
+      sym_data[dst++] = start[i];
+    }
+  }
+  sym_data[dst] = '\0';
+
+  SCM *scm = create_sym(sym_data, dst);
   set_source_location(scm, p->filename, start_line, start_column);
   delete[] sym_data;
   return scm;
