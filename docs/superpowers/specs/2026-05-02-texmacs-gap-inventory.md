@@ -100,6 +100,11 @@ Tracks A (stability) and B (C API) are also complete:
 - A3: Print buffer 4096-byte limit — fixed (daf62ab)
 - B: 6 C API module wrappers — implemented (e99e490, 968ebf7, 05976ba)
 
-**All 442 TeXmacs Scheme files attempted (ALL-LOADED). No crashes. 378 caught errors remain — these are load-order issues where files reference macros/variables from modules not yet loaded. When TeXmacs loads files through its normal module dependency resolution, these errors would not occur.**
+**All 442 TeXmacs Scheme files attempted (ALL-LOADED). No crashes.**
 
-**Next step: Resolve load-order by loading files through TeXmacs's own module system (load init-texmacs.scm, then let module dependencies drive loading), or add stubs for the most common missing symbols.**
+127 files pass, 251 have caught errors. C4 investigation revealed:
+- Adding global stubs for TeXmacs module-defined macros (menu-bind, define-preferences, etc.) causes infinite loops/hangs because these macros are already defined inside kernel modules and global stubs conflict with the module system's environment chain.
+- The caught errors are load-order issues — files reference macros from modules not yet loaded via sequential `(load)`. These would resolve correctly through TeXmacs's module dependency system.
+- Deep fix requires improving pscm's module resolution in `module.cc` to properly chain module environments during dependency loading. This is a separate task needing its own design spec.
+
+**Next step: Fix pscm module dependency resolution to properly export macros across module boundaries during module loading.**
