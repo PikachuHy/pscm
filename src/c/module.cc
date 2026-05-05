@@ -490,8 +490,10 @@ void scm_module_export(SCM_Module *module, SCM_Symbol *sym) {
 
   // Update public interface
   SCM_Module *iface = scm_ensure_public_interface(module);
-  // Sync this specific symbol into the interface
-  SCM *val = module_obarray_lookup(module, sym);
+  // Use module_search_variable instead of module_obarray_lookup so that
+  // re-export after use-modules works: the symbol may live in a used
+  // module's obarray, not the current module's own obarray.
+  SCM *val = module_search_variable(module, sym);
   if (val) {
     scm_c_hash_set_eq(wrap(iface->obarray), wrap(sym), val);
   }
