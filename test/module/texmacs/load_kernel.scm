@@ -207,7 +207,13 @@
 (define-macro (unless cond? . body)
   `(if (not ,cond?) (begin ,@body)))
 (define-macro (with var val . body)
-  `(let ((,var ,val)) ,@body))
+  (if (pair? var)
+      ;; Destructuring bind: pscm's let/lambda don't support destructuring,
+      ;; so use apply with a standard dotted lambda-list instead.
+      ;; e.g. (with (cmd help . action) val body)
+      ;;   -> (apply (lambda (cmd help . action) body) val)
+      `(apply (lambda ,var ,@body) ,val)
+      `(let ((,var ,val)) ,@body)))
 (define-macro (with-global var val . body)
   `(let ((,var ,val)) ,@body))
 (define-macro (and-with var val . body)

@@ -97,7 +97,20 @@ SCM *expand_macro_call(SCM_Environment *env, SCM_Macro *macro, SCM_List *args, S
         break;
       }
       
-      assert(is_sym(current_param->data));
+      if (!is_sym(current_param->data)) {
+        fprintf(stderr, "\nError binding macro parameter");
+        if (macro->name) {
+          fprintf(stderr, " in macro '%s'", macro->name->data);
+        }
+        fprintf(stderr, "\n  Expected a symbol, got: ");
+        print_ast(current_param->data);
+        fprintf(stderr, "\n  Parameter list: ");
+        print_ast(wrap(macro->transformer->args));
+        fprintf(stderr, "\n");
+        fflush(stderr);
+        eval_error("macro: malformed parameter in lambda list (expected symbol)");
+        return nullptr;
+      }
       auto param_sym = cast<SCM_Symbol>(current_param->data);
       // Pass the argument as-is (syntax object), not evaluated
       scm_env_insert(macro_env, param_sym, actual_args->data, /*search_parent=*/false);

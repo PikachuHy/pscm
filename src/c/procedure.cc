@@ -164,7 +164,20 @@ SCM *apply_procedure(SCM_Environment *env, SCM_Procedure *proc, SCM_List *args) 
       // Check if this is the penultimate parameter before rest parameter
       if (has_rest_param && current_param == penultimate_param) {
       // Bind the penultimate parameter
-      assert(is_sym(current_param->data));
+      if (!is_sym(current_param->data)) {
+        fprintf(stderr, "\nError binding penultimate parameter");
+        if (proc->name) {
+          fprintf(stderr, " in procedure '%s'", proc->name->data);
+        }
+        fprintf(stderr, "\n  Expected a symbol, got: ");
+        print_ast(current_param->data);
+        fprintf(stderr, "\n  Parameter list: ");
+        print_ast(wrap(proc->args));
+        fprintf(stderr, "\n");
+        fflush(stderr);
+        eval_error("procedure: malformed parameter in lambda list (expected symbol)");
+        return nullptr;
+      }
       auto arg_sym = cast<SCM_Symbol>(current_param->data);
       auto arg_val = eval_with_env(env, args_iter->data);
       scm_env_insert(proc_env, arg_sym, arg_val, /*search_parent=*/false);
@@ -198,7 +211,20 @@ SCM *apply_procedure(SCM_Environment *env, SCM_Procedure *proc, SCM_List *args) 
         break;
       }
       
-      assert(is_sym(current_param->data));
+      if (!is_sym(current_param->data)) {
+        fprintf(stderr, "\nError binding procedure parameter");
+        if (proc->name) {
+          fprintf(stderr, " in procedure '%s'", proc->name->data);
+        }
+        fprintf(stderr, "\n  Expected a symbol, got: ");
+        print_ast(current_param->data);
+        fprintf(stderr, "\n  Parameter list: ");
+        print_ast(wrap(proc->args));
+        fprintf(stderr, "\n");
+        fflush(stderr);
+        eval_error("procedure: malformed parameter in lambda list (expected symbol)");
+        return nullptr;
+      }
       auto arg_sym = cast<SCM_Symbol>(current_param->data);
       auto arg_val = eval_with_env(env, args_iter->data);
       scm_env_insert(proc_env, arg_sym, arg_val, /*search_parent=*/false);
