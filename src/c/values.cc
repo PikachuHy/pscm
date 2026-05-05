@@ -74,7 +74,7 @@ SCM *eval_call_with_values(SCM_Environment *env, SCM_List *l) {
   // Build argument list from values_list
   if (is_proc(consumer)) {
     SCM_Procedure *proc = cast<SCM_Procedure>(consumer);
-    return apply_procedure(env, proc, values_list);
+    return apply_procedure_with_values(env, proc, values_list);
   } else {
     // Function - need to call it with the values
     SCM_Function *func = cast<SCM_Function>(consumer);
