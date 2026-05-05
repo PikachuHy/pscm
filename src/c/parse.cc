@@ -805,12 +805,22 @@ static SCM *parse_symbol(Parser *p) {
   
   // Parse regular symbol
   // Symbols can contain: letters, digits, and special characters
-  while (*p->pos && 
-         (isalnum((unsigned char)*p->pos) || 
+  while (*p->pos &&
+         (isalnum((unsigned char)*p->pos) ||
+          *p->pos == '\\' ||
           strchr("!$%&*+-./:<=>?@^_~|", *p->pos) != nullptr)) {
-    len++;
-    p->pos++;
-    p->column++;
+    if (*p->pos == '\\') {
+      // Guile 1.8 backslash escape: next character is part of the symbol literally
+      len++; p->pos++; p->column++;  // consume backslash
+      if (*p->pos && !isspace((unsigned char)*p->pos) &&
+          *p->pos != '(' && *p->pos != ')' && *p->pos != ';') {
+        len++; p->pos++; p->column++;  // consume escaped character
+      }
+    } else {
+      len++;
+      p->pos++;
+      p->column++;
+    }
   }
   
   if (len == 0) {
@@ -1208,6 +1218,47 @@ static SCM *parse_expr(Parser *p) {
       parse_error(p, "expected identifier after #:");
     }
     return result;
+  }
+
+  // #{...}# symbol reader syntax (Guile 1.8)
+  // Creates a symbol whose name is the literal content between #{ and }#
+  if (p->pos[0] == '#' && p->pos[1] == '{') {
+    int sym_start_line = p->line;
+    int sym_start_col = p->column;
+    p->pos += 2;  // skip #{
+    p->column += 2;
+    const char *content_start = p->pos;
+    int brace_depth = 1;
+    while (*p->pos && brace_depth > 0) {
+      if (*p->pos == '{') brace_depth++;
+      else if (*p->pos == '}') brace_depth--;
+      if (brace_depth > 0) {
+        if (*p->pos == '\n') { p->line++; p->column = 0; }
+        else p->column++;
+        p->pos++;
+      }
+    }
+    if (brace_depth != 0) {
+      parse_error(p, "unterminated #{...}# reader syntax");
+      return nullptr;
+    }
+    int content_len = (p->pos) - content_start;
+    p->pos++;  // skip closing }
+    p->column++;
+    if (p->pos[0] != '#') {
+      parse_error(p, "expected # after } in #{...}#");
+      return nullptr;
+    }
+    p->pos++;  // skip closing #
+    p->column++;
+
+    char *name = new char[content_len + 1];
+    memcpy(name, content_start, content_len);
+    name[content_len] = '\0';
+    SCM *sym = create_sym(name, content_len);
+    set_source_location(sym, p->filename, sym_start_line, sym_start_col);
+    delete[] name;
+    return sym;
   }
 
   // Character literal (#\A, #\., etc.)
