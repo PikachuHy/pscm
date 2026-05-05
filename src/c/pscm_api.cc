@@ -170,6 +170,15 @@ SCM *pscm_c_define_gsubr(const char *name, int req, int opt, int rst,
   return scm_c_define_gsubr(name, req, opt, rst, fcn);
 }
 
+// Module operations (compatible with Guile 1.8 API)
+SCM *pscm_c_resolve_module(const char *name) {
+  return scm_c_resolve_module(name);
+}
+
+SCM *pscm_c_module_lookup(SCM *module, const char *name) {
+  return scm_c_module_lookup(module, name);
+}
+
 // Port operations (compatible with Guile 1.8 API)
 SCM *pscm_current_error_port(void) {
   return scm_current_error_port();
