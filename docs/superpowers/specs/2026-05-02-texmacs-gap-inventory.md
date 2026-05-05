@@ -11,19 +11,23 @@
 - [x] Loads kernel/boot/abbrevs.scm
 - [x] Loads kernel/boot/debug.scm
 - [x] Loads kernel/boot/srfi.scm
-- [/] Loads kernel/library/* (base, list via inherit-modules)
-- [/] Loads kernel/regexp/* (match, select via inherit-modules)
-- [/] Loads kernel/logic/* (rules, query, data via inherit-modules)
-- [/] Loads kernel/texmacs/tm-define.scm (blocked at macro expansion)
+- [x] Loads kernel/library/* (base, list, tree, content, patch, iterator)
+- [x] Loads kernel/regexp/* (match, select, test)
+- [x] Loads kernel/logic/* (rules, bind, unify, query, data, test)
+- [x] Loads kernel/texmacs/* (tm-define, tm-preferences, tm-modes, tm-plugins, tm-language, tm-convert, tm-dialogue, tm-file-system, tm-secure, tm-states)
+- [x] Loads kernel/old-gui/* (factory, widget, form, test)
+- [x] Loads kernel/gui/* (menu-convert, menu-widget, menu-define, menu-test, gui-markup, kbd-define, kbd-handlers, speech-define)
+- [x] Loads kernel/boot/ahash-table.scm, kernel/boot/prologue.scm
+- [x] All 45 kernel/ files load without uncaught errors (KERNEL-LOADED milestone: 2026-05-05)
 
-## Blocking Issues Found
+## Blocking Issues Found (All Resolved as of 2026-05-05)
 
-| # | Issue | Location | Category | Impact |
+| # | Issue | Location | Category | Status |
 |---|-------|----------|----------|--------|
-| 1 | Special forms not aliaseable as values | boot.scm:100 `(define import-from use-modules)` | Module system | Prevented boot.scm guile-a path; worked around with scheme-dialect change |
-| 2 | Module-scoped privates invisible to macro expansion | tm-define.scm:127-168 (`cur-props`, `cur-props-table`, etc.) | Macro/module | Blocked tm-define macro loading; private defines inside a module not found during expansion |
-| 3 | `for` macro in expression position: "not supported expression type: macro" | tm-define.scm:163 | Macro system | Hard block — macro expander not handling nested macro in expression context |
-| 4 | Conservative GC `abort()` on heap exhaustion | gc.cc:175,181,303,767 | GC | Risk under heavy loading |
+| 1 | Special forms not aliaseable as values | boot.scm:100 | Module system | Resolved via scheme-dialect workaround |
+| 2 | Module-scoped privates invisible to macro expansion | tm-define.scm:127-168 | Macro/module | Resolved by module environment chain (741919b) |
+| 3 | `with` macro stub didn't handle destructuring | kbd-handlers.scm via tm-define | Macro system | Resolved (41f2ef3) |
+| 4 | `assert(is_sym(...))` in procedure/macro param binding | procedure.cc:201,167 macro.cc:100 | Error handling | Resolved — replaced with eval_error (41f2ef3) |
 
 ## Missing C++ Functions (Stubbed)
 
@@ -79,14 +83,19 @@ These TeXmacs C++ functions were encountered and stubbed. A full TeXmacs integra
 
 3. **Macro expansion in expression position** — When a macro object (unexpanded) appears in expression position, pscm reports "not supported expression type: macro" instead of expanding it. This blocks nested macro usage like `(for ...)` inside a `define-macro` body.
 
-## Recommendation
+## Recommendation (Updated 2026-05-05)
 
-**Not yet production-ready for TeXmacs.** Three blocking issues prevent the TeXmacs init chain from completing:
+**All 45 kernel/ modules load without errors.** The KERNEL-LOADED milestone has been reached.
 
-1. **Module-scoped macro expansion** (blocking) — tm-define.scm uses private module variables during macro expansion. Requires pscm to capture the defining module's environment in macro transformers.
-2. **Macro-in-expression-position** (blocking) — The `for` loop macro inside `define-macro` bodies fails. Requires fixing pscm's evaluator to expand macros found in expression position.
-3. **Special form aliasability** (workaround exists) — `(define x special-form)` doesn't work. The `scheme-dialect` workaround switches to a `define-macro` path.
+Three previously-blocking issues were resolved:
+1. Module-scoped macro expansion — fixed by module environment chain (commits 741919b, 1ed79fb)
+2. `with` macro destructuring — fixed by detecting pair patterns and using `(apply (lambda ...) val)` (41f2ef3)
+3. `assert(is_sym(...))` crash in param binding — replaced with proper `eval_error` (41f2ef3)
 
-Once these three are resolved, the remaining gap is the ~25 C++ stubs that need real implementations (or a strategy for TeXmacs to load without them).
+Tracks A (stability) and B (C API) are also complete:
+- A1: Float comparison — already fixed (63b94ad, 49d3cf1)
+- A2: GC abort() — already fixed (e9bd053)
+- A3: Print buffer 4096-byte limit — fixed (daf62ab)
+- B: 6 C API module wrappers — implemented (e99e490, 968ebf7, 05976ba)
 
-The GC heap limit risk (MAX_SEGMENTS=16, ~64MB) and numeric comparison bugs (<, >, <=, >= truncating doubles) are not currently blocking the init chain but would cause issues under production load.
+**Next step: C2 — load utils/ modules (~85 files).**
