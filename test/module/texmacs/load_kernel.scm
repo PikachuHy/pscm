@@ -271,27 +271,6 @@
 (define-macro (tm-widget head . body) '(noop))
 (define-macro (define-group group . l) '(noop))
 
-;; ----- Additional TeXmacs macro stubs (for all-module loading) -----
-(define-macro (menu-bind . args) '(noop))
-(define-macro (define-preferences . args) '(noop))
-(define-macro (kbd-map . args) '(noop))
-(define-macro (tm-menu . args) '(noop))
-(define-macro (tm-tool* . args) '(noop))
-(define-macro (bib-define-style . args) '(noop))
-(define-macro (define-alternate . args) '(noop))
-(define-macro (tmfs-title-handler . args) '(noop))
-(define-macro (define-format . args) '(noop))
-(define-macro (tm-service . args) '(noop))
-(define-macro (tm-property . args) '(noop))
-(define-macro (speech-map . args) '(noop))
-(define-macro (set-font-rules . args) '(noop))
-(define-macro (tm-generate . args) '(noop))
-(define (symbol-append . syms) (car syms))
-(define (string->url s) s)
-(define (make-record-type name fields) (list 'record-type name))
-(define (new-author . args) '())
-(define (smart-table . args) #f)
-
 ;; ----- Save original display/write before boot.scm redefines them -----
 (define pscm-display display)
 (define pscm-write write)
