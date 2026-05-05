@@ -187,6 +187,14 @@ void pscm_c_use_module(const char *name) {
   scm_c_use_module(name);
 }
 
+SCM *pscm_c_current_module(void) {
+  return scm_current_module();
+}
+
+SCM *pscm_c_set_current_module(SCM *module) {
+  return scm_set_current_module(module);
+}
+
 // Port operations (compatible with Guile 1.8 API)
 SCM *pscm_current_error_port(void) {
   return scm_current_error_port();

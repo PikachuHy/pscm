@@ -42,6 +42,8 @@ SCM *pscm_c_resolve_module(const char *name);                         // Resolve
 SCM *pscm_c_module_lookup(SCM *module, const char *name);             // Look up variable in module
 SCM *pscm_c_module_define(SCM *module, const char *name, SCM *val);  // Define variable in module
 void  pscm_c_use_module(const char *name);                            // Import module
+SCM *pscm_c_current_module(void);                                     // Get current module
+SCM *pscm_c_set_current_module(SCM *module);                          // Set current module
 
 // Port operations (compatible with Guile 1.8 API)
 SCM *pscm_current_error_port(void);    // Get current error port
