@@ -271,6 +271,19 @@
 (define-macro (tm-widget head . body) '(noop))
 (define-macro (define-group group . l) '(noop))
 
+;; TeXmacs C++ function stubs — these are genuinely missing (not module-defined macros)
+(define (url-none . args) "")
+(define (tree-remove t x) t)
+(define (tmfs-title-handler . args) #f)
+(define (tm-property . args) #f)
+(define (tm-call-back . args) #f)
+(define (tm-build-widget . args) #f)
+(define (server-define-error-codes . args) #f)
+(define (new-author . args) '())
+(define (make-record-type name fields) (list 'record-type name))
+(define (string->url s) s)
+(define (bib-define-style . args) #f)
+
 ;; ----- Save original display/write before boot.scm redefines them -----
 (define pscm-display display)
 (define pscm-write write)
