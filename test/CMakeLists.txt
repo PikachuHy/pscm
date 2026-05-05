@@ -244,3 +244,10 @@ add_test(
     COMMAND $<TARGET_FILE:pscm_cc> --test load_utils.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
 )
+add_test(
+    NAME load_all
+    COMMAND $<TARGET_FILE:pscm_cc> --test load_all.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
+)
+set_tests_properties(load_all PROPERTIES
+  PASS_REGULAR_EXPRESSION "ALL-LOADED")

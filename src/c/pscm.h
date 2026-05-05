@@ -166,13 +166,19 @@ inline SCM_List *make_list(SCM *data1, SCM *data2, SCM *data3) {
   return l;
 }
 
+// Forward declaration needed by make_proc (scm_nil defined later)
+SCM *scm_nil();
+
 inline SCM_Procedure *make_proc(SCM_Symbol *name, SCM_List *args, SCM_List *body, SCM_Environment *env) {
   // name can be nullptr
   // assert(name);
   // args can be nullptr
   // assert(args);
-  assert(body);
   assert(env);
+  if (!body) {
+    // Lambda with no body e.g. (lambda (p)) -- use nil as a noop body
+    body = make_list(scm_nil());
+  }
   SCM_Procedure *proc = (SCM_Procedure *)gc_alloc(GC_PROC, sizeof(SCM_Procedure));
   proc->name = name;
   proc->args = args;
