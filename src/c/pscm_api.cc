@@ -179,6 +179,14 @@ SCM *pscm_c_module_lookup(SCM *module, const char *name) {
   return scm_c_module_lookup(module, name);
 }
 
+SCM *pscm_c_module_define(SCM *module, const char *name, SCM *val) {
+  return scm_c_module_define(module, name, val);
+}
+
+void pscm_c_use_module(const char *name) {
+  scm_c_use_module(name);
+}
+
 // Port operations (compatible with Guile 1.8 API)
 SCM *pscm_current_error_port(void) {
   return scm_current_error_port();
