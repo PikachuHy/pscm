@@ -183,9 +183,6 @@ SCM *scm_c_display(SCM_List *args) {
       eval_error("display: expected output port");
       return nullptr;
     }
-    // For now, use print_ast and capture output (simplified)
-    // In a full implementation, we'd need a port-aware print function
-    char buffer[4096];
     FILE *old_stdout = stdout;
     FILE *tmp_file = tmpfile();
     if (!tmp_file) {
@@ -195,12 +192,27 @@ SCM *scm_c_display(SCM_List *args) {
     stdout = tmp_file;
     print_ast(obj, false);
     fflush(tmp_file);
+    long file_size = ftell(tmp_file);
     rewind(tmp_file);
-    size_t len = fread(buffer, 1, sizeof(buffer) - 1, tmp_file);
-    buffer[len] = '\0';
+    size_t buf_size = (file_size > 0) ? (size_t)file_size + 1 : 4096;
+    char *buffer = (char *)malloc(buf_size);
+    if (!buffer) {
+      stdout = old_stdout;
+      fclose(tmp_file);
+      eval_error("display: memory allocation failed");
+      return nullptr;
+    }
+    size_t total = 0;
+    while (total < buf_size - 1) {
+      size_t n = fread(buffer + total, 1, buf_size - 1 - total, tmp_file);
+      if (n == 0) break;
+      total += n;
+    }
+    buffer[total] = '\0';
     stdout = old_stdout;
     fclose(tmp_file);
     write_string_to_port(port, buffer);
+    free(buffer);
   } else {
     print_ast(obj, false); // Use display format (write_mode = false)
   }
@@ -231,8 +243,6 @@ SCM *scm_c_write(SCM_List *args) {
       eval_error("write: expected output port");
       return nullptr;
     }
-    // For now, use print_ast and capture output (simplified)
-    char buffer[4096];
     FILE *old_stdout = stdout;
     FILE *tmp_file = tmpfile();
     if (!tmp_file) {
@@ -242,12 +252,27 @@ SCM *scm_c_write(SCM_List *args) {
     stdout = tmp_file;
     print_ast(obj, true);
     fflush(tmp_file);
+    long file_size = ftell(tmp_file);
     rewind(tmp_file);
-    size_t len = fread(buffer, 1, sizeof(buffer) - 1, tmp_file);
-    buffer[len] = '\0';
+    size_t buf_size = (file_size > 0) ? (size_t)file_size + 1 : 4096;
+    char *buffer = (char *)malloc(buf_size);
+    if (!buffer) {
+      stdout = old_stdout;
+      fclose(tmp_file);
+      eval_error("write: memory allocation failed");
+      return nullptr;
+    }
+    size_t total = 0;
+    while (total < buf_size - 1) {
+      size_t n = fread(buffer + total, 1, buf_size - 1 - total, tmp_file);
+      if (n == 0) break;
+      total += n;
+    }
+    buffer[total] = '\0';
     stdout = old_stdout;
     fclose(tmp_file);
     write_string_to_port(port, buffer);
+    free(buffer);
   } else {
     print_ast(obj, true); // Use write format (write_mode = true)
   }
