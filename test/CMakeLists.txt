@@ -238,3 +238,9 @@ add_test(
     COMMAND $<TARGET_FILE:pscm_cc> --test load_kernel.scm
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
 )
+
+add_test(
+    NAME load_utils
+    COMMAND $<TARGET_FILE:pscm_cc> --test load_utils.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module/texmacs
+)
