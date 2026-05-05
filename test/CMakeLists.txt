@@ -251,3 +251,11 @@ add_test(
 )
 set_tests_properties(load_all PROPERTIES
   PASS_REGULAR_EXPRESSION "ALL-LOADED")
+
+add_test(
+    NAME cross_module_loading
+    COMMAND $<TARGET_FILE:pscm_cc> --test cross_module_loading.scm
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/module
+)
+set_tests_properties(cross_module_loading PROPERTIES
+  PASS_REGULAR_EXPRESSION "CROSS-MODULE-PASS")

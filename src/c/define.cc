@@ -23,8 +23,13 @@ SCM *eval_define(SCM_Environment *env, SCM_List *l) {
     // Otherwise, if current module exists, define in module
     // This ensures define creates local bindings in let/lambda contexts
     if (env->parent) {
-      // We're in a nested environment (lambda/let), create local binding
-      scm_env_insert(env, varname, val, /*search_parent=*/false);
+      // Check if this is a module environment (env->module from scm_resolve_module)
+      if (env->module) {
+        scm_c_hash_set_eq(wrap(env->module->obarray), wrap(varname), val);
+      } else {
+        // We're in a nested environment (lambda/let), create local binding
+        scm_env_insert(env, varname, val, /*search_parent=*/false);
+      }
       } else {
         // Top-level: check if symbol exists in global environment
         // If it exists, update it; otherwise define in module or environment

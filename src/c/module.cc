@@ -750,18 +750,19 @@ SCM *eval_define_module(SCM_Environment *env, SCM_List *l) {
   
   // Use equal? comparison for module names (lists), not eq?
   SCM *existing = scm_c_hash_ref_equal(wrap(g_module_registry), wrap(name));
-  if (existing && !is_falsy(existing) && is_module(existing)) {
+  bool mod_exists = (existing && !is_falsy(existing) && is_module(existing));
+
+  SCM *module_scm;
+  if (mod_exists) {
     // Module already exists (e.g., created by scm_resolve_module), use it
-    scm_set_current_module(existing);
-    return scm_none();
+    module_scm = existing;
+  } else {
+    // Create new module
+    module_scm = scm_make_module(name, 31);
+    // Register module
+    // Use equal? comparison for module names (lists), not eq?
+    scm_c_hash_set_equal(wrap(g_module_registry), wrap(name), module_scm);
   }
-  
-  // Create new module
-  SCM *module_scm = scm_make_module(name, 31);
-  
-  // Register module
-  // Use equal? comparison for module names (lists), not eq?
-  scm_c_hash_set_equal(wrap(g_module_registry), wrap(name), module_scm);
 
   // Process options
   SCM_List *opts = options;
