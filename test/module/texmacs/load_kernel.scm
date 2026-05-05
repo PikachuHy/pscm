@@ -7,10 +7,6 @@
 (set! %load-path (cons "/Users/pikachu/pr/texmacs/TeXmacs/progs" %load-path))
 (set! %load-path (cons "/Users/pikachu/pr/texmacs/TeXmacs/fonts" %load-path))
 
-;; Save & clear current module so define stubs go into g_env, not a module obarray.
-(define pscm-saved-module (current-module))
-(set-current-module #f)
-
 ;; ----- stubs (from load_texmacs_init.scm) -----
 ;; TeXmacs init needs C++-side functions. Define stubs:
 (define (cpp-get-preference key default) default)
@@ -29,7 +25,7 @@
   (if (eq? key 'line) 0
       (if (eq? key 'column) 0
           (if (eq? key 'filename) "unknown" #f))))
-(define (debug-set! key val) (noop))
+(define-macro (debug-set! key val) '(noop))
 (define (debug-enable . args) (noop))
 (define (url-concretize path)
   ;; Stub: returns the path with $TEXMACS_PATH expanded
@@ -203,6 +199,44 @@
 ;; ----- Guile built-in stubs needed by remaining kernel files -----
 (define (cadddr x) (car (cdddr x)))
 
+;; Macros from abbrevs.scm — needed by tm-define.scm and other kernel modules
+(define == equal?)
+(define (!= x y) (not (equal? x y)))
+(define-macro (when cond? . body)
+  `(if ,cond? (begin ,@body)))
+(define-macro (unless cond? . body)
+  `(if (not ,cond?) (begin ,@body)))
+(define-macro (with var val . body)
+  `(let ((,var ,val)) ,@body))
+(define-macro (with-global var val . body)
+  `(let ((,var ,val)) ,@body))
+(define-macro (and-with var val . body)
+  `(and ,val (let ((,var ,val)) ,@body)))
+(define-macro (with-result result . body)
+  `(let ((,result '())) ,@body (reverse ,result)))
+(define-macro (repeat n . body)
+  `(do ((i 0 (+ i 1))) ((= i ,n) (noop)) ,@body))
+(define-macro (twice . body)
+  `(begin ,@body ,@body))
+(define-macro (for what . body)
+  (let ((n (length what)))
+    (cond ((= n 2)
+           `(for-each (lambda (,(car what)) ,@body)
+                      ,(cadr what)))
+          ((= n 3)
+           `(do ((,(car what) ,(cadr what) (+ ,(car what) 1)))
+                ((>= ,(car what) ,(caddr what)) (noop))
+              ,@body))
+          ((= n 4)
+           `(if (> ,(cadddr what) 0)
+                (do ((,(car what) ,(cadr what) (+ ,(car what) ,(cadddr what))))
+                    ((>= ,(car what) ,(caddr what)) (noop))
+                  ,@body)
+                (do ((,(car what) ,(cadr what) (+ ,(car what) ,(cadddr what))))
+                    ((<= ,(car what) ,(caddr what)) (noop))
+                  ,@body)))
+          (else '(noop)))))
+
 ;; ----- Save original display/write before boot.scm redefines them -----
 (define pscm-display display)
 (define pscm-write write)
@@ -217,10 +251,10 @@
       (display "  ERROR: ") (display key)
       (display " ") (display args) (newline))))
 
-;; ----- Restore module before loading -----
-(set-current-module pscm-saved-module)
-
 ;; ----- Step 1: Load init-texmacs.scm (bootstrap) -----
+;; Save current module; init chain creates modules and switches context.
+;; We must restore afterward so kernel-base and stubs are visible to try-load.
+(define load-kernel-module (current-module))
 (pscm-display "=== Loading init-texmacs.scm (bootstrap) ===") (pscm-newline)
 (catch #t
   (lambda ()
@@ -229,6 +263,7 @@
   (lambda (key . args)
     (pscm-display "INIT-ERROR: ") (pscm-display key) (pscm-newline)
     (pscm-display "INIT-ARGS: ") (pscm-display args) (pscm-newline)))
+(set-current-module load-kernel-module)
 
 ;; ----- Step 2: Load remaining kernel files -----
 (pscm-display "") (pscm-newline)

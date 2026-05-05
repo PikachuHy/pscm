@@ -255,21 +255,21 @@ SCM *eval_define_macro(SCM_Environment *env, SCM_List *l) {
 
     SCM *macro_scm = wrap(macro);
 
-    // Module-aware insertion: same pattern as eval_define (define.cc)
-    if (env->parent) {
+    // Module-aware insertion: check module first (module-aware env has
+    // a parent chain, so env->parent alone doesn't distinguish module
+    // scope from lambda scope).
+    SCM *current_mod = scm_current_module();
+    if (current_mod && is_module(current_mod) && current_mod != g_root_module) {
+      SCM_Module *module = cast<SCM_Module>(current_mod);
+      scm_c_hash_set_eq(wrap(module->obarray), wrap(name), macro_scm);
+    } else if (env->parent) {
       scm_env_insert(env, name, macro_scm);
     } else {
       auto global_entry = scm_env_search_entry(&g_env, name, /*search_parent=*/false);
       if (global_entry) {
         global_entry->value = macro_scm;
       } else {
-        SCM *current_mod = scm_current_module();
-        if (current_mod && is_module(current_mod)) {
-          SCM_Module *module = cast<SCM_Module>(current_mod);
-          scm_c_hash_set_eq(wrap(module->obarray), wrap(name), macro_scm);
-        } else {
-          scm_env_insert(env, name, macro_scm);
-        }
+        scm_env_insert(env, name, macro_scm);
       }
     }
 
@@ -309,21 +309,19 @@ SCM *eval_define_macro(SCM_Environment *env, SCM_List *l) {
 
   SCM *macro_scm = wrap(macro);
 
-  // Module-aware insertion: same pattern as eval_define (define.cc)
-  if (env->parent) {
+  // Module-aware insertion: check module first
+  SCM *current_mod = scm_current_module();
+  if (current_mod && is_module(current_mod) && current_mod != g_root_module) {
+    SCM_Module *module = cast<SCM_Module>(current_mod);
+    scm_c_hash_set_eq(wrap(module->obarray), wrap(name), macro_scm);
+  } else if (env->parent) {
     scm_env_insert(env, name, macro_scm);
   } else {
     auto global_entry = scm_env_search_entry(&g_env, name, /*search_parent=*/false);
     if (global_entry) {
       global_entry->value = macro_scm;
     } else {
-      SCM *current_mod = scm_current_module();
-      if (current_mod && is_module(current_mod)) {
-        SCM_Module *module = cast<SCM_Module>(current_mod);
-        scm_c_hash_set_eq(wrap(module->obarray), wrap(name), macro_scm);
-      } else {
-        scm_env_insert(env, name, macro_scm);
-      }
+      scm_env_insert(env, name, macro_scm);
     }
   }
 

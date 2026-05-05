@@ -807,7 +807,7 @@ static SCM *parse_symbol(Parser *p) {
   // Symbols can contain: letters, digits, and special characters
   while (*p->pos && 
          (isalnum((unsigned char)*p->pos) || 
-          strchr("!$%&*+-./:<=>?@^_~", *p->pos) != nullptr)) {
+          strchr("!$%&*+-./:<=>?@^_~|", *p->pos) != nullptr)) {
     len++;
     p->pos++;
     p->column++;
